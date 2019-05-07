@@ -14,7 +14,7 @@
 - Meetings: When/where?
 - Can we take data outside NN?
 - We are going to need good hardware; will this be a problem?
-- Open-source code. The code we write is going to be public. Is this a problem?
+- Open-source code. The code we write is going to be public; will this be a problem?
 - Publishing results. Is this an option? Does public data exist?
 
 
