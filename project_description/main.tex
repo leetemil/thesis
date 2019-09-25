@@ -79,37 +79,39 @@
 
 \begin{document}
 
-% Front page
-\input{frontpage.tex}
+\section*{Master Thesis Project Description (1200 words)}
+This projects revolves around applying representation learning to protein sequence modelling. Previous attemps have applied language models to protein sequences (source), making latent representations of proteins, reaching both levels of performance comparable to the currently best known, and faster computation. A recent study (source: TAPE article) emphasizes the importance of representations in the performance on downstream tasks.
 
-% Table of contents
-% \tableofcontents\thispagestyle{empty} \newpage
-% \setcounter{page}{1}
+Such a representation allows for comparison between sequences directly in their latent space representation, instead of current similarity measures, such as pairwise sequence alignments (?). Thus a good representation of protein sequences is important.
 
-% Solutions header; set WITHSOLUTIONS to true for solutions
-\newboolean{WITHSOLUTIONS}
-\setboolean{WITHSOLUTIONS}{true}
+We wish to examine the performance of representations and their implications for protein informatics by making an unsupervised representation using tools from machine learning and language modelling such as variational autoencoders and deep neural networks. The results will be compared with current state-of-the-art performance on downstream tasks.
 
-\ifthenelse {\boolean{WITHSOLUTIONS}}
-{\newcommand{\solution}[1]{\textbf{Solution:} #1}}
-{\newcommand{\solution}[1]{}}
+Representations are important not only for protein informatics, but also language modelling, as the protein domain is one of the richest in terms of data and structure.
 
-\textbf{Discussed questions with:} Victor Nordam Suadicani and Simon Haastrup.
-% Sections
-\input{sections/01.tex}
-% \input{sections/02.tex}
-% \input{sections/03.tex}
-% \input{sections/04.tex}
-% \input{sections/05.tex}
+Initially, we wish to inspect the unsupervised UniRep model (source) which compresses protein sequences into a fixed length vector, representing the sequence in a latent space. One key aspect is that the representations created by UniRep corresponds to the internal state of the LSTM used for training. In this project, we wish to make a proper representation instead, meaning that the representation itself is the output, not the internal state. 
 
-% % Appendix
-% \clearpage
-% \begin{appendices}
-% \section{Source Code}
-% \end{appendices}
+Finally, current work on representations of proteins might carry potential toward a general representation of proteins, implying that general unseen protein sequences can be analyzed with such a representation with respect to functionality or structure, or at least infer commonalities from their representations. We wish to explore such implications.
 
+Learning from protein sequences is also desirable in terms of data, as it would be able to utilize the growing number of protein sequence data that is being aquired. That is, there is a lot of unlabelled data and little labeled.
 
-% References
-% \clearpage
-% \printbibliography[heading=bibintoc,title={References}]
+In addition, this field of research, being the understanding and formulation of protein sequence space, is comparatively new, allowing for many different ventures to be explored. This project is one step in that direction.
+
+% I suggest that the goal of the main project should be that we try to create a proper representation, rather than simply using the internal state of the LSTM. We will do this by using variational auto encoders. The challenge here is that we need to encode *sequences* of inputs.
+
+% Daniele
+% Protein sequence models would be a great subject actually. Regarding the application, it seems pretty simple and it requires very little information in general and also for the project (Description of project in English, maximum 1,200 words. Please include background, aim and project plan and how this project is of interest to Novo Nordisk) especially if you have already proposals around.
+
+% Wouter
+% Unified rational protein engineering with sequence-only deep representation learning
+% This is the first (or one of the first) applications of using language models to learn representations of protein sequences. 
+% https://www.biorxiv.org/content/10.1101/589333v1
+% One of the authors, Mohammed Alquraishi (a collaborator of ours), also writes some of his thoughts on the method on his blog: https://moalquraishi.wordpress.com/2019/04/01/the-future-of-protein-science-will-not-be-supervised
+
+% Evaluating Protein Transfer Learning with TAPE
+% This is a very recent manuscript (will probably be published at NeurIPS this year) about representation learning of biological sequences. It is interesting because it asks the question how much different downstream tasks can be improved by first learning a good representation - and they present a benchmark set that is likely to become standard in the field (which we might use in the project).
+
+% In the preproject, I suggest we try and reproduce the results of the first article, but with CNNs instead of RNNs. I suggest that the goal of the main project should be that we try to create a proper representation, rather than simply using the internal state of the LSTM. We will do this by using variational auto encoders. The challenge here is that we need to encode *sequences* of inputs. Here is one of the first papers that tries to do encode/decode sequences of words: https://arxiv.org/abs/1511.06349. There are a some difficulties getting this to work, and some newer references that try to resolve this, but I think you have enough reading material for now :) Again, we will try to use CNNs in addition to LSTMs, to compare pros/cons of the two approaches.
+
+% I do not expect you to have a full overview over this literature when we meet - so don’t stress too much if there are things you don’t understand in these papers. But it would be great if you could try to write the main points of your thesis project in your own words - so we have something to discuss when we meet on the 27th.
+
 \end{document}
