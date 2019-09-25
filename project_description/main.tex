@@ -58,7 +58,7 @@
 
 % For references
 \usepackage[backend=biber, style=numeric, sorting=none]{biblatex}
-\addbibresource{references/references.bib}
+\addbibresource{references.bib}
 
 % For title formatting
 \usepackage{titlesec, blindtext, color}
@@ -88,7 +88,7 @@ We wish to examine the performance of representations and their implications for
 
 Representations are important not only for protein informatics, but also language modelling, as the protein domain is one of the richest in terms of data and structure.
 
-Initially, we wish to inspect the unsupervised UniRep model (source) which compresses protein sequences into a fixed length vector, representing the sequence in a latent space. One key aspect is that the representations created by UniRep corresponds to the internal state of the LSTM used for training. In this project, we wish to make a proper representation instead, meaning that the representation itself is the output, not the internal state. 
+Initially, we wish to inspect the unsupervised UniRep model (\cite{alley2019unified}) which compresses protein sequences into a fixed length vector, representing the sequence in a latent space. One key aspect is that the representations created by UniRep corresponds to the internal state of the LSTM used for training. In this project, we wish to make a proper representation instead, meaning that the representation itself is the output, not the internal state.
 
 Finally, current work on representations of proteins might carry potential toward a general representation of proteins, implying that general unseen protein sequences can be analyzed with such a representation with respect to functionality or structure, or at least infer commonalities from their representations. We wish to explore such implications.
 
@@ -103,7 +103,7 @@ In addition, this field of research, being the understanding and formulation of 
 
 % Wouter
 % Unified rational protein engineering with sequence-only deep representation learning
-% This is the first (or one of the first) applications of using language models to learn representations of protein sequences. 
+% This is the first (or one of the first) applications of using language models to learn representations of protein sequences.
 % https://www.biorxiv.org/content/10.1101/589333v1
 % One of the authors, Mohammed Alquraishi (a collaborator of ours), also writes some of his thoughts on the method on his blog: https://moalquraishi.wordpress.com/2019/04/01/the-future-of-protein-science-will-not-be-supervised
 
@@ -113,5 +113,7 @@ In addition, this field of research, being the understanding and formulation of 
 % In the preproject, I suggest we try and reproduce the results of the first article, but with CNNs instead of RNNs. I suggest that the goal of the main project should be that we try to create a proper representation, rather than simply using the internal state of the LSTM. We will do this by using variational auto encoders. The challenge here is that we need to encode *sequences* of inputs. Here is one of the first papers that tries to do encode/decode sequences of words: https://arxiv.org/abs/1511.06349. There are a some difficulties getting this to work, and some newer references that try to resolve this, but I think you have enough reading material for now :) Again, we will try to use CNNs in addition to LSTMs, to compare pros/cons of the two approaches.
 
 % I do not expect you to have a full overview over this literature when we meet - so don’t stress too much if there are things you don’t understand in these papers. But it would be great if you could try to write the main points of your thesis project in your own words - so we have something to discuss when we meet on the 27th.
+
+\printbibliography
 
 \end{document}
