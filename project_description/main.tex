@@ -77,26 +77,39 @@
 
 \input{formatting.tex}
 
+\title{Deep Unsupervised Representation Learning on Protein Sequences using Variational Autoencoders}
+\date{}
+
 \begin{document}
+\maketitle
+\vspace{-1.5cm}
 
-\section*{Master Thesis Project Description (1200 words)}
-This projects revolves around applying representation learning to protein sequences. Previous attempts have applied language models to protein sequences (source), making latent representations of proteins, reaching both levels of performance comparable to the currently best known, and faster computation. A recent study (source: TAPE article) emphasizes the importance of representations in the performance on downstream tasks.
+\section*{Master Thesis Project Descriptions}
 
-Representation learning is the task of letting the machine discover a suitable representation of features for the desired input, usually instead of manually engineering the representation. In our case we look at representations of protein sequences.
+% deep learning
+% (variational) autoencoders
+% protein sequences
+% representation
+% unsupervised
+% latent space
 
-Such a representation allows for comparison between sequences directly in their latent space representation, instead of current similarity measures, such as pairwise sequence alignments (?). Thus a good representation of protein sequences is important.
+%Deep Unsupervised Representation Learning on Protein Sequences using Variational Autoencoders
 
-We wish to examine the performance of representations and their implications for protein informatics by making an unsupervised representation using tools from machine learning and language modelling such as variational autoencoders and deep neural networks. The results will be compared with current state-of-the-art performance on downstream tasks.
+Representation learning is the task of training a machine to produce a suitable representation of features for the desired input, as opposed to manually engineering the representation. Good representations are important in order to learn useful properties of the given data.
 
-Representations are important not only for protein informatics, but also language modelling, as the protein domain is one of the richest in terms of data and structure.
+This project revolves around applying representation learning to protein sequences. Previous attempts have applied language models to protein sequences (source), making latent representations of proteins, reaching both levels of performance comparable to the currently best known, and faster computation. A recent study \cite{rao2019evaluating} emphasizes the importance of representations in the performance on downstream tasks.
 
-Initially, we wish to inspect the unsupervised UniRep model (\cite{alley2019unified}) which compresses protein sequences into a fixed length vector, representing the sequence in a latent space. One key aspect is that the representations created by UniRep corresponds to the internal state of the LSTM used for training. In this project, we wish to make a proper representation instead, meaning that the representation itself is the output, not the internal state.
+We wish to examine the performance of representations and their implications for protein informatics, by developing an unsupervised representation of protein sequences, using tools from machine learning and language modeling such as variational autoencoders and deep neural networks. The results will be compared with current state-of-the-art performance on downstream tasks.
 
-Finally, current work on representations of proteins might carry potential toward a general representation of proteins, implying that general unseen protein sequences can be analyzed with such a representation with respect to functionality or structure, or at least infer commonalities from their representations. We wish to explore such implications.
+Protein sequences are comparable to natural language sentences, in the sense that both consists of a sequence of symbols. In the case of sentences, the symbols are the letters of the alphabet, and in the case of proteins, the symbols are amino acids. Thus one might look at the results of natural language sentence representations in order to learn about protein sequence representation. A study by Google Brain \cite{bowman2015generating} showed that it is possible to represent entire sentences as single vectors in a latent space, allowing interpolation between sentences. Additionally, the latent space inherently maps common properties of sentences, such as style and topic. It is possible that a similar representation for proteins may be able to map properties of proteins, such as secondary structure.
 
-Learning from protein sequences is also desirable in terms of data, as it would be able to utilize the growing number of protein sequence data that is being aquired. That is, there is a lot of unlabelled data and little labeled.
+Unsupervised learning is particularly suited for protein machine learning, since there is an overweight of unlabeled data in comparison to labeled data. If a powerful unsupervised model could be produced, the wealth of this data could be used effectively \cite{AlQuraishiUnsupervised}. Therefore, unsupervised or variants like semi- or self-supervised learning methods could be especially useful.
 
-In addition, this field of research, being the understanding and formulation of protein sequence space, is comparatively new, allowing for many different ventures to be explored. This project is one step in that direction.
+Initially, we wish to inspect the unsupervised UniRep model \cite{alley2019unified} which compresses protein sequences into a fixed length vector, representing the sequence in a latent space. One key aspect is that the representations created by UniRep corresponds to the internal state of the LSTM used for training. In this project, we wish to make a proper representation instead, meaning that the representation itself is the output, not the internal state. The hope is that such a model would produce an overall better representation, with better performance on standard benchmarks (?).
+
+Current work on representations of proteins might carry potential toward a general representation of proteins, implying that general unseen protein sequences can be analyzed with such a representation with respect to functionality or structure, or at least infer commonalities from their representations. We wish to explore such implications.
+
+% In addition, this field of research, being the understanding and formulation of protein sequence space, is comparatively new, allowing for many different ventures to be explored. This project is one step in that direction.
 
 % I suggest that the goal of the main project should be that we try to create a proper representation, rather than simply using the internal state of the LSTM. We will do this by using variational auto encoders. The challenge here is that we need to encode *sequences* of inputs.
 
@@ -118,6 +131,8 @@ In addition, this field of research, being the understanding and formulation of 
 
 % I do not expect you to have a full overview over this literature when we meet - so don’t stress too much if there are things you don’t understand in these papers. But it would be great if you could try to write the main points of your thesis project in your own words - so we have something to discuss when we meet on the 27th.
 
-\printbibliography
+% References
+\clearpage
+\printbibliography[title={References}]
 
 \end{document}
