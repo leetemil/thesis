@@ -1,88 +1,11 @@
-\documentclass[a4paper,11pt]{article}
+\documentclass[a4paper,11pt]{report}
 
-% This removes annoying dependency warning from graph packages
-\RequirePackage{etex}
-
-% Language and encoding
-\usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
-\usepackage{lmodern}
-
-% Paragraph settings
-\setlength{\parindent}{0cm}
-\setlength{\parskip}{8pt}
-
-% Proper date format
-\usepackage[yyyymmdd]{datetime}
-
-% For front page
-\usepackage{wallpaper}
-
-% For margin
-\usepackage[margin=3cm]{geometry}
-
-% For math
-\usepackage{amsmath,amssymb,amsthm}
-\usepackage{xfrac}
-\usepackage{mathtools}
-\usepackage{bm}
-
-% Concrete Mathematics Font
-% \usepackage[boldsans]{ccfonts}
-% \usepackage[euler-digits,euler-hat-accent]{eulervm}
-
-% Linux Libertine Font
-\usepackage[T1]{fontenc}
-\usepackage[tt = false]{libertine}
-\usepackage{libertinust1math}
-
-% For pseudocode
-\usepackage[ruled, vlined, linesnumbered]{algorithm2e}
-% \usepackage{minted}                     % Code snippets.
-
-% For quotes
-\usepackage{csquotes}
-
-% For graphs etc.
-\usepackage{tkz-berge}
-
-% For figures
-\usepackage{graphicx}
-\usepackage{caption}
-
-% For figure positioning (allows use of H)
-\usepackage{float}
-
-% For code listings
-\usepackage{listings}
-
-% For references
-\usepackage[backend=biber, style=numeric, sorting=none]{biblatex}
-\addbibresource{references.bib}
-
-% For title formatting
-\usepackage{titlesec, blindtext, color}
-
-% For paragraph skipping
-\usepackage{parskip}
-
-% For appendix
-\usepackage[toc,page]{appendix}
-
-% For text coloring
-\usepackage{color}
-
-% For enumeration with letters
-\usepackage{enumerate}
+\input{packages.tex}
 
 \input{formatting.tex}
 
-\title{Deep Unsupervised Representation Learning on Protein Sequences using Variational Autoencoders}
-\date{}
-
 \begin{document}
-\maketitle
-\vspace{-1.5cm}
+\input{frontpage.tex}
 
 \section*{Master Thesis Project Descriptions}
 

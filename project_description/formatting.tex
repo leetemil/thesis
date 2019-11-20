@@ -1,17 +1,17 @@
 % Chapter formatting
-\titleformat{\chapter} % command
-    [display] % shape
-    {\bfseries\huge} % format
-    {\thechapter} % label
-    {0.0pt} % separator
-    {} % before-code
-    [] % after-code
+% \titleformat{\chapter} % command
+%     [display] % shape
+%     {\bfseries\huge} % format
+%     {\thechapter} % label
+%     {0.0pt} % separator
+%     {} % before-code
+%     [] % after-code
 
 % Spacing of sections         Left      Before spacing           After spacing      [right] (optional)
-\titlespacing*{\chapter}      {0pt}{0pt plus 2pt minus 2pt}{8pt plus 2pt minus 2pt}
-\titlespacing*{\section}      {0pt}{8pt plus 2pt minus 2pt}{4pt plus 1pt minus 1pt}
-\titlespacing*{\subsection}   {0pt}{8pt plus 2pt minus 2pt}{2pt plus 1pt minus 1pt}
-\titlespacing*{\subsubsection}{0pt}{4pt plus 1pt minus 1pt}{2pt plus 1pt minus 1pt}
+% \titlespacing*{\chapter}      {0pt}{0pt plus 2pt minus 2pt}{8pt plus 2pt minus 2pt}
+% \titlespacing*{\section}      {0pt}{8pt plus 2pt minus 2pt}{4pt plus 1pt minus 1pt}
+% \titlespacing*{\subsection}   {0pt}{8pt plus 2pt minus 2pt}{2pt plus 1pt minus 1pt}
+% \titlespacing*{\subsubsection}{0pt}{4pt plus 1pt minus 1pt}{2pt plus 1pt minus 1pt}
 
 % Declaring definitions, theorems etc.
 \newtheorem*{definition}{Definition}
@@ -28,25 +28,17 @@
 % Internal formatting method
 \newcommand{\mo}[1]{{\mathopen{} #1 \mathclose{}}}
 
-% Differential d
-\newcommand*\diff{\mathop{}\!\mathrm{d}}
-
-% Line segments
-\newcommand{\overbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
-
-% Vector
-\newcommand{\ve}[1]{\mathbf{ #1 }}
-
 % Scaling parentheses
 \newcommand{\prts}[1]{\mo{\left( #1 \right)}}
 
-% \DeclarePairedDelimiter{\prts}{\left(}{\right)}
+% Scaling brackets
+\newcommand{\brts}[1]{\mo{\left[ #1 \right]}}
 
 % Scaling curly brackets
 \newcommand{\crts}[1]{\mo{\left\{ #1 \right\}}}
 
-% Scaling brackets
-\newcommand{\brts}[1]{\mo{\left[ #1 \right]}}
+% Scaling curly brackets
+\newcommand{\bars}[1]{\mo{\left| #1 \right|}}
 
 % Expected value
 \newcommand{\E}[1]{\mathbb{E}{\mo{\left[ #1 \right]}}}
@@ -56,40 +48,3 @@
 % Floor and ceil
 \newcommand{\ceil}[1]{\left\lceil #1 \right\rceil}
 \newcommand{\floor}[1]{\left\lfloor #1 \right\rfloor}
-
-% Absolute value
-\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
-
-
-\DeclareMathOperator{\kullbackliebler}{kl}
-\newcommand{\kl}[2]{\kullbackliebler\mo{\left(#1 \parallel #2\right)}}
-
-% Listing color syntax
-\definecolor{greybg}{RGB}{246,247,248}
-\definecolor{codeblue}{RGB}{15,126,227}
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
-\definecolor{redstrings}{rgb}{1,0.6,0.6}
- 
-\lstdefinestyle{mystyle}{
-    backgroundcolor=\color{greybg},   
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{codeblue},
-    numberstyle=\tiny\color{codegray},
-    stringstyle=\color{codepurple},
-    basicstyle=\footnotesize\ttfamily,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,
-    showspaces=false,                
-    showstringspaces=false,
-    showtabs=false,                  
-    tabsize=2,
-}
-
-\lstset{style=mystyle, lineskip=2pt}
