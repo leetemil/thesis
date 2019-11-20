@@ -48,3 +48,31 @@
 % Floor and ceil
 \newcommand{\ceil}[1]{\left\lceil #1 \right\rceil}
 \newcommand{\floor}[1]{\left\lfloor #1 \right\rfloor}
+
+% Acknowledgements environment
+\makeatletter
+\newcommand\ackname{Acknowledgements}
+\if@titlepage
+   \newenvironment{acknowledgements}{%
+       \titlepage
+       \null\vfil
+       \@beginparpenalty\@lowpenalty
+       \begin{center}%
+         \bfseries \ackname
+         \@endparpenalty\@M
+       \end{center}}%
+      {\par\vfil\null\endtitlepage}
+\else
+   \newenvironment{acknowledgements}{%
+       \if@twocolumn
+         \section*{\abstractname}%
+       \else
+         \small
+         \begin{center}%
+           {\bfseries \ackname\vspace{-.5em}\vspace{\z@}}%
+         \end{center}%
+         \quotation
+       \fi}
+       {\if@twocolumn\else\endquotation\fi}
+\fi
+\makeatother
