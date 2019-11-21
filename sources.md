@@ -7,3 +7,6 @@
 4. [Slides on how to evaluate ML models/methods.](http://pages.cs.wisc.edu/~dpage/cs760/evaluating.pdf)
 5. [General article on Deep Learning by Turing award winners.](http://www.cs.toronto.edu/~hinton/absps/NatureDeepReview.pdf)
 6. [LEARNING PROTEIN SEQUENCE EMBEDDINGS USING INFORMATION FROM STRUCTURE.](https://openreview.net/pdf?id=SygLehCqtm)
+7. [Transformers instead of RNN's](https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf)
+8. [What is a transformer](https://medium.com/inside-machine-learning/what-is-a-transformer-d07dd1fbec04)
+9. [Attention Mechanisms](https://medium.com/syncedreview/a-brief-overview-of-attention-mechanism-13c578ba9129)
