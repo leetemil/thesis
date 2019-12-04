@@ -14,4 +14,5 @@
 12. [VAE in Pytorch](https://vxlabs.com/2017/12/08/variational-autoencoder-in-pytorch-commented-and-annotated/)
 13. [Sequence learning in Keras](https://blog.keras.io/a-ten-minute-introduction-to-sequence-to-sequence-learning-in-keras.html)
 14. [Autoencoders in Keras](https://blog.keras.io/building-autoencoders-in-keras.html)
-15. [Understanding LSTMs](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
+15. [Drawing NN figures](http://alexlenail.me/NN-SVG/LeNet.html)
+16. [Understanding LSTMs](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
