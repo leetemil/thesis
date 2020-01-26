@@ -9,7 +9,7 @@ from torch.nn import functional as F
 from protein_data import NUM_TOKENS
 
 class VAE(nn.Module):
-    """Variational Auto-Encoder"""
+    """Variational Auto-Encoder for protein sequences"""
 
     def __init__(self, layer_sizes):
         super().__init__()
@@ -40,6 +40,8 @@ class VAE(nn.Module):
             self.decode_layers.append(layer)
 
     def encode(self, x):
+        x = F.one_hot(x, NUM_TOKENS).to(torch.float).flatten(1)
+
         # Encode x by sending it through all encode layers
         for layer in self.encode_layers:
             x = F.relu(layer(x))
@@ -91,8 +93,7 @@ class VAE(nn.Module):
         return z
 
     def forward(self, x):
-        encode_x = F.one_hot(x, NUM_TOKENS).to(torch.float).flatten(1)
-        mu, logvar = self.encode(encode_x)
+        mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         return self.decode(z), x, mu, logvar
 

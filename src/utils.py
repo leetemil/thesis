@@ -11,11 +11,11 @@ def make_loading_bar(length, fraction):
 
 def readable_time(seconds):
     if seconds >= 3600:
-        return f"{seconds / 3600:4.2f}h"
+        return f"{seconds / 3600:5.2f}h"
     elif seconds >= 60:
-        return f"{seconds / 60:4.2f}m"
+        return f"{seconds / 60:5.2f}m"
     else:
-        return f"{seconds:4.2f}s"
+        return f"{seconds:5.2f}s"
 
 def eta(time, fraction_done):
     total_time = time / fraction_done if fraction_done != 0 else float("inf")
