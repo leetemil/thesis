@@ -5,12 +5,12 @@ import torch
 from utils import make_loading_bar, readable_time, eta, get_gradient_norm
 
 def log_progress(epoch, time, fraction_done, end, **kwargs):
-    report = f"Epoch: {epoch:4} "
+    report = f"Epoch: {epoch:5} "
     for key, value in kwargs.items():
         if type(value) == int:
-            report += (f"{key}: {value:4} ")
+            report += (f"{key}: {value:5} ")
         elif type(value) == float:
-            report += (f"{key}: {value:8.4f} ")
+            report += (f"{key}: {value:7.5f} ")
         else:
             report += (f"{key}: {value} ")
 
@@ -29,7 +29,7 @@ def train(epoch, model, optimizer, loss_function, train_loader, log_interval):
     model.train()
 
     if log_interval != 0:
-        log_progress(epoch, 0, 0, "\r")
+        log_progress(epoch, 0, 0, "\r", Loss = 0)
     last_log_time = time.time()
 
     train_loss = 0
@@ -52,7 +52,6 @@ def train(epoch, model, optimizer, loss_function, train_loader, log_interval):
 
         # Calculate the gradient of the loss w.r.t. the graph leaves
         loss.backward()
-        grad_norm = get_gradient_norm(model)
 
         # Step in the direction of the gradient
         optimizer.step()
@@ -62,11 +61,11 @@ def train(epoch, model, optimizer, loss_function, train_loader, log_interval):
 
         if log_interval != 0 and time.time() - last_log_time > log_interval:
             last_log_time = time.time()
-            log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), "\r", Loss = train_loss / train_count, Gradnorm = grad_norm)
+            log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), "\r", Loss = train_loss / train_count)
 
     average_loss = train_loss / train_count
     if log_interval != 0:
-        log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), "\n", Loss = train_loss / train_count, Gradnorm = grad_norm)
+        log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), "\n", Loss = train_loss / train_count)
     return average_loss
 
 def validate(epoch, model, loss_function, validation_loader):

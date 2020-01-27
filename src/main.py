@@ -59,28 +59,29 @@ if __name__ == "__main__":
             train_loss = train(epoch, model, optimizer, VAE.vae_loss, train_loader, args.log_interval)
             val_loss = validate(epoch, model, VAE.vae_loss, val_loader)
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.4f} Validation loss: {val_loss:.4f} Time: {readable_time(time.time() - start_time)}")
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {torch.cuda.max_memory_allocated() / 1024**3:.2f}GiB")
+            torch.cuda.reset_max_memory_allocated()
 
             improved = val_loss < best_val_loss
 
             if args.visualize == "always" or (args.visualize == "improvement", improved):
-                plot_data(args.results_dir / Path(f"epoch_{epoch}_val_loss_{best_val_loss:.4f}.pdf"), model, protein_dataset, args.batch_size),
+                plot_data(args.results_dir / Path(f"epoch_{epoch}_val_loss_{best_val_loss:.5f}.pdf"), model, protein_dataset, args.batch_size),
 
             if improved:
                 # If model improved, save the model
                 model_save_name = args.results_dir / Path("model.torch")
                 torch.save(model.state_dict(), model_save_name)
-                print(f"Validation loss improved from {best_val_loss:.4f} to {val_loss:.4f}. Saved model to: {model_save_name}")
+                print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                 best_val_loss = val_loss
                 patience = args.patience
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                 patience -= 1
                 if patience == 0:
-                    print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.4f}.")
+                    print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
                     break
 
             print("")
 
     except KeyboardInterrupt:
-        print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.4f}.\n")
+        print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")

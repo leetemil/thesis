@@ -88,10 +88,9 @@ class VAE(nn.Module):
         # Send z through all decode layers
         for layer in self.decode_layers[:-1]:
             z = F.relu(layer(z))
-
-        # z = torch.sigmoid(self.decode_layers[-1](z))
-        # print(z.shape)
         z = self.decode_layers[-1](z)
+        # z = torch.sigmoid(z)
+
         z = z.view(z.size(0), -1, NUM_TOKENS)
         z = torch.log_softmax(z, dim = -1)
 
@@ -111,11 +110,11 @@ class VAE(nn.Module):
                 f"  Parameters:  {num_params:,}\n")
 
     @staticmethod
-    def CE_loss(recon_x, x):
+    def NLL_loss(recon_x, x):
         # How well do input x and output recon_x agree?
         # CE = F.cross_entropy(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
-        NLL = F.nll_loss(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
-        return NLL#CE
+        nll = F.nll_loss(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
+        return nll
 
     @staticmethod
     def KLD_loss(mu, logvar):
@@ -133,4 +132,4 @@ class VAE(nn.Module):
 
     @staticmethod
     def vae_loss(recon_x, x, mu, logvar):
-        return VAE.CE_loss(recon_x, x) + VAE.KLD_loss(mu, logvar)
+        return VAE.NLL_loss(recon_x, x) + VAE.KLD_loss(mu, logvar)
