@@ -6,6 +6,7 @@ Master's Thesis Git Repository.
 - Metrics and benchmarks
 - Papers
 - Plan until next week
+- Cross entropy loss vs. negative log likelihood loss, and applying activation sigmoid before. what makes sense?
 
 ## Weekly Schedule
 
