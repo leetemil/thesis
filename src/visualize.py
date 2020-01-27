@@ -8,16 +8,16 @@ from vae import VAE
 from protein_data import ProteinDataset
 
 def plot_data(filepath, model, dataset, batch_size = 64):
-	dataloader = DataLoader(data, batch_size = batch_size)
+	dataloader = DataLoader(dataset, batch_size = batch_size)
 
 	with torch.no_grad():
-		for i, xb in enumerate(dataloader):
-			mean, logvar = model.encode(xb)
+		for xb in dataloader:
+			mean, _ = model.encode(xb)
 			mean = mean.cpu()
 			plt.scatter(mean[:, 0], mean[:, 1], s = 1, c = "blue")
 
 	if filepath is not None:
-		plt.save(filepath.with_suffix(".pdf"))
+		plt.savefig(filepath.with_suffix(".pdf"))
 	else:
 		plt.show()
 
