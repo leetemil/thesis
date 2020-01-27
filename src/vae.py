@@ -89,8 +89,13 @@ class VAE(nn.Module):
         for layer in self.decode_layers[:-1]:
             z = F.relu(layer(z))
 
-        z = torch.sigmoid(self.decode_layers[-1](z))
-        return z
+        # z = torch.sigmoid(self.decode_layers[-1](z))
+        # print(z.shape)
+        z = self.decode_layers[-1](z)
+        z = z.view(z.size(0), -1, NUM_TOKENS)
+        z = torch.log_softmax(z, dim = -1)
+
+        return z.flatten(1)
 
     def forward(self, x):
         mu, logvar = self.encode(x)
@@ -108,8 +113,9 @@ class VAE(nn.Module):
     @staticmethod
     def CE_loss(recon_x, x):
         # How well do input x and output recon_x agree?
-        CE = F.cross_entropy(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
-        return CE
+        # CE = F.cross_entropy(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
+        NLL = F.nll_loss(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
+        return NLL#CE
 
     @staticmethod
     def KLD_loss(mu, logvar):
