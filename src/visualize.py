@@ -1,4 +1,5 @@
 from pathlib import Path
+from Bio import SeqIO
 
 import torch
 from torch.utils.data import DataLoader
@@ -6,6 +7,19 @@ import matplotlib.pyplot as plt
 
 from vae import VAE
 from protein_data import ProteinDataset
+
+def get_label_dict():
+    FILE = Path('data/PF00144_full_length_sequences_labeled.fasta')
+    seqs = SeqIO.parse(FILE, "fasta")
+    seqs = list(seqs)
+
+    def getKeyLabel(seq):
+        s = seq.description.split(' ')
+        return s[0], s[2].replace('[', '').replace(']', '')
+
+    return { protein : label for protein, label in map(getKeyLabel, seqs) }
+
+LABEL_DICT = get_label_dict()
 
 def plot_data(filepath, model, dataset, batch_size = 64):
 	dataloader = DataLoader(dataset, batch_size = batch_size)
