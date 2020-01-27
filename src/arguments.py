@@ -12,6 +12,7 @@ parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fra
 parser.add_argument("--device", type = str, default = "cuda", choices = ["cpu", "cuda"], help = "Which device to use (CPU or CUDA for GPU).")
 parser.add_argument("--patience", type = int, default = 50, help = "Training will stop if the model does not improve on the validation set for this many epochs.")
 parser.add_argument("--log_interval", type = float, default = 1, help = "How many seconds to wait between training status logging.")
+parser.add_argument("--visualize", type = str, default = "improvement", choices = ["always", "improvement", "never"], help = "When to visualize the output.")
 parser.add_argument("--save_path", type = Path, default = Path("model.torch"), help = "Path to save the model to every time it improves on validation loss.")
 parser.add_argument("--seed", type = int, help = "Seed for random number generation. If not set, a random seed will be used.")
 args = parser.parse_args()

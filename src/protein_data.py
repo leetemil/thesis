@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from Bio import SeqIO
 
 IUPAC_AMINO_IDX_PAIRS = [
@@ -53,21 +53,25 @@ class ProteinDataset(Dataset):
     def __init__(self, file, device = None):
         super().__init__()
         self.device = device
+
         seqs = SeqIO.parse(file, "fasta")
         list_seqs = map(lambda s: ["<cls>"] + list(s.upper()) + ["<sep>"], seqs)
         mask_seqs = map(lambda s: [a if a != "-" else "<mask>" for a in s], list_seqs)
         encodedSeqs = map(lambda s: seq2idx(s, self.device), mask_seqs)
         self.seqs = list(encodedSeqs)
 
-        # with open(file) as f:
-        #     seqs = f.readlines()
-
-        # list_seqs = map(lambda x: [CLS] + list(x[:-1]) + [SEP], seqs)
-        # encodedSeqs = map(lambda x: seq2idx(x, self.device), list_seqs)
-        # self.seqs = list(encodedSeqs)
+        seqs = SeqIO.parse(file, "fasta")
+        self.names = list(map(lambda s: s.id.split("/")[0], seqs))
 
     def __len__(self):
         return len(self.seqs)
 
     def __getitem__(self, i):
-        return self.seqs[i]
+        return self.seqs[i], self.names[i]
+
+def discard_names_collate(tensors):
+    tensors, names = zip(*tensors)
+    return torch.stack(tensors)
+
+def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_names = False):
+    return DataLoader(dataset, shuffle = shuffle, batch_size = batch_size, collate_fn = None if get_names else discard_names_collate)
