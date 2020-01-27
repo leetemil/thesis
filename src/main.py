@@ -26,13 +26,13 @@ if __name__ == "__main__":
     # Device
     if args.device == "cuda" and not torch.cuda.is_available:
         raise ValueError("CUDA device specified, but CUDA is not available. Use --device cpu.")
-
     device = torch.device(args.device)
     print(f"Using device: {device.type.upper()}")
 
     # Load data
     print(f"Loading data from {args.data}...")
     protein_dataset = ProteinDataset(args.data, device)
+    data_len = protein_dataset[0][0].size(0)
 
     # Split into train/validation
     train_length = int(args.train_ratio * len(protein_dataset))
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     print("Data loaded!")
 
     # Define model and optimizer
-    model = VAE(args.layer_sizes).to(device)
+    model = VAE([data_len] + args.layer_sizes).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     best_val_loss = float("inf")
     patience = args.patience
     try:
-        plot_data(args.result_dir / Path(f"epoch_0_val_loss_inf.pdf"), model, protein_dataset, args.batch_size),
+        plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.pdf"), model, protein_dataset, args.batch_size),
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss = train(epoch, model, optimizer, VAE.vae_loss, train_loader, args.log_interval)
@@ -64,11 +64,11 @@ if __name__ == "__main__":
             improved = val_loss < best_val_loss
 
             if args.visualize == "always" or (args.visualize == "improvement", improved):
-                plot_data(args.result_dir / Path(f"epoch_{epoch}_val_loss_{best_val_loss:.4f}.pdf"), model, protein_dataset, args.batch_size),
+                plot_data(args.results_dir / Path(f"epoch_{epoch}_val_loss_{best_val_loss:.4f}.pdf"), model, protein_dataset, args.batch_size),
 
             if improved:
                 # If model improved, save the model
-                model_save_name = args.result_dir / Path("model.torch")
+                model_save_name = args.results_dir / Path("model.torch")
                 torch.save(model.state_dict(), model_save_name)
                 print(f"Validation loss improved from {best_val_loss:.4f} to {val_loss:.4f}. Saved model to: {model_save_name}")
                 best_val_loss = val_loss

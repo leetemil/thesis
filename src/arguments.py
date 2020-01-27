@@ -5,7 +5,7 @@ from datetime import datetime
 parser = argparse.ArgumentParser(description = "Variational Auto-Encoder on aligned protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument("data", type = Path, help = "Fasta input file of sequences")
-parser.add_argument("layer_sizes", type = int, nargs = "+", help = "Sizes of the hidden layers of the VAE. First size is the input size, last is the latent space size.")
+parser.add_argument("layer_sizes", type = int, nargs = "+", help = "Sizes of the hidden layers of the VAE, except the first, which will be inferred from the data argument.")
 parser.add_argument("--embed_size", type = int, default = 10, help = "Size of the embedded vectors of the amino acids.")
 parser.add_argument("--epochs", type = int, default = 10, help = "Maximum number of epochs to train (patience may cause fewer epochs to be run).")
 parser.add_argument("--batch_size", type = int, default = 128, help = "Input batch size for training.")
@@ -19,9 +19,6 @@ parser.add_argument("--seed", type = int, help = "Seed for random number generat
 args = parser.parse_args()
 
 # Argument postprocessing
-if len(args.layer_sizes) < 2:
-	raise ValueError("At least 2 layers sizes (input size and latent space size) must be given.")
-
 args.train_ratio = 1 - args.val_ratio
 
 args.results_dir.mkdir()
