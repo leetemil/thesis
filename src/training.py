@@ -2,10 +2,20 @@ import time
 
 import torch
 
-from utils import make_loading_bar, readable_time, eta
+from utils import make_loading_bar, readable_time, eta, get_gradient_norm
 
-def log_progress(epoch, time, fraction_done, loss, end):
-    print(f"Epoch: {epoch:4} Loss: {loss:7.4f} {make_loading_bar(50, fraction_done)} Time: {readable_time(time)} ETA: {readable_time(eta(time, fraction_done))}", end = end)
+def log_progress(epoch, time, fraction_done, end, **kwargs):
+    report = f"Epoch: {epoch:4} "
+    for key, value in kwargs.items():
+        if type(value) == int:
+            report += (f"{key}: {value:4} ")
+        elif type(value) == float:
+            report += (f"{key}: {value:8.4f} ")
+        else:
+            report += (f"{key}: {value} ")
+
+    report += f"{make_loading_bar(50, fraction_done)} Time: {readable_time(time)} ETA: {readable_time(eta(time, fraction_done))}"
+    print(report, end = end)
 
 def train(epoch, model, optimizer, loss_function, train_loader, log_interval):
     """
@@ -19,7 +29,7 @@ def train(epoch, model, optimizer, loss_function, train_loader, log_interval):
     model.train()
 
     if log_interval != 0:
-        log_progress(epoch, 0, 0, 0, "\r")
+        log_progress(epoch, 0, 0, "\r")
     last_log_time = time.time()
 
     train_loss = 0
@@ -42,6 +52,7 @@ def train(epoch, model, optimizer, loss_function, train_loader, log_interval):
 
         # Calculate the gradient of the loss w.r.t. the graph leaves
         loss.backward()
+        grad_norm = get_gradient_norm(model)
 
         # Step in the direction of the gradient
         optimizer.step()
@@ -51,11 +62,11 @@ def train(epoch, model, optimizer, loss_function, train_loader, log_interval):
 
         if log_interval != 0 and time.time() - last_log_time > log_interval:
             last_log_time = time.time()
-            log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), train_loss / train_count, "\r")
+            log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), "\r", Loss = train_loss / train_count, Gradnorm = grad_norm)
 
     average_loss = train_loss / train_count
     if log_interval != 0:
-        log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), train_loss / train_count, "\n")
+        log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), "\n", Loss = train_loss / train_count, Gradnorm = grad_norm)
     return average_loss
 
 def validate(epoch, model, loss_function, validation_loader):

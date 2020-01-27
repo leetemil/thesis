@@ -1,5 +1,7 @@
 import time
 
+import torch
+
 def make_loading_bar(length, fraction):
     filled_length = int(round(fraction * length))
     filled = ["="] * filled_length
@@ -21,3 +23,10 @@ def eta(time, fraction_done):
     total_time = time / fraction_done if fraction_done != 0 else float("inf")
     eta = total_time - time
     return eta
+
+def get_gradient_norm(model):
+    with torch.no_grad():
+        params = [p.grad.flatten() for p in model.parameters()]
+        grad_vector = torch.cat(params)
+        multiplier = grad_vector.size(0) / 1_000_000
+        return grad_vector.norm().item() / multiplier
