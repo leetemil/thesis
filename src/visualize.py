@@ -60,7 +60,6 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_good_names = True)
 		plt.scatter(points[:, 0], points[:, 1], s = 2, label = name)
 
 	if filepath is not None:
-		plt.savefig(filepath)
 		plt.savefig(filepath.with_suffix(".png"))
 	else:
 		plt.show()
