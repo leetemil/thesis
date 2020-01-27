@@ -1,6 +1,11 @@
 # MASTER'S THESIS
 Master's Thesis Git Repository.
 
+## 2020-01-28 Wouter Questions
+- Variational Auto Encoders: what exactly is forced to be unit Gaussian?
+- Metrics and benchmarks
+- Papers
+- Plan until next week
 
 ## Weekly Schedule
 
