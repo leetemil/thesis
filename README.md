@@ -7,6 +7,12 @@ Master's Thesis Git Repository.
 - Papers
 - Plan until next week
 - Cross entropy loss vs. negative log likelihood loss, and applying activation sigmoid before. what makes sense?
+- aligned data; many gaps, missing amino acids? What is alignment exactly.
+- Can we overcome alignment/Do something else?
+- Small protein families, how do we tackle those?
+- CNN's?
+- co-volution between domains?
+- First step: Explore space. (1) Pick a protein. (2) Encode it to get mean, logvar for the distribution of the protein. (3) Sample from the distribution. (4) Decode samples.
 
 ## Weekly Schedule
 
