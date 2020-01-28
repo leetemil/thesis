@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
             improved = val_loss < best_val_loss
 
-            if args.visualize == "always" or (args.visualize == "improvement", improved):
+            if args.visualize == "always" or (args.visualize == "improvement" and improved):
                 plot_data(args.results_dir / Path(f"epoch_{epoch}_val_loss_{best_val_loss:.5f}.pdf"), model, protein_dataset, args.batch_size),
 
             if improved:
