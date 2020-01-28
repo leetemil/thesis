@@ -6,20 +6,17 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from protein_data import NUM_TOKENS
-
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences"""
 
-    def __init__(self, layer_sizes):
+    def __init__(self, layer_sizes, num_tokens):
         super().__init__()
 
         assert len(layer_sizes) >= 2
 
         self.layer_sizes = layer_sizes
-        self.layer_sizes[0] *= NUM_TOKENS
+        self.num_tokens = num_tokens
 
-        # Construct encode layers except last ones
         self.encode_layers = nn.ModuleList()
         for i in range(len(self.layer_sizes) - 2):
             lz1 = self.layer_sizes[i]
@@ -40,7 +37,7 @@ class VAE(nn.Module):
             self.decode_layers.append(layer)
 
     def encode(self, x):
-        x = F.one_hot(x, NUM_TOKENS).to(torch.float).flatten(1)
+        x = F.one_hot(x, self.num_tokens).to(torch.float).flatten(1)
 
         # Encode x by sending it through all encode layers
         for layer in self.encode_layers:
@@ -91,15 +88,35 @@ class VAE(nn.Module):
         z = self.decode_layers[-1](z)
         # z = torch.sigmoid(z)
 
-        z = z.view(z.size(0), -1, NUM_TOKENS)
+        z = z.view(z.size(0), -1, self.num_tokens)
         z = torch.log_softmax(z, dim = -1)
 
-        return z.flatten(1)
+        return z
+
+    def sample(self, z):
+        z = self.decode(z)
+        sample = z.exp().argmax(dim = -1)
+        return sample
+
+    def sample_random(self, batch_size = 1):
+        z = torch.randn(batch_size, self.layer_sizes[-1])
+        return self.sample(z)
 
     def forward(self, x):
+        # Forward pass + loss + metrics
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
-        return self.decode(z), x, mu, logvar
+        recon_x = self.decode(z)
+        loss = VAE.vae_loss(recon_x, x, mu, logvar)
+
+        # Metrics
+        metrics_dict = {}
+
+        # Accuracy
+        acc = (recon_x.exp().argmax(dim = -1) == x).to(torch.float).mean().item()
+        metrics_dict["train_accuracy"] = acc
+
+        return loss, metrics_dict
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
@@ -112,8 +129,8 @@ class VAE(nn.Module):
     @staticmethod
     def NLL_loss(recon_x, x):
         # How well do input x and output recon_x agree?
-        # CE = F.cross_entropy(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
-        nll = F.nll_loss(recon_x.view(-1, NUM_TOKENS), x.flatten(), reduction = "sum")
+        # CE = F.cross_entropy(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
+        nll = F.nll_loss(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
         return nll
 
     @staticmethod
@@ -132,4 +149,6 @@ class VAE(nn.Module):
 
     @staticmethod
     def vae_loss(recon_x, x, mu, logvar):
-        return VAE.NLL_loss(recon_x, x) + VAE.KLD_loss(mu, logvar)
+        nll_loss = VAE.NLL_loss(recon_x, x)
+        kld_loss = VAE.KLD_loss(mu, logvar)
+        return nll_loss + kld_loss

@@ -11,7 +11,7 @@ from torch import optim
 from torch.utils.data import random_split
 
 from vae import VAE
-from protein_data import ProteinDataset, get_protein_dataloader
+from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS
 from training import train, validate
 from utils import readable_time
 from visualize import plot_data
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     print("Data loaded!")
 
     # Define model and optimizer
-    model = VAE([data_len] + args.layer_sizes).to(device)
+    model = VAE([data_len * NUM_TOKENS] + args.layer_sizes, NUM_TOKENS).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 
@@ -56,8 +56,8 @@ if __name__ == "__main__":
         plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.pdf"), model, protein_dataset, args.batch_size),
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss = train(epoch, model, optimizer, VAE.vae_loss, train_loader, args.log_interval)
-            val_loss = validate(epoch, model, VAE.vae_loss, val_loader)
+            train_loss = train(epoch, model, optimizer, train_loader, args.log_interval)
+            val_loss = validate(epoch, model, val_loader)
 
             print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {torch.cuda.max_memory_allocated() / 1024**3:.2f}GiB")
             torch.cuda.reset_max_memory_allocated()
