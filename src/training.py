@@ -6,7 +6,7 @@ from utils import make_loading_bar, readable_time, eta, get_gradient_norm
 
 def log_progress(epoch, time, fraction_done, end, **kwargs):
     report = f"Epoch: {epoch:5} "
-    report += f"{make_loading_bar(50, fraction_done)} Time: {readable_time(time)} ETA: {readable_time(eta(time, fraction_done))}"
+    report += f"Time: {readable_time(time)} ETA: {readable_time(eta(time, fraction_done))} {make_loading_bar(50, fraction_done)}"
 
     for key, value in kwargs.items():
         if type(value) == int:

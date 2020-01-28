@@ -57,7 +57,7 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_good_names = True)
 
 	for name, points in scatter_dict.items():
 		points = torch.stack(points)
-		plt.scatter(points[:, 0], points[:, 1], s = 2, label = name)
+		plt.scatter(points[:, 0], points[:, 1], s = 1, label = name)
 
 	if filepath is not None:
 		plt.savefig(filepath.with_suffix(".png"))
