@@ -60,8 +60,9 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = Tr
 	plt.title(f"Encoded points")
 
 	all_points = torch.stack(list(itertools.chain(*scatter_dict.values())))
-	if all_points.size(1) >= 3:
-		axis = Axes3D(fig)
+	if all_points.size(1) > 2:
+		if pca_dim == 3:
+			axis = Axes3D(fig)
 		pca = PCA(pca_dim)
 		pca.fit(all_points)
 		explained_variance = pca.explained_variance_ratio_.sum()
@@ -73,14 +74,15 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = Tr
 			plt.scatter(points[:, 0], points[:, 1], s = 1, label = name)
 		elif points.size(1) > 2:
 			pca_points = pca.transform(points)
-			axis.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = name)
+			if pca_dim == 2:
+				plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = name)
+			elif pca_dim == 3:
+				axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = name)
 
 	if show:
 		plt.show()
 
 	if filepath is not None:
-		if all_points.size(1) >= 3:
-			axis.view_init()
 		fig.savefig(filepath)
 
 	plt.close(fig)
