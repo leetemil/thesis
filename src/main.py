@@ -13,7 +13,7 @@ from torch.utils.data import random_split
 from vae import VAE
 from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS
 from training import train, validate
-from utils import readable_time
+from utils import readable_time, get_memory_usage
 from visualize import plot_data
 
 if __name__ == "__main__":
@@ -50,22 +50,29 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters())
 
     # Train, validate, save
+    show = False
+    save = False
+    if args.visualize_style == "show" or args.visualize_style == "both":
+        show = True
+    if args.visualize_style == "save" or args.visualize_style == "both":
+        save = True
+
     best_val_loss = float("inf")
     patience = args.patience
     try:
-        plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.pdf"), model, protein_dataset, args.batch_size),
+        plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, model, protein_dataset, args.batch_size, show = show),
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss = train(epoch, model, optimizer, train_loader, args.log_interval)
             val_loss = validate(epoch, model, val_loader)
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {torch.cuda.max_memory_allocated() / 1024**3:.2f}GiB")
-            torch.cuda.reset_max_memory_allocated()
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")
 
             improved = val_loss < best_val_loss
 
-            if args.visualize == "always" or (args.visualize == "improvement" and improved):
-                plot_data(args.results_dir / Path(f"epoch_{epoch}_val_loss_{best_val_loss:.5f}.pdf"), model, protein_dataset, args.batch_size),
+            if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
+                filename = args.results_dir / Path(f"epoch_{epoch}_val_loss_{best_val_loss:.5f}.png") if save else None
+                plot_data(filename, model, protein_dataset, args.batch_size, show = show)
 
             if improved:
                 # If model improved, save the model

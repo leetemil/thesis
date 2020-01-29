@@ -58,7 +58,7 @@ def train(epoch, model, optimizer, train_loader, log_interval):
 
     average_loss = train_loss / train_count
     if log_interval != 0:
-        log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), "\n", Loss = train_loss / train_count, **metrics_dict)
+        log_progress(epoch, time.time() - start_time, 1.0, "\n", Loss = train_loss / train_count, **metrics_dict)
     return average_loss
 
 def validate(epoch, model, validation_loader):
