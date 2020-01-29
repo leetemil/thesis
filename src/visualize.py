@@ -23,7 +23,7 @@ def get_label_dict():
 
 LABEL_DICT = get_label_dict()
 
-def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 3):
+def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
 	fig = plt.figure()
 	subset_labels = set([
 		"Acidobacteria",
@@ -73,7 +73,7 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = Tr
 			plt.scatter(points[:, 0], points[:, 1], s = 1, label = name)
 		elif points.size(1) > 2:
 			pca_points = pca.transform(points)
-			axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = name)
+			axis.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = name)
 
 	if show:
 		plt.show()
