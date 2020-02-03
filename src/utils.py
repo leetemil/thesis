@@ -1,3 +1,5 @@
+import os
+from psutil import Process
 import time
 
 import torch
@@ -30,3 +32,13 @@ def get_gradient_norm(model):
         grad_vector = torch.cat(params)
         multiplier = grad_vector.size(0) / 1_000_000
         return grad_vector.norm().item() / multiplier
+
+def get_memory_usage(device, unit = 1024**3):
+    if device.type == "cuda":
+        memory = torch.cuda.max_memory_allocated()
+        torch.cuda.reset_max_memory_allocated()
+    else:
+        process = Process(os.getpid())
+        memory = process.memory_info().rss
+
+    return memory / unit

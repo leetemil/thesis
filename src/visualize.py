@@ -1,10 +1,12 @@
 from collections import defaultdict
 from pathlib import Path
-
+import itertools
 
 from Bio import SeqIO
 import torch
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from vae import VAE
 from protein_data import ProteinDataset, get_protein_dataloader
@@ -21,9 +23,9 @@ def get_label_dict():
 
 LABEL_DICT = get_label_dict()
 
-def plot_data(filepath, model, dataset, batch_size = 64, only_good_names = True):
-	plt.figure()
-	good_names = set([
+def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
+	fig = plt.figure()
+	subset_labels = set([
 		"Acidobacteria",
 		"Actinobacteria",
 		"Bacteroidetes",
@@ -47,23 +49,43 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_good_names = True)
 			for name, point in zip(names, mean):
 				try:
 					label = LABEL_DICT[name]
-					if only_good_names:
-						if label in good_names:
+					if only_subset_labels:
+						if label in subset_labels:
 							scatter_dict[label].append(point)
 					else:
 						scatter_dict[label].append(point)
 				except KeyError:
 					error_count += 1
 
+	plt.title(f"Encoded points")
+
+	all_points = torch.stack(list(itertools.chain(*scatter_dict.values())))
+	if all_points.size(1) > 2:
+		if pca_dim == 3:
+			axis = Axes3D(fig)
+		pca = PCA(pca_dim)
+		pca.fit(all_points)
+		explained_variance = pca.explained_variance_ratio_.sum()
+		plt.title(f"PCA of encoded points ({explained_variance:.3f} explained variance)")
+
 	for name, points in scatter_dict.items():
 		points = torch.stack(points)
-		plt.scatter(points[:, 0], points[:, 1], s = 1, label = name)
+		if points.size(1) == 2:
+			plt.scatter(points[:, 0], points[:, 1], s = 1, label = name)
+		elif points.size(1) > 2:
+			pca_points = pca.transform(points)
+			if pca_dim == 2:
+				plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = name)
+			elif pca_dim == 3:
+				axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = name)
+
+	if show:
+		plt.show()
 
 	if filepath is not None:
-		plt.savefig(filepath.with_suffix(".png"))
-	else:
-		plt.show()
-	plt.close()
+		fig.savefig(filepath)
+
+	plt.close(fig)
 
 if __name__ == "__main__":
 	device = torch.device("cuda")

@@ -43,6 +43,10 @@ NUM_TOKENS = len(IUPAC_AMINO_IDX_PAIRS)
 IUPAC_SEQ2IDX = OrderedDict(IUPAC_AMINO_IDX_PAIRS)
 IUPAC_IDX2SEQ = OrderedDict(IUPAC_IDX_AMINO_PAIRS)
 
+# Add gap tokens as the same as mask
+IUPAC_SEQ2IDX["-"] = IUPAC_SEQ2IDX["<mask>"]
+IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
+
 def seq2idx(seq, device = None):
     return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq], device = device)
 
@@ -55,9 +59,8 @@ class ProteinDataset(Dataset):
         self.device = device
 
         seqs = SeqIO.parse(file, "fasta")
-        list_seqs = map(lambda s: ["<cls>"] + list(s.upper()) + ["<sep>"], seqs)
-        mask_seqs = map(lambda s: [a if a != "-" else "<mask>" for a in s], list_seqs)
-        encodedSeqs = map(lambda s: seq2idx(s, self.device), mask_seqs)
+        list_seqs = map(lambda s: list(s.upper()), seqs)
+        encodedSeqs = map(lambda s: seq2idx(s, self.device), list_seqs)
         self.seqs = list(encodedSeqs)
 
         seqs = SeqIO.parse(file, "fasta")
