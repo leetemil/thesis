@@ -10,11 +10,14 @@
 date -Is
 hostname
 echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
+echo "Program output follows:"
+echo ""
 
 # Script:
 # -u: Unbuffered output
 python3 -u main.py "$@"
 
 # End
+echo ""
+echo "Program finished"
 date -Is
-echo "Finished"
