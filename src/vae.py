@@ -17,9 +17,11 @@ class VAE(nn.Module):
         self.layer_sizes = layer_sizes
         self.num_tokens = num_tokens
 
+        bottleneck_idx = layer_sizes.index(min(layer_sizes))
+
         # Construct encode layers except last ones
         encode_layers = []
-        layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[:-1], layer_sizes[1:])]
+        layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[:bottleneck_idx], layer_sizes[1:])]
         for s1, s2 in layer_sizes_doubles[:-1]:
             encode_layers.append(nn.Linear(s1, s2))
             encode_layers.append(nn.ReLU())
@@ -32,7 +34,7 @@ class VAE(nn.Module):
 
         # Construct decode layers
         decode_layers = []
-        layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[:0:-1], layer_sizes[-2::-1])]
+        layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
         for s1, s2 in layer_sizes_doubles[:-1]:
             decode_layers.append(nn.Linear(s1, s2))
             decode_layers.append(nn.ReLU())
@@ -114,8 +116,9 @@ class VAE(nn.Module):
         metrics_dict = {}
 
         # Accuracy
-        acc = (recon_x.exp().argmax(dim = -1) == x).to(torch.float).mean().item()
-        metrics_dict["train_accuracy"] = acc
+        with torch.no_grad():
+            acc = (self.decode(mu).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
+            metrics_dict["train_accuracy"] = acc
 
         return loss, metrics_dict
 
@@ -126,6 +129,13 @@ class VAE(nn.Module):
         return (f"Variational Auto-Encoder summary:\n"
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters:  {num_params:,}\n")
+
+    def protein_probabilities(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        recon_x = self.decode(z)
+        log_probabilties = F.nll_loss(recon_x, x, reduction = "none")
+        return log_probabilties
 
     def NLL_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?

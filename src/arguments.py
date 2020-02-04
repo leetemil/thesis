@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser(description = "Variational Auto-Encoder on alig
 
 # Required arguments
 parser.add_argument("data", type = Path, help = "Fasta input file of sequences")
-parser.add_argument("layer_sizes", type = int, nargs = "+", help = "Sizes of the hidden layers of the VAE, except the first, which will be inferred from the data argument.")
+parser.add_argument("layer_sizes", type = int, nargs = "+", help = "Sizes of the hidden layers of the VAE, except the first and last, which will be inferred from the data argument. The smallest size is understood as the bottleneck size and will be the size of the output of the encoder, and the size of the input of the decoder.")
 
 # Optional arguments
 parser.add_argument("--epochs", type = int, default = 10, help = "Maximum number of epochs to train (patience may cause fewer epochs to be run).")

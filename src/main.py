@@ -45,7 +45,8 @@ if __name__ == "__main__":
     print("Data loaded!")
 
     # Define model and optimizer
-    model = VAE([data_len * NUM_TOKENS] + args.layer_sizes, NUM_TOKENS).to(device)
+    data_size = data_len * NUM_TOKENS
+    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 
@@ -60,7 +61,8 @@ if __name__ == "__main__":
     best_val_loss = float("inf")
     patience = args.patience
     try:
-        plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, model, protein_dataset, args.batch_size, show = show),
+        if args.visualize_interval != "never":
+            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, model, protein_dataset, args.batch_size, show = show),
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss = train(epoch, model, optimizer, train_loader, args.log_interval)
