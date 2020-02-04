@@ -1,8 +1,10 @@
 from collections import OrderedDict
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from Bio import SeqIO
+from bioservices import UniProt
 
 IUPAC_AMINO_IDX_PAIRS = [
     ("<pad>", 0),
@@ -78,3 +80,48 @@ def discard_names_collate(tensors):
 
 def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_names = False):
     return DataLoader(dataset, shuffle = shuffle, batch_size = batch_size, collate_fn = None if get_names else discard_names_collate)
+
+def retrieve_labels(infile, outfile):
+    seqs = SeqIO.parse(infile, "fasta")
+    uniprot = UniProt()
+    breakpoint()
+
+    with open(outfile, "r") as out:
+        lines = out.readlines()
+
+    with open(outfile, "a") as out:
+        for i, seq in enumerate(seqs):
+            if i < len(lines):
+                continue
+
+            ID = seq.id.split("/")[0].replace("UniRef100_", "")
+            print(f"Doing ID {i:6}, {ID + ':':15} ", end = "")
+            try:
+                # Try get_df
+                df = uniprot.get_df(ID)
+                label = df["Taxonomic lineage (PHYLUM)"][0]
+
+                if type(label) == np.float64 and np.isnan(label):
+                    columns, values = uniprot.search(ID, database = "uniparc", limit = 1)[:-1].split("\n")
+                    name_idx = columns.split("\t").index("Organisms")
+                    name = values.split("\t")[name_idx].split("; ")[0]
+                    columns, values = uniprot.search(name, database = "taxonomy", limit = 1)[:-1].split("\n")
+                    lineage_idx = columns.split("\t").index("Lineage")
+                    label = values.split("\t")[lineage_idx].split("; ")[:2][-1]
+            except KeyError:
+                try:
+                    columns, values = uniprot.search(ID, database = "uniparc", limit = 1)[:-1].split("\n")
+                    name_idx = columns.split("\t").index("Organisms")
+                    name = values.split("\t")[name_idx].split("; ")[0]
+                    columns, values = uniprot.search(name, database = "taxonomy", limit = 1)[:-1].split("\n")
+                    lineage_idx = columns.split("\t").index("Lineage")
+                    label = values.split("\t")[lineage_idx].split("; ")[:2][-1]
+                except:
+                    print("Couldn't handle it!")
+                    breakpoint()
+
+            print(f"{label}")
+            out.write(f"{seq.id}: {label}\n")
+
+if __name__ == "__main__":
+    retrieve_labels("data/alignments/BLAT_ECOLX_1_b0.5.a2m", "data/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m")
