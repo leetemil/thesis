@@ -16,7 +16,7 @@ from training import train, validate
 from utils import readable_time, get_memory_usage
 from visualize import plot_data
 
-if __name__ == "__main__":
+if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
     # Seed
     if args.seed is not None:
