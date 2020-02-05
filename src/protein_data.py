@@ -60,26 +60,26 @@ class ProteinDataset(Dataset):
         super().__init__()
         self.device = device
 
-        seqs = SeqIO.parse(file, "fasta")
-        list_seqs = map(lambda s: list(s.upper()), seqs)
-        encodedSeqs = map(lambda s: seq2idx(s, self.device), list_seqs)
-        self.seqs = list(encodedSeqs)
-
-        seqs = SeqIO.parse(file, "fasta")
-        self.names = list(map(lambda s: s.id.split("/")[0], seqs))
+        seqs = list(SeqIO.parse(file, "fasta"))
+        self.ids = [s.id for s in seqs]
+        self.encoded_seqs = [seq2idx(s.upper(), self.device) for s in seqs]
 
     def __len__(self):
-        return len(self.seqs)
+        return len(self.encoded_seqs)
 
     def __getitem__(self, i):
-        return self.seqs[i], self.names[i]
+        return self.encoded_seqs[i], self.ids[i]
 
-def discard_names_collate(tensors):
-    tensors, names = zip(*tensors)
+# def ids_collate(tensors):
+#     tensors, ids = zip(*tensors)
+#     return torch.stack(tensors), ids
+
+def discard_ids_collate(tensors):
+    tensors, ids = zip(*tensors)
     return torch.stack(tensors)
 
-def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_names = False):
-    return DataLoader(dataset, shuffle = shuffle, batch_size = batch_size, collate_fn = None if get_names else discard_names_collate)
+def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_ids = False):
+    return DataLoader(dataset, shuffle = shuffle, batch_size = batch_size, collate_fn = None if get_ids else discard_ids_collate)
 
 def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")
