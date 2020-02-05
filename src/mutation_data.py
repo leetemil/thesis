@@ -4,7 +4,9 @@ import torch
 import numpy as np
 from vae import VAE
 from pathlib import Path
-from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ
+from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
+import matplotlib.pyplot as plt
+from scipy.stats import spearmanr
 
 
 BLAT_ECOL = 'BLAT_ECOLX_Palzkill2012'
@@ -17,32 +19,46 @@ sequence = ('hpetlvKVKDAEDQLGARVGYIELDLNSGKILeSFRPEERFPMMSTFKVLLCGAVLSRVDAGQEQL'
 device = torch.device("cpu")
 protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 
-wild_type, _ = next(iter(protein_dataset))
+wild_type, wild_type_id = next(iter(protein_dataset))
 wild_type = wild_type.unsqueeze(0)
 
 model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
 model.load_state_dict(torch.load("model.torch", map_location=device))
 
-wild_type_logp = model.protein_log_probability(wild_type)
+with torch.no_grad():
 
-with open(PICKLE_FILE, 'rb') as f:
-    proteins = pickle.load(f)
+    wild_type_logp = model.protein_log_probability(wild_type)
 
-p = proteins[BLAT_ECOL]
+    with open(PICKLE_FILE, 'rb') as f:
+        proteins = pickle.load(f)
 
-def h(s):
-    wildtype = IUPAC_SEQ2IDX[s[0]]
-    mutant = IUPAC_SEQ2IDX[s[-1]]
-    location = int(s[1:-1])
-    return wildtype, mutant, location
+    p = proteins[BLAT_ECOL]
+    offset = protein_dataset.offsets[wild_type_id]
 
-df = pd.DataFrame([h(s) for s in p.mutant], columns = ['wildtype', 'mutant', 'location'])
+    def h(s, offset = 0):
+        wildtype = IUPAC_SEQ2IDX[s[0]]
+        mutant = IUPAC_SEQ2IDX[s[-1]]
+        location = int(s[1:-1]) - offset
+        return wildtype, mutant, location
 
-df = pd.concat([p.loc[:, ['ddG_stat']], df], axis = 1)
+    df = pd.DataFrame([h(s, offset) for s in p.mutant], columns = ['wildtype', 'mutant', 'location'])
 
-batch_size = 64
-for batch in np.array_split(df, len(df)/batch_size):
-    wt = torch.stack([wild_type.squeeze(0)] * len(batch))
+    df = pd.concat([p.loc[:, ['ddG_stat']], df], axis = 1)
 
+    predictions = np.empty(len(df))
+    scores = np.empty(len(df))
 
-    breakpoint()
+    for batch in np.array_split(df, len(df)/len(df)):
+        wt = torch.stack([wild_type.squeeze(0)] * len(batch))
+        bs = len(batch)
+        idx = range(bs), batch.location
+        wt[idx] = torch.tensor(batch.mutant)
+
+        mutant_logp = model.protein_log_probability(wt)
+
+        scores = batch.ddG_stat
+        predictions = mutant_logp #- wild_type_logp
+
+        # plt.scatter(scores, predictions)
+        cor, pval = spearmanr(scores, predictions)
+        breakpoint()

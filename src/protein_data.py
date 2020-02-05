@@ -69,7 +69,6 @@ class ProteinDataset(Dataset):
         seqs = list(SeqIO.parse(file, "fasta"))
 
         ids, offsets, encoded = list(zip(*map(process_seq, seqs)))
-        breakpoint()
         self.ids = ids
         self.offsets = {i: os for i, os in zip(ids, offsets)}
         self.encoded_seqs = encoded
