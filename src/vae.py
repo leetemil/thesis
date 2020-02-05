@@ -130,12 +130,16 @@ class VAE(nn.Module):
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters:  {num_params:,}\n")
 
-    def protein_probabilities(self, x):
-        mean, logvar = self.encode(x)
-        z = self.reparameterize(mean, logvar)
-        recon_x = self.decode(z)
-        log_probabilties = F.nll_loss(recon_x, x, reduction = "none")
-        return log_probabilties
+    def protein_log_probability(self, x):
+        mu, _ = self.encode(x)
+        # z = self.reparameterize(mu, logvar)
+        recon_x = self.decode(mu).permute(0, 2, 1)
+        log_probability = -1 * F.nll_loss(recon_x, x, reduction = "none")
+        print('sfd')
+        breakpoint()
+
+        # amino acid probabilities are independent conditioned on z
+        return log_probability
 
     def NLL_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
