@@ -61,4 +61,4 @@ with torch.no_grad():
 
         # plt.scatter(scores, predictions)
         cor, pval = spearmanr(scores, predictions)
-        breakpoint()
+        print(cor)

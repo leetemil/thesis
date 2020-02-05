@@ -131,12 +131,13 @@ class VAE(nn.Module):
                 f"  Parameters:  {num_params:,}\n")
 
     def protein_log_probability(self, x):
-        mu, _ = self.encode(x)
-        recon_x = self.decode(mu).permute(0, 2, 1)
+        mean, logvar = self.encode(x)
+        recon_x = self.decode(mean).permute(0, 2, 1)
+        kld = self.KLD_loss(mean, logvar)
         log_probability = -1 * F.nll_loss(recon_x, x, reduction = "none")
 
         # amino acid probabilities are independent conditioned on z
-        return log_probability.sum(1)
+        return log_probability.sum(1) + kld
 
     def NLL_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
