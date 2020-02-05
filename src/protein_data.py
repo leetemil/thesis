@@ -55,14 +55,24 @@ def seq2idx(seq, device = None):
 def idx2seq(idxs):
     return "".join([IUPAC_IDX2SEQ[i] for i in idxs])
 
+def process_seq(seq, device = None):
+    seq_id = seq.id
+    seq_offset = int(seq.id.split("/")[1].split('-')[0])
+    seq_encoded = seq2idx(seq.upper(), device)
+    return seq_id, seq_offset, seq_encoded
+
 class ProteinDataset(Dataset):
     def __init__(self, file, device = None):
         super().__init__()
         self.device = device
 
         seqs = list(SeqIO.parse(file, "fasta"))
-        self.ids = [s.id for s in seqs]
-        self.encoded_seqs = [seq2idx(s.upper(), self.device) for s in seqs]
+
+        ids, offsets, encoded = list(zip(*map(process_seq, seqs)))
+        breakpoint()
+        self.ids = ids
+        self.offsets = {i: os for i, os in zip(ids, offsets)}
+        self.encoded_seqs = encoded
 
     def __len__(self):
         return len(self.encoded_seqs)
@@ -84,7 +94,6 @@ def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_ids = 
 def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")
     uniprot = UniProt()
-    breakpoint()
 
     with open(outfile, "r") as out:
         lines = out.readlines()
