@@ -84,7 +84,6 @@ def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_names 
 def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")
     uniprot = UniProt()
-    breakpoint()
 
     with open(outfile, "r") as out:
         lines = out.readlines()
