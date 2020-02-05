@@ -11,7 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from vae import VAE
 from protein_data import ProteinDataset, get_protein_dataloader
 
-def get_label_dict():
+def get_pfam_label_dict():
     file = Path("data/PF00144_full_length_sequences_labeled.fasta")
     seqs = SeqIO.parse(file, "fasta")
 
@@ -21,7 +21,17 @@ def get_label_dict():
 
     return {protein_id: label for protein_id, label in map(getKeyLabel, seqs)}
 
-LABEL_DICT = get_label_dict()
+PFAM_LABEL_DICT = get_label_dict()
+
+def get_BLAT_label_dict():
+    file = Path("data/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m")
+
+	with open(file, "r") as f:
+		lines = f.readlines()
+
+	return dict([line.split(": ") for line in lines])
+
+BLAT_LABEL_DICT = get_BLAT_label_dict()
 
 def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
 	fig = plt.figure()
@@ -38,17 +48,17 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = Tr
 		"Proteobacteria"
 	])
 
-	dataloader = get_protein_dataloader(dataset, batch_size = batch_size, get_names = True)
+	dataloader = get_protein_dataloader(dataset, batch_size = batch_size, get_seqs = True)
 
 	error_count = 0
 	scatter_dict = defaultdict(lambda: [])
 	with torch.no_grad():
-		for i, (xb, names) in enumerate(dataloader):
+		for xb, seqs in enumerate(dataloader):
 			mean, _ = model.encode(xb)
 			mean = mean.cpu()
-			for name, point in zip(names, mean):
+			for point, seq in zip(mean, seqs):
 				try:
-					label = LABEL_DICT[name]
+					label = BLAT_LABEL_DICT[seq.id]
 					if only_subset_labels:
 						if label in subset_labels:
 							scatter_dict[label].append(point)
