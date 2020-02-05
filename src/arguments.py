@@ -17,6 +17,7 @@ parser.add_argument("--patience", type = int, default = 50, help = "Training wil
 parser.add_argument("--log_interval", type = float, default = 1, help = "How many seconds to wait between training status logging. 0 to disable loading bar progress.")
 parser.add_argument("--visualize_interval", type = str, default = "improvement", choices = ["always", "improvement", "never"], help = "Visualize the output at every epoch (always), only at validation loss improvement or never.")
 parser.add_argument("--visualize_style", type = str, default = "save", choices = ["save", "show", "both"], help = "Save or show the visualization, or both.")
+parser.add_argument("--figure_type", type = str, default = ".png", help = "Filetype of the visualization figures.")
 parser.add_argument("--results_dir", type = Path, default = Path(f"results_{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory to save results to.")
 parser.add_argument("--seed", type = int, help = "Seed for random number generation. If not set, a random seed will be used.")
 args = parser.parse_args()

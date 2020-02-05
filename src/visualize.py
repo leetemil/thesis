@@ -33,8 +33,8 @@ def get_BLAT_label_dict():
 
 BLAT_LABEL_DICT = get_BLAT_label_dict()
 
-def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
-    fig = plt.figure()
+def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
+    pca_fig = plt.figure()
     subset_labels = set([
         "Acidobacteria",
         "Actinobacteria",
@@ -72,31 +72,48 @@ def plot_data(filepath, model, dataset, batch_size = 64, only_subset_labels = Tr
     all_points = torch.stack(list(itertools.chain(*scatter_dict.values())))
     if all_points.size(1) > 2:
         if pca_dim == 3:
-            axis = Axes3D(fig)
+            axis = Axes3D(pca_fig)
         pca = PCA(pca_dim)
         pca.fit(all_points)
         explained_variance = pca.explained_variance_ratio_.sum()
         plt.title(f"PCA of encoded points ({explained_variance:.3f} explained variance)")
 
-    for name, points in scatter_dict.items():
+        # Make explained variance figure
+        variance_fig = plt.figure()
+        plt.title("Explained variance of principal components")
+        plt.xlabel("Principal components")
+        plt.ylabel("Ratio of variance")
+        plt.ylim((0, 1))
+
+        pca_highdim = PCA(all_points.size(1))
+        pca_highdim.fit(all_points)
+        explained_variances = pca_highdim.explained_variance_ratio_
+        plt.plot(range(len(explained_variances)), explained_variances, label = "Explained variance ratio")
+        plt.legend()
+
+        if name is not None:
+            variance_fig.savefig(name.with_name("variance_" + name.name).with_suffix(figure_type))
+        plt.figure(pca_fig.number)
+
+    for label, points in scatter_dict.items():
         points = torch.stack(points)
         if points.size(1) == 2:
-            plt.scatter(points[:, 0], points[:, 1], s = 1, label = name)
+            plt.scatter(points[:, 0], points[:, 1], s = 1, label = label)
         elif points.size(1) > 2:
             pca_points = pca.transform(points)
             if pca_dim == 2:
-                plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = name)
+                plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = label)
             elif pca_dim == 3:
-                axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = name)
+                axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = label)
 
-    plt.legend()
+    if name is not None:
+        pca_fig.savefig(name.with_suffix(figure_type))
+
     if show:
         plt.show()
 
-    if filepath is not None:
-        fig.savefig(filepath)
-
-    plt.close(fig)
+    plt.close(variance_fig)
+    plt.close(pca_fig)
 
 if __name__ == "__main__":
     device = torch.device("cuda")
