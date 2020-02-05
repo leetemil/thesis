@@ -66,9 +66,9 @@ class ProteinDataset(Dataset):
         super().__init__()
         self.device = device
 
-        seqs = list(SeqIO.parse(file, "fasta"))
+        seqs = SeqIO.parse(file, "fasta")
 
-        ids, offsets, encoded = list(zip(*map(process_seq, seqs)))
+        ids, offsets, encoded = list(zip(*[process_seq(s, self.device) for s in  seqs]))
         self.ids = ids
         self.offsets = {i: os for i, os in zip(ids, offsets)}
         self.encoded_seqs = encoded
