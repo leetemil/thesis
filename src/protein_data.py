@@ -79,10 +79,6 @@ class ProteinDataset(Dataset):
     def __getitem__(self, i):
         return self.encoded_seqs[i], self.ids[i]
 
-# def ids_collate(tensors):
-#     tensors, ids = zip(*tensors)
-#     return torch.stack(tensors), ids
-
 def discard_ids_collate(tensors):
     tensors, ids = zip(*tensors)
     return torch.stack(tensors)
