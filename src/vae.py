@@ -18,6 +18,13 @@ class VAE(nn.Module):
         self.num_tokens = num_tokens
         self.dropout = dropout
 
+        self.weight = nn.Parameter(torch.randn(40, self.layer_sizes[-2]))
+        self.dictionary = nn.Parmater(torch.randn(self.num_tokens, 40))
+        self.inverse_temp_param = nn.Parameter(torch.randn(1))
+        self.scale_param = nn.Parameter(torch.randn(self.layer_sizes[-2] // 4, self.layer_sizes[0] // self.num_tokens) * 4 - 12.36)
+
+        # Minimum value considered to be bottleneck
+        # Index is used to separate encode/decode layers
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
         # Construct encode layers except last ones
@@ -137,6 +144,14 @@ class VAE(nn.Module):
         return (f"Variational Auto-Encoder summary:\n"
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters:  {num_params:,}\n")
+
+    def scale_matrix():
+        s1 = 1 / (1 + self.scale_param.exp())
+        s2 = torch.stack([s1, s1, s1, s1])
+        return s2.transpose(0, 1).reshape(-1, self.layer_sizes[0] / self.num_tokens)
+
+    def inverse_temp():
+        return F.softplus(self.inverse_temp_param)
 
     def protein_log_probability(self, x):
         mean, logvar = self.encode(x)
