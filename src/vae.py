@@ -130,12 +130,20 @@ class VAE(nn.Module):
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters:  {num_params:,}\n")
 
-    def protein_log_probability(self, x):
+    def protein_log_probability(self, x, n_estimates = 500):
         mean, logvar = self.encode(x)
-        recon_x = self.decode(mean).permute(0, 2, 1)
         kld = self.KLD_loss(mean, logvar)
-        log_probability = -1 * F.nll_loss(recon_x, x, reduction = "none")
 
+        # estimate = torch.zeros((n_estimates, x.size(0)))
+        # for i in range(n_estimates):
+        #     z = self.reparameterize(mean, logvar)
+        #     recon_x = self.decode(z).permute(0, 2, 1)
+        #     log_probability = -1 * F.nll_loss(recon_x, x, reduction = "none")
+        #     estimate[i] = log_probability.sum(1) + kld
+        # empirical_mean = estimate.mean()
+
+        recon_x = self.decode(mean).permute(0, 2, 1)
+        log_probability = -1 * F.nll_loss(recon_x, x, reduction = "none")
         # amino acid probabilities are independent conditioned on z
         return log_probability.sum(1) + kld
 
@@ -143,6 +151,8 @@ class VAE(nn.Module):
         # How well do input x and output recon_x agree?
         # CE = F.cross_entropy(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
         nll = F.nll_loss(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
+
+        # amino acid probabilities are independent conditioned on z
         return nll
 
     def KLD_loss(self, mean, logvar):
@@ -155,6 +165,7 @@ class VAE(nn.Module):
         # https://arxiv.org/abs/1312.6114
         # - D_{KL} = 0.5 * sum(1 + log(sigma^2) - mean^2 - sigma^2)
         # Note the negative D_{KL} in appendix B of the paper
+
         KLD = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
         return KLD
 
