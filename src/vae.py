@@ -9,13 +9,14 @@ from torch.nn import functional as F
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences"""
 
-    def __init__(self, layer_sizes, num_tokens):
+    def __init__(self, layer_sizes, num_tokens, dropout = 0.5):
         super().__init__()
 
         assert len(layer_sizes) >= 2
 
         self.layer_sizes = layer_sizes
         self.num_tokens = num_tokens
+        self.dropout = dropout
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -35,9 +36,16 @@ class VAE(nn.Module):
         # Construct decode layers
         decode_layers = []
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
-        for s1, s2 in layer_sizes_doubles[:-1]:
+        for s1, s2 in layer_sizes_doubles[:-2]:
             decode_layers.append(nn.Linear(s1, s2))
             decode_layers.append(nn.ReLU())
+            decode_layers.append(nn.Dropout(self.dropout))
+
+        # Second-to-last decode layer has sigmoid activation
+        s1, s2 = layer_sizes_doubles[-2]
+        decode_layers.append(nn.Linear(s1, s2))
+        decode_layers.append(nn.Sigmoid())
+        decode_layers.append(nn.Dropout(self.dropout))
 
         # Last decode layer has no activation
         s1, s2 = layer_sizes_doubles[-1]
