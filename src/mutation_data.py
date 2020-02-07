@@ -8,15 +8,15 @@ from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, IUP
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 
-
+ALIGNPATH = Path('data/alignments')
 BLAT_ECOL = 'BLAT_ECOLX_Palzkill2012'
-BLAT_SEQ_FILE = Path('data/alignments/BLAT_ECOLX_1_b0.5.a2m')
+BLAT_SEQ_FILE = ALIGNPATH / Path('BLAT_ECOLX_1_b0.5.a2m')
+BLAT_SEQ_FILE = ALIGNPATH / Path('BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m')
 PICKLE_FILE = Path('data/mutation_data.pickle')
 
-sequence = ('hpetlvKVKDAEDQLGARVGYIELDLNSGKILeSFRPEERFPMMSTFKVLLCGAVLSRVDAGQEQL'
-            'GRRIHYSQNDLVEYSPVTEKHLTDGMTVRELCSAAITMSDNTAANLLLTTIGGPKELTAFLHNMGD''HVTRLDRWEPELNEAIPNDERDTTMPAAMATTLRKLLTGELLTLASRQQLIDWMEADKVAGPLLRS''ALPAGWFIADKSGAGErGSRGIIAALGPDGKPSRIVVIYTTGSQATMDERNRQIAEIGASLIkhw')
+# only tested on cpu device ...
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-device = torch.device("cpu")
 protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 
 wild_type, wild_type_id = next(iter(protein_dataset))
@@ -25,9 +25,20 @@ wild_type = wild_type.unsqueeze(0)
 model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
 model.load_state_dict(torch.load("model.torch", map_location=device))
 
-with torch.no_grad():
+def protein_accuracy(trials = 100, model = model, data = protein_dataset):
+    model.eval()
+    fname = data.file.stem
+    print(f'{fname}: Prediction accuracies for {trials} proteins.')
+    data = iter(data)
+    for _ in range(trials):
+        protein, name = next(data)
+        wtr = model.reconstruct(protein.unsqueeze(0)).squeeze(0).numpy()
+        wt = protein.numpy()
+        loss = 1 - (wtr == wt).mean()
+        print(f'{name:<60s}{100 * loss:>4.1f}%')
 
-    wild_type_logp = model.protein_log_probability(wild_type)
+def mutation_effect_prediction(model = model, data = protein_dataset):
+    model.eval()
 
     with open(PICKLE_FILE, 'rb') as f:
         proteins = pickle.load(f)
@@ -44,21 +55,26 @@ with torch.no_grad():
     df = pd.DataFrame([h(s, offset) for s in p.mutant], columns = ['wildtype', 'mutant', 'location'])
 
     df = pd.concat([p.loc[:, ['ddG_stat']], df], axis = 1)
+    data_size = len(df)
 
-    predictions = np.empty(len(df))
-    scores = np.empty(len(df))
+    wt = torch.stack([wild_type.squeeze(0)] * data_size)
+    idx = range(data_size), df.location[:data_size]
+    wt[idx] = torch.tensor(df.mutant)
 
-    for batch in np.array_split(df, len(df)/len(df)):
-        wt = torch.stack([wild_type.squeeze(0)] * len(batch))
-        bs = len(batch)
-        idx = range(bs), batch.location
-        wt[idx] = torch.tensor(batch.mutant)
+    mutant_logp = model.protein_logp(wt)
+    wild_type_logp = model.protein_logp(wild_type)
 
-        mutant_logp = model.protein_log_probability(wt)
+    breakpoint()
 
-        scores = batch.ddG_stat
-        predictions = mutant_logp #- wild_type_logp
+    predictions = mutant_logp - wild_type_logp
+    scores = df.ddG_stat
 
-        # plt.scatter(scores, predictions)
-        cor, pval = spearmanr(scores, predictions)
-        print(cor)
+    cor, pval = spearmanr(scores, predictions)
+
+    return cor, pval
+
+with torch.no_grad():
+    cor, _ = mutation_effect_prediction()
+    # protein_accuracy()
+
+    print(f'Spearman\'s Rho: {cor:5.3f}.')

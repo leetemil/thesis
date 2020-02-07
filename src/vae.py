@@ -113,6 +113,10 @@ class VAE(nn.Module):
         z = torch.randn(batch_size, self.layer_sizes[-1])
         return self.sample(z)
 
+    def reconstruct(self, x):
+        mean, _ = self.encode(x)
+        return self.sample(mean)
+
     def forward(self, x):
         # Forward pass + loss + metrics
         mean, logvar = self.encode(x)
@@ -138,22 +142,15 @@ class VAE(nn.Module):
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters:  {num_params:,}\n")
 
-    def protein_log_probability(self, x, n_estimates = 500):
+    def protein_logp(self, x, n_estimates = 500):
         mean, logvar = self.encode(x)
-        kld = self.KLD_loss(mean, logvar)
-
-        # estimate = torch.zeros((n_estimates, x.size(0)))
-        # for i in range(n_estimates):
-        #     z = self.reparameterize(mean, logvar)
-        #     recon_x = self.decode(z).permute(0, 2, 1)
-        #     log_probability = -1 * F.nll_loss(recon_x, x, reduction = "none")
-        #     estimate[i] = log_probability.sum(1) + kld
-        # empirical_mean = estimate.mean()
+        kld = -0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
 
         recon_x = self.decode(mean).permute(0, 2, 1)
-        log_probability = -1 * F.nll_loss(recon_x, x, reduction = "none")
+        logp = -1 * F.nll_loss(recon_x, x, reduction = "none")
+
         # amino acid probabilities are independent conditioned on z
-        return log_probability.sum(1) + kld
+        return logp.sum(1) + kld
 
     def NLL_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?

@@ -24,7 +24,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f"Random seed set to {args.seed}")
 
     # Device
-    if args.device == "cuda" and not torch.cuda.is_available:
+    if args.device == "cuda" and not torch.cuda.is_available():
         raise ValueError("CUDA device specified, but CUDA is not available. Use --device cpu.")
     device = torch.device(args.device)
     print(f"Using device: {device.type.upper()}")

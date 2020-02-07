@@ -65,6 +65,7 @@ class ProteinDataset(Dataset):
     def __init__(self, file, device = None):
         super().__init__()
         self.device = device
+        self.file = file
 
         seqs = SeqIO.parse(file, "fasta")
 
