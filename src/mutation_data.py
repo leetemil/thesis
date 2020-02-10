@@ -19,10 +19,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 
-wt, wt_id = protein_dataset[0]
+wt, weight, wt_seq = protein_dataset[0]
+wt_id = wt_seq.id
 wt = wt.unsqueeze(0)
 
-model = VAE([7890, 1500, 1500, 2, 100, 2000, 7890], NUM_TOKENS).to(device)
+model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
 model.load_state_dict(torch.load("model.torch", map_location=device))
 
 def protein_accuracy(trials = 100, model = model, data = protein_dataset):

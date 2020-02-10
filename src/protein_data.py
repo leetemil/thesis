@@ -66,7 +66,7 @@ class ProteinDataset(Dataset):
         super().__init__()
         self.device = device
 
-        self.seqs = seqs
+        self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
         self.encoded_seqs = torch.stack([seq2idx(seq.upper(), device) for seq in self.seqs])
         self.weights = torch.stack([1.0 / (t != self.encoded_seqs).to(torch.float).mean(1).lt(0.2).to(torch.float).sum() for t in self.encoded_seqs])
 
