@@ -19,8 +19,8 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 
-wild_type, wild_type_id = next(iter(protein_dataset))
-wild_type = wild_type.unsqueeze(0)
+wt, wt_id = next(iter(protein_dataset))
+wt = wt.unsqueeze(0)
 
 model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
 model.load_state_dict(torch.load("model.torch", map_location=device))
@@ -44,7 +44,7 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
         proteins = pickle.load(f)
 
     p = proteins[BLAT_ECOL]
-    offset = protein_dataset.offsets[wild_type_id]
+    offset = protein_dataset.offsets[wt_id]
 
     def h(s, offset = 0):
         wildtype = IUPAC_SEQ2IDX[s[0]]
@@ -57,16 +57,14 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
     df = pd.concat([p.loc[:, ['ddG_stat']], df], axis = 1)
     data_size = len(df)
 
-    wt = torch.stack([wild_type.squeeze(0)] * data_size)
+    mutants = torch.stack([wt.squeeze(0)] * data_size)
     idx = range(data_size), df.location[:data_size]
-    wt[idx] = torch.tensor(df.mutant)
+    mutants[idx] = torch.tensor(df.mutant)
 
-    mutant_logp = model.protein_logp(wt)
-    wild_type_logp = model.protein_logp(wild_type)
+    m_elbo, _, _ = model.protein_logp(mutants)
+    wt_elbo, _, _ = model.protein_logp(wt)
 
-    breakpoint()
-
-    predictions = mutant_logp - wild_type_logp
+    predictions = m_elbo - wt_elbo
     scores = df.ddG_stat
 
     cor, pval = spearmanr(scores, predictions)
