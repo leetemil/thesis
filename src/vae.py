@@ -143,15 +143,16 @@ class VAE(nn.Module):
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters:  {num_params:,}\n")
 
-    def protein_logp(self, x, n_estimates = 500):
+    def protein_logp(self, x):
         mean, logvar = self.encode(x)
-        kld = -0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
+        kld = 0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
 
         recon_x = self.decode(mean).permute(0, 2, 1)
-        logp = -1 * F.nll_loss(recon_x, x, reduction = "none")
+        logp = F.nll_loss(recon_x, x, reduction = "none").mul(-1).sum(1)
+        elbo = logp + kld
 
         # amino acid probabilities are independent conditioned on z
-        return logp.sum(1) + kld
+        return elbo, logp, kld
 
     def nll_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
