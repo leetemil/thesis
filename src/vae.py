@@ -117,12 +117,13 @@ class VAE(nn.Module):
         mean, _ = self.encode(x)
         return self.sample(mean)
 
-    def forward(self, x):
+    def forward(self, x, weights):
         # Forward pass + loss + metrics
         mean, logvar = self.encode(x)
         z = self.reparameterize(mean, logvar)
         recon_x = self.decode(z)
         loss = self.vae_loss(recon_x, x, mean, logvar)
+        weighted_loss = torch.sum(loss * weights)
 
         # Metrics
         metrics_dict = {}
@@ -132,7 +133,7 @@ class VAE(nn.Module):
             acc = (self.decode(mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
             metrics_dict["train_accuracy"] = acc
 
-        return loss, metrics_dict
+        return weighted_loss, metrics_dict
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
@@ -152,16 +153,16 @@ class VAE(nn.Module):
         # amino acid probabilities are independent conditioned on z
         return logp.sum(1) + kld
 
-    def NLL_loss(self, recon_x, x):
+    def nll_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
         # CE = F.cross_entropy(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
-        nll = F.nll_loss(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
+        nll = F.nll_loss(recon_x.permute(0, 2, 1), x, reduction = "none").sum(1)
 
         # amino acid probabilities are independent conditioned on z
         return nll
 
-    def KLD_loss(self, mean, logvar):
-        # KLD is Kullback–Leibler divergence -- how much does one learned
+    def kld_loss(self, mean, logvar):
+        # kld is Kullback–Leibler divergence -- how much does one learned
         # distribution deviate from another, in this specific case the
         # learned distribution from the unit Gaussian
 
@@ -171,10 +172,10 @@ class VAE(nn.Module):
         # - D_{KL} = 0.5 * sum(1 + log(sigma^2) - mean^2 - sigma^2)
         # Note the negative D_{KL} in appendix B of the paper
 
-        KLD = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp())
-        return KLD
+        kld = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp(), dim = 1)
+        return kld
 
     def vae_loss(self, recon_x, x, mean, logvar):
-        nll_loss = self.NLL_loss(recon_x, x)
-        kld_loss = self.KLD_loss(mean, logvar)
+        nll_loss = self.nll_loss(recon_x, x)
+        kld_loss = self.kld_loss(mean, logvar)
         return nll_loss + kld_loss

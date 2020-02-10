@@ -1,6 +1,7 @@
 # First, command-line arguments
 from arguments import args
 
+import random
 import time
 from pathlib import Path
 # import logging
@@ -9,6 +10,7 @@ from pathlib import Path
 import torch
 from torch import optim
 from torch.utils.data import random_split
+from Bio import SeqIO
 
 from vae import VAE
 from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS
@@ -31,13 +33,25 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     # Load data
     print(f"Loading data from {args.data}...")
-    protein_dataset = ProteinDataset(args.data, device)
-    data_len = protein_dataset[0][0].size(0)
+    seqs = list(SeqIO.parse(args.data, "fasta"))
+    data_len = len(seqs)
+    seq_len = len(seqs[0])
 
     # Split into train/validation
-    train_length = int(args.train_ratio * len(protein_dataset))
-    val_length = len(protein_dataset) - train_length
-    train_data, val_data = random_split(protein_dataset, [train_length, val_length])
+    train_length = int(args.train_ratio * data_len)
+    val_length = data_len - train_length
+
+    indices = list(range(data_len))
+    random.shuffle(indices)
+    train_indices = indices[:train_length]
+    val_indices = indices[train_length:]
+
+    train_seqs = [seqs[i] for i in train_indices]
+    val_seqs = [seqs[i] for i in val_indices]
+
+    all_data = ProteinDataset(seqs, device)
+    train_data = ProteinDataset(train_seqs, device)
+    val_data = ProteinDataset(val_seqs, device)
 
     # Construct dataloaders for batches
     train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size, shuffle = True)
@@ -45,7 +59,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     print("Data loaded!")
 
     # Define model and optimizer
-    data_size = data_len * NUM_TOKENS
+    data_size = seq_len * NUM_TOKENS
     model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
@@ -62,7 +76,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     patience = args.patience
     try:
         if args.visualize_interval != "never":
-            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, protein_dataset, args.batch_size, show = show),
+            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show),
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss = train(epoch, model, optimizer, train_loader, args.log_interval)
@@ -74,7 +88,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
-                plot_data(name, args.figure_type, model, protein_dataset, args.batch_size, show = show)
+                plot_data(name, args.figure_type, model, all_data, args.batch_size, show = show)
 
             if improved:
                 # If model improved, save the model

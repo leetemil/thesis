@@ -48,12 +48,13 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
         "Proteobacteria"
     ])
 
-    dataloader = get_protein_dataloader(dataset, batch_size = batch_size, get_ids = True)
+    dataloader = get_protein_dataloader(dataset, batch_size = batch_size, get_seqs = True)
 
     error_count = 0
     scatter_dict = defaultdict(lambda: [])
     with torch.no_grad():
-        for xb, ids in dataloader:
+        for xb, weights, seqs in dataloader:
+            ids = [s.id for s in seqs]
             mean, _ = model.encode(xb)
             mean = mean.cpu()
             for point, ID in zip(mean, ids):
@@ -106,8 +107,6 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
                 plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = label)
             elif pca_dim == 3:
                 axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = label)
-
-    breakpoint()
 
     if name is not None:
         pca_fig.savefig(name.with_suffix(figure_type))
