@@ -93,6 +93,7 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
 
         if name is not None:
             variance_fig.savefig(name.with_name("variance_" + name.name).with_suffix(figure_type))
+        plt.close(variance_fig)
         plt.figure(pca_fig.number)
 
     for label, points in scatter_dict.items():
@@ -106,13 +107,14 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
             elif pca_dim == 3:
                 axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = label)
 
+    breakpoint()
+
     if name is not None:
         pca_fig.savefig(name.with_suffix(figure_type))
 
     if show:
         plt.show()
 
-    plt.close(variance_fig)
     plt.close(pca_fig)
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ args = parser.parse_args()
 
 # Argument postprocessing
 args.train_ratio = 1 - args.val_ratio
-args.results_dir.mkdir()
+args.results_dir.mkdir(exist_ok = True)
 
 print("Arguments given:")
 for arg, value in args.__dict__.items():
