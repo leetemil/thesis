@@ -15,14 +15,14 @@ BLAT_SEQ_FILE = ALIGNPATH / Path('BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-2
 PICKLE_FILE = Path('data/mutation_data.pickle')
 
 # only tested on cpu device ...
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 
-wt, wt_id = next(iter(protein_dataset))
+wt, wt_id = protein_dataset[0]
 wt = wt.unsqueeze(0)
 
-model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
+model = VAE([7890, 1500, 1500, 2, 100, 2000, 7890], NUM_TOKENS).to(device)
 model.load_state_dict(torch.load("model.torch", map_location=device))
 
 def protein_accuracy(trials = 100, model = model, data = protein_dataset):
@@ -59,7 +59,7 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
 
     mutants = torch.stack([wt.squeeze(0)] * data_size)
     idx = range(data_size), df.location[:data_size]
-    mutants[idx] = torch.tensor(df.mutant)
+    mutants[idx] = torch.tensor(df.mutant, device = device)
 
     m_elbo, _, _ = model.protein_logp(mutants)
     wt_elbo, _, _ = model.protein_logp(wt)
@@ -67,7 +67,7 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
     predictions = m_elbo - wt_elbo
     scores = df.ddG_stat
 
-    cor, pval = spearmanr(scores, predictions)
+    cor, pval = spearmanr(scores, predictions.cpu())
 
     return cor, pval
 
