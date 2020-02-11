@@ -64,7 +64,7 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
     mutants[idx] = torch.tensor(df.mutant, device = device)
 
     m_elbo, m_logp, m_kld = model.protein_logp(mutants)
-    wt_elbo, wt_logp, wt_kld = model.protein_logp(wt)
+    wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
     predictions = m_elbo - wt_elbo
     scores = df.ddG_stat
