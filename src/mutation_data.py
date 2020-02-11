@@ -9,10 +9,13 @@ import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 
 ALIGNPATH = Path('data/alignments')
-BLAT_ECOL = 'BLAT_ECOLX_Palzkill2012'
 BLAT_SEQ_FILE = ALIGNPATH / Path('BLAT_ECOLX_1_b0.5.a2m')
 BLAT_SEQ_FILE = ALIGNPATH / Path('BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m')
 PICKLE_FILE = Path('data/mutation_data.pickle')
+
+BLAT_ECOL = 'BLAT_ECOLX_Palzkill2012'
+BLAT_ECOL = 'BLAT_ECOLX_Ranganathan2015'
+METRIC_COLUMN = '2500'
 
 # only tested on cpu device ...
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -56,18 +59,17 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
 
     df = pd.DataFrame([h(s, offset) for s in p.mutant], columns = ['wildtype', 'mutant', 'location'])
 
-    df = pd.concat([p.loc[:, ['ddG_stat']], df], axis = 1)
+    df = pd.concat([p.loc[:, [METRIC_COLUMN]], df], axis = 1)
     data_size = len(df)
 
     mutants = torch.stack([wt.squeeze(0)] * data_size)
     idx = range(data_size), df.location[:data_size]
     mutants[idx] = torch.tensor(df.mutant, device = device)
-
     m_elbo, m_logp, m_kld = model.protein_logp(mutants)
     wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
     predictions = m_elbo - wt_elbo
-    scores = df.ddG_stat
+    scores = df[METRIC_COLUMN]
 
     # plt.scatter(predictions, scores)
     # plt.show()
