@@ -23,15 +23,15 @@ def get_pfam_label_dict():
 
 PFAM_LABEL_DICT = get_pfam_label_dict()
 
-def get_BLAT_label_dict():
-    file = Path("data/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m")
-
+def get_BLAT_label_dict(file):
     with open(file, "r") as f:
         lines = f.readlines()
 
     return dict([line[:-1].split(": ") for line in lines])
 
-BLAT_LABEL_DICT = get_BLAT_label_dict()
+BLAT_LABEL_DICT = get_BLAT_label_dict(Path("data/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m"))
+
+BLAT_HMMERBIT_LABEL_DICT = get_BLAT_label_dict(Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105_LABELS.a2m"))
 
 def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
     pca_fig = plt.figure()
@@ -59,7 +59,7 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
             mean = mean.cpu()
             for point, ID in zip(mean, ids):
                 try:
-                    label = BLAT_LABEL_DICT[ID]
+                    label = BLAT_HMMERBIT_LABEL_DICT[ID]
                     if only_subset_labels:
                         if label in subset_labels:
                             scatter_dict[label].append(point)

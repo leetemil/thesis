@@ -1,3 +1,4 @@
+from pathlib import Path
 from collections import OrderedDict
 
 import numpy as np
@@ -91,15 +92,21 @@ def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")
     uniprot = UniProt()
 
-    with open(outfile, "r") as out:
-        lines = out.readlines()
+    if outfile.exists():
+        with open(outfile, "r") as out:
+            lines = out.readlines()
+    else:
+        lines = []
 
     with open(outfile, "a") as out:
         for i, seq in enumerate(seqs):
             if i < len(lines):
                 continue
 
-            ID = seq.id.split("/")[0].replace("UniRef100_", "")
+            if "|" in seq.id:
+                ID = seq.id.split("|")[1]
+            else:
+                ID = seq.id.split("/")[0].replace("UniRef100_", "")
             print(f"Doing ID {i:6}, {ID + ':':15} ", end = "")
             try:
                 # Try get_df
@@ -113,7 +120,7 @@ def retrieve_labels(infile, outfile):
                     columns, values = uniprot.search(name, database = "taxonomy", limit = 1)[:-1].split("\n")
                     lineage_idx = columns.split("\t").index("Lineage")
                     label = values.split("\t")[lineage_idx].split("; ")[:2][-1]
-            except KeyError:
+            except:
                 try:
                     columns, values = uniprot.search(ID, database = "uniparc", limit = 1)[:-1].split("\n")
                     name_idx = columns.split("\t").index("Organisms")
@@ -122,11 +129,19 @@ def retrieve_labels(infile, outfile):
                     lineage_idx = columns.split("\t").index("Lineage")
                     label = values.split("\t")[lineage_idx].split("; ")[:2][-1]
                 except:
-                    print("Couldn't handle it!")
-                    breakpoint()
+                    try:
+                        columns, values = uniprot.search(ID, database = "uniparc", limit = 1)[:-1].split("\n")
+                        name_idx = columns.split("\t").index("Organisms")
+                        name = values.split("\t")[name_idx].split("; ")[0].split(" ")[0]
+                        columns, values = uniprot.search(name, database = "taxonomy", limit = 1)[:-1].split("\n")
+                        lineage_idx = columns.split("\t").index("Lineage")
+                        label = values.split("\t")[lineage_idx].split("; ")[:2][-1]
+                    except:
+                        print("Couldn't handle it!")
+                        breakpoint()
 
             print(f"{label}")
             out.write(f"{seq.id}: {label}\n")
 
 if __name__ == "__main__":
-    retrieve_labels("data/alignments/BLAT_ECOLX_1_b0.5.a2m", "data/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m")
+    retrieve_labels(Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48.a2m"), Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48_LABELS.a2m"))
