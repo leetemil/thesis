@@ -62,30 +62,30 @@ def process_seq(seq, device = None):
     return seq_id, seq_offset, seq_encoded
 
 class ProteinDataset(Dataset):
-    def __init__(self, file, device = None):
+    def __init__(self, seqs, device = None):
         super().__init__()
         self.device = device
-        self.file = file
 
-        seqs = SeqIO.parse(file, "fasta")
-
-        ids, offsets, encoded = list(zip(*[process_seq(s, self.device) for s in  seqs]))
-        self.ids = ids
-        self.offsets = {i: os for i, os in zip(ids, offsets)}
-        self.encoded_seqs = encoded
+        self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
+        self.encoded_seqs = torch.stack([seq2idx(seq.upper(), device) for seq in self.seqs])
+        self.weights = torch.stack([1.0 / (t != self.encoded_seqs).to(torch.float).mean(1).lt(0.2).to(torch.float).sum() for t in self.encoded_seqs])
 
     def __len__(self):
         return len(self.encoded_seqs)
 
     def __getitem__(self, i):
-        return self.encoded_seqs[i], self.ids[i]
+        return self.encoded_seqs[i], self.weights[i], self.seqs[i]
 
-def discard_ids_collate(tensors):
-    tensors, ids = zip(*tensors)
-    return torch.stack(tensors)
+def get_seqs_collate(tensors):
+    encoded_seq, weights, seq = zip(*tensors)
+    return torch.stack(encoded_seq), torch.stack(weights), list(seq)
 
-def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_ids = False):
-    return DataLoader(dataset, shuffle = shuffle, batch_size = batch_size, collate_fn = None if get_ids else discard_ids_collate)
+def discard_seqs_collate(tensors):
+    encoded_seq, weights, seq = zip(*tensors)
+    return torch.stack(encoded_seq), torch.stack(weights)
+
+def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_seqs = False):
+    return DataLoader(dataset, batch_size = batch_size, shuffle = False, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)
 
 def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")

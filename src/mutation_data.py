@@ -19,7 +19,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 
-wt, wt_id = protein_dataset[0]
+wt, weight, wt_seq = protein_dataset[0]
+wt_id = wt_seq.id
 wt = wt.unsqueeze(0)
 
 model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
@@ -44,7 +45,8 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
         proteins = pickle.load(f)
 
     p = proteins[BLAT_ECOL]
-    offset = protein_dataset.offsets[wt_id]
+    wt, weight, wt_seq = data[0]
+    offset = int(wt_seq.id.split("/")[1].split("-")[0])
 
     def h(s, offset = 0):
         wildtype = IUPAC_SEQ2IDX[s[0]]

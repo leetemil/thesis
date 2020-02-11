@@ -34,14 +34,14 @@ def train(epoch, model, optimizer, train_loader, log_interval):
     train_loss = 0
     train_count = 0
     start_time = time.time()
-    for batch_idx, xb in enumerate(train_loader):
+    for batch_idx, (xb, weights) in enumerate(train_loader):
         batch_size, seq_len = xb.shape
 
         # Reset gradient for next batch
         optimizer.zero_grad()
 
         # Push whole batch of data through model.forward()
-        loss, metrics_dict = model(xb)
+        loss, metrics_dict = model(xb, weights)
 
         # Calculate the gradient of the loss w.r.t. the graph leaves
         loss.backward()
@@ -67,11 +67,11 @@ def validate(epoch, model, validation_loader):
     validation_loss = 0
     validation_count = 0
     with torch.no_grad():
-        for i, xb in enumerate(validation_loader):
+        for i, (xb, weights) in enumerate(validation_loader):
             batch_size, seq_len = xb.shape
 
             # Push whole batch of data through model.forward()
-            loss, metrics_dict = model(xb)
+            loss, metrics_dict = model(xb, weights)
 
             validation_loss += loss.item()
             validation_count += batch_size * seq_len
