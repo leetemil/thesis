@@ -45,7 +45,8 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
         proteins = pickle.load(f)
 
     p = proteins[BLAT_ECOL]
-    offset = protein_dataset.offsets[wt_id]
+    wt, weight, wt_seq = data[0]
+    offset = int(wt_seq.id.split("/")[1].split("-")[0])
 
     def h(s, offset = 0):
         wildtype = IUPAC_SEQ2IDX[s[0]]
