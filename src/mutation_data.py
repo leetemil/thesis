@@ -22,7 +22,7 @@ protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 wt, wt_id = protein_dataset[0]
 wt = wt.unsqueeze(0)
 
-model = VAE([7890, 1500, 1500, 2, 100, 2000, 7890], NUM_TOKENS).to(device)
+model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
 model.load_state_dict(torch.load("model.torch", map_location=device))
 
 def protein_accuracy(trials = 100, model = model, data = protein_dataset):
@@ -61,18 +61,21 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
     idx = range(data_size), df.location[:data_size]
     mutants[idx] = torch.tensor(df.mutant, device = device)
 
-    m_elbo, _, _ = model.protein_logp(mutants)
-    wt_elbo, _, _ = model.protein_logp(wt)
+    m_elbo, m_logp, m_kld = model.protein_logp(mutants)
+    wt_elbo, wt_logp, wt_kld = model.protein_logp(wt)
 
     predictions = m_elbo - wt_elbo
     scores = df.ddG_stat
+
+    # plt.scatter(predictions, scores)
+    # plt.show()
 
     cor, pval = spearmanr(scores, predictions.cpu())
 
     return cor, pval
 
 with torch.no_grad():
-    cor, _ = mutation_effect_prediction()
+    cor, pval = mutation_effect_prediction()
     # protein_accuracy()
 
-    print(f'Spearman\'s Rho: {cor:5.3f}.')
+    print(f'Spearman\'s Rho: {cor:5.3f}. Pval: {pval}')
