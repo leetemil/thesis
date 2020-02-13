@@ -50,7 +50,6 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
 
     dataloader = get_protein_dataloader(dataset, batch_size = batch_size, get_seqs = True)
 
-    error_count = 0
     scatter_dict = defaultdict(lambda: [])
     with torch.no_grad():
         for xb, weights, seqs in dataloader:
@@ -66,11 +65,13 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
                     else:
                         scatter_dict[label].append(point)
                 except KeyError:
-                    error_count += 1
+                    if not only_subset_labels:
+                        scatter_dict["Others"].append(point)
 
     plt.title(f"Encoded points")
 
-    all_points = torch.stack(list(itertools.chain(*scatter_dict.values())))
+    all_points_list = list(itertools.chain(*scatter_dict.values()))
+    all_points = torch.stack(all_points_list) if len(all_points_list) > 0 else torch.zeros(0, 0)
     if all_points.size(1) > 2:
         if pca_dim == 3:
             axis = Axes3D(pca_fig)

@@ -1,5 +1,7 @@
 from pathlib import Path
 from collections import OrderedDict
+import pickle
+import random
 
 import numpy as np
 import torch
@@ -76,6 +78,47 @@ class ProteinDataset(Dataset):
 
     def __getitem__(self, i):
         return self.encoded_seqs[i], self.weights[i], self.seqs[i]
+
+def get_datasets(file, device, train_ratio):
+    saved_datasets = file.with_suffix(".saved_datasets")
+    if saved_datasets.exists():
+        print(f"Loading data from preprocessed {saved_datasets}...")
+        return get_datasets_from_saved_data(saved_datasets)
+    else:
+        print(f"Loading raw data from {file}...")
+        data = get_datasets_from_raw_data(file, device, train_ratio)
+        print(f"Saving data to {saved_datasets}...")
+        with open(saved_datasets, "wb") as f:
+            pickle.dump(data, f)
+        return data
+
+def get_datasets_from_saved_data(saved_datasets):
+    with open(saved_datasets, "rb") as f:
+        data = pickle.load(f)
+    return data
+
+def get_datasets_from_raw_data(file, device, train_ratio):
+    seqs = list(SeqIO.parse(file, "fasta"))
+    data_len = len(seqs)
+    seq_len = len(seqs[0])
+
+    # Split into train/validation
+    train_length = int(train_ratio * data_len)
+    val_length = data_len - train_length
+
+    indices = list(range(data_len))
+    random.shuffle(indices)
+    train_indices = indices[:train_length]
+    val_indices = indices[train_length:]
+
+    train_seqs = [seqs[i] for i in train_indices]
+    val_seqs = [seqs[i] for i in val_indices]
+
+    all_data = ProteinDataset(seqs, device)
+    train_data = ProteinDataset(train_seqs, device)
+    val_data = ProteinDataset(val_seqs, device)
+    return all_data, train_data, val_data
+
 
 def get_seqs_collate(tensors):
     encoded_seq, weights, seq = zip(*tensors)
