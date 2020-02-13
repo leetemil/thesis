@@ -4,67 +4,130 @@ import torch
 import numpy as np
 from vae import VAE
 from pathlib import Path
-from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
+from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 
+import argparse
+from datetime import datetime
+
+parser = argparse.ArgumentParser(description = "Variational Auto-Encoder on aligned protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
+
+# Required arguments
+parser.add_argument("protein_family", type = str, help = "Protein family alignment data")
+parser.add_argument("data_sheet", type = str, help = "Protein family data sheet in mutation_data.pickle.")
+parser.add_argument("metric", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
+
+args = parser.parse_args()
+
+print("Arguments given:")
+for arg, value in args.__dict__.items():
+	print(f"  {arg}: {value}")
+print("")
+
+"""
+BRCA1_HUMAN_BRCT
+B3VI55_LIPSTSTABLE
+BLAT_ECOLX_Ranganathan2015
+F7YBW7_MESOW_vae
+RL401_YEAST_Fraser2016
+CALM1_HUMAN_Roth2017
+parEparD_Laub2015_all
+UBC9_HUMAN_Roth2017
+PABP_YEAST_Fields2013-doubles
+SUMO1_HUMAN_Roth2017
+RASH_HUMAN_Kuriyan
+BG_STRSQ_hmmerbit
+RL401_YEAST_Bolon2014
+MK01_HUMAN_Johannessen
+HSP82_YEAST_Bolon2016
+YAP1_HUMAN_Fields2012-singles
+BF520_env_Bloom2018
+UBE4B_MOUSE_Klevit2013-singles
+tRNA_mutation_effect
+HG_FLU_Bloom2016
+B3VI55_LIPST_Whitehead2015
+TPK1_HUMAN_Roth2017
+BLAT_ECOLX_Palzkill2012
+GAL4_YEAST_Shendure2015
+TIM_SULSO_b0
+POLG_HCVJF_Sun2014
+HIS7_YEAST_Kondrashov2017
+TPMT_HUMAN_Fowler2018
+DLG4_RAT_Ranganathan2012
+MTH3_HAEAESTABILIZED_Tawfik2015
+AMIE_PSEAE_Whitehead
+BLAT_ECOLX_Tenaillon2013
+BLAT_ECOLX_Ostermeier2014
+BRCA1_HUMAN_RING
+P84126_THETH_b0
+PTEN_HUMAN_Fowler2018
+PABP_YEAST_Fields2013-singles
+IF1_ECOLI_Kishony
+PA_FLU_Sun2015
+RL401_YEAST_Bolon2013
+KKA2_KLEPN_Mikkelsen2014
+POL_HV1N5-CA_Ndungu2014
+TIM_THEMA_b0
+BG505_env_Bloom2018
+"""
+
 ALIGNPATH = Path('data/alignments')
-BLAT_SEQ_FILE = ALIGNPATH / Path('BLAT_ECOLX_1_b0.5.a2m')
-BLAT_SEQ_FILE = ALIGNPATH / Path('BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m')
 PICKLE_FILE = Path('data/mutation_data.pickle')
 
-BLAT_ECOL = 'BLAT_ECOLX_Palzkill2012'
-BLAT_ECOL = 'BLAT_ECOLX_Ranganathan2015'
-METRIC_COLUMN = '2500'
+SHEET = args.data_sheet#'PABP_YEAST_Fields2013-singles'
+PROTEIN_FAMILY = ALIGNPATH / Path(args.protein_family)
+METRIC_COLUMN = args.metric
 
 # only tested on cpu device ...
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
+protein_dataset, *_ = get_datasets(PROTEIN_FAMILY, device, None)
+print('Data loaded')
 
-wt, weight, wt_seq = protein_dataset[0]
+wt, _, wt_seq = protein_dataset[0]
 wt_id = wt_seq.id
+size = len(wt) * NUM_TOKENS
 wt = wt.unsqueeze(0)
 
-model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
+model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
 model.load_state_dict(torch.load("model.torch", map_location=device))
 
 def protein_accuracy(trials = 100, model = model, data = protein_dataset):
     model.eval()
-    fname = data.file.stem
-    print(f'{fname}: Prediction accuracies for {trials} proteins.')
+    print(f'{wt_id}: Prediction accuracies for {trials} proteins.')
     data = iter(data)
     for _ in range(trials):
-        protein, name = next(data)
-        wtr = model.reconstruct(protein.unsqueeze(0)).squeeze(0).numpy()
-        wt = protein.numpy()
-        loss = 1 - (wtr == wt).mean()
-        print(f'{name:<60s}{100 * loss:>4.1f}%')
+        p, _,  p_seq = next(data)
+        p_recon = model.reconstruct(p.unsqueeze(0)).squeeze(0).numpy()
+        p = p.numpy()
+        loss = 1 - (p == p_recon).mean()
+        print(f'{p_seq.id:<60s}{100 * loss:>4.1f}%')
 
 def mutation_effect_prediction(model = model, data = protein_dataset):
     model.eval()
 
     with open(PICKLE_FILE, 'rb') as f:
         proteins = pickle.load(f)
+        p = proteins[SHEET]
 
-    p = proteins[BLAT_ECOL]
-    wt, weight, wt_seq = data[0]
+    wt, _, wt_seq = data[0]
+
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
-
-    def h(s, offset = 0):
+    def h(s, offset = offset):
         wildtype = IUPAC_SEQ2IDX[s[0]]
         mutant = IUPAC_SEQ2IDX[s[-1]]
         location = int(s[1:-1]) - offset
         return wildtype, mutant, location
 
-    df = pd.DataFrame([h(s, offset) for s in p.mutant], columns = ['wildtype', 'mutant', 'location'])
+    df = pd.DataFrame([h(s) for s in p.mutant], columns = ['wt', 'mt', 'loc'])
 
     df = pd.concat([p.loc[:, [METRIC_COLUMN]], df], axis = 1)
     data_size = len(df)
 
     mutants = torch.stack([wt.squeeze(0)] * data_size)
-    idx = range(data_size), df.location[:data_size]
-    mutants[idx] = torch.tensor(df.mutant, device = device)
+    idx = range(data_size), df['loc'][:data_size]
+    mutants[idx] = torch.tensor(df['mt'], device = device)
     m_elbo, m_logp, m_kld = model.protein_logp(mutants)
     wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
@@ -80,6 +143,6 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
 
 with torch.no_grad():
     cor, pval = mutation_effect_prediction()
-    # protein_accuracy()
+    protein_accuracy()
 
     print(f'Spearman\'s Rho: {cor:5.3f}. Pval: {pval}')

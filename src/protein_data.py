@@ -81,7 +81,7 @@ class ProteinDataset(Dataset):
 def get_datasets(file, device, train_ratio):
     saved_datasets = file.with_suffix(".saved_datasets")
     if saved_datasets.exists():
-        print(f"Loading data from preprocessed {saved_datasets}...")
+        print(f"Loading data from preprocessed {saved_datasets}")
         return get_datasets_from_saved_data(saved_datasets, device)
     else:
         print(f"Loading raw data from {file}...")
