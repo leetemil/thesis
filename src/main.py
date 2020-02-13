@@ -61,7 +61,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     patience = args.patience
     try:
         if args.visualize_interval != "never":
-            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show, only_subset_labels = False)
+            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show)
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss = train(epoch, model, optimizer, train_loader, args.log_interval)
@@ -73,7 +73,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
-                plot_data(name, args.figure_type, model, all_data, args.batch_size, show = show, only_subset_labels = False)
+                plot_data(name, args.figure_type, model, all_data, args.batch_size, show = show)
 
             if improved:
                 # If model improved, save the model

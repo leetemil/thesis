@@ -131,7 +131,7 @@ class VAE(nn.Module):
         # Accuracy
         with torch.no_grad():
             acc = (self.decode(mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
-            metrics_dict["train_accuracy"] = acc
+            metrics_dict["accuracy"] = acc
 
         return weighted_loss, metrics_dict
 
