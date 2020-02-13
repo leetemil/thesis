@@ -1,6 +1,5 @@
 from pathlib import Path
 from collections import OrderedDict
-import pickle
 import random
 
 import numpy as np
@@ -83,18 +82,16 @@ def get_datasets(file, device, train_ratio):
     saved_datasets = file.with_suffix(".saved_datasets")
     if saved_datasets.exists():
         print(f"Loading data from preprocessed {saved_datasets}...")
-        return get_datasets_from_saved_data(saved_datasets)
+        return get_datasets_from_saved_data(saved_datasets, device)
     else:
         print(f"Loading raw data from {file}...")
         data = get_datasets_from_raw_data(file, device, train_ratio)
         print(f"Saving data to {saved_datasets}...")
-        with open(saved_datasets, "wb") as f:
-            pickle.dump(data, f)
+        torch.save(data, saved_datasets)
         return data
 
-def get_datasets_from_saved_data(saved_datasets):
-    with open(saved_datasets, "rb") as f:
-        data = pickle.load(f)
+def get_datasets_from_saved_data(saved_datasets, device):
+    data = torch.load(saved_datasets, map_location = device)
     return data
 
 def get_datasets_from_raw_data(file, device, train_ratio):
@@ -118,7 +115,6 @@ def get_datasets_from_raw_data(file, device, train_ratio):
     train_data = ProteinDataset(train_seqs, device)
     val_data = ProteinDataset(val_seqs, device)
     return all_data, train_data, val_data
-
 
 def get_seqs_collate(tensors):
     encoded_seq, weights, seq = zip(*tensors)
