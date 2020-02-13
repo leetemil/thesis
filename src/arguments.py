@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from datetime import datetime
+from typing import Union
 
 parser = argparse.ArgumentParser(description = "Variational Auto-Encoder on aligned protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
 
@@ -14,7 +15,7 @@ parser.add_argument("--batch_size", type = int, default = 128, help = "Input bat
 parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
 parser.add_argument("--device", type = str, default = "cuda", choices = ["cpu", "cuda"], help = "Which device to use (CPU or CUDA for GPU).")
 parser.add_argument("--patience", type = int, default = 50, help = "Training will stop if the model does not improve on the validation set for this many epochs.")
-parser.add_argument("--log_interval", type = float, default = 1, help = "How many seconds to wait between training status logging. 0 to disable loading bar progress.")
+parser.add_argument("--log_interval", type = lambda x: x if x == "batch" else float(x), default = 1, help = "How many seconds to wait between training status logging. 0 to disable loading bar progress. \"batch\" for log at every batch.")
 parser.add_argument("--visualize_interval", type = str, default = "improvement", choices = ["always", "improvement", "never"], help = "Visualize the output at every epoch (always), only at validation loss improvement or never.")
 parser.add_argument("--visualize_style", type = str, default = "save", choices = ["save", "show", "both"], help = "Save or show the visualization, or both.")
 parser.add_argument("--figure_type", type = str, default = ".png", help = "Filetype of the visualization figures.")
