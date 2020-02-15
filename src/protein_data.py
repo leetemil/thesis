@@ -1,6 +1,8 @@
 from pathlib import Path
 from collections import OrderedDict
 import random
+import multiprocessing
+import threading
 
 import numpy as np
 import torch
@@ -127,6 +129,73 @@ def discard_seqs_collate(tensors):
 def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_seqs = False):
     return DataLoader(dataset, batch_size = batch_size, shuffle = False, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)
 
+def retrieve_label_from_uniprot_df(ID):
+    uniprot = UniProt()
+    df = uniprot.get_df(ID)
+    label = df["Taxonomic lineage (PHYLUM)"][0]
+
+    if type(label) == np.float64 and np.isnan(label):
+        raise ValueError("Label was NaN")
+    return label
+
+def retrieve_label_from_uniparc(ID):
+    uniprot = UniProt()
+    columns, values = uniprot.search(ID, database = "uniparc", limit = 1)[:-1].split("\n")
+    name_idx = columns.split("\t").index("Organisms")
+    name = values.split("\t")[name_idx].split("; ")[0]
+    columns, values = uniprot.search(name, database = "taxonomy", limit = 1)[:-1].split("\n")
+    lineage_idx = columns.split("\t").index("Lineage")
+    label = values.split("\t")[lineage_idx].split("; ")[:2][-1]
+    return label
+
+lock = threading.Lock()
+def retrieve_label(ID):
+    try:
+        label = retrieve_label_from_uniprot_df(ID)
+    except:
+        label = retrieve_label_from_uniparc(ID)
+    return label
+
+def retrieve_many_labels(seqs, outlist):
+    thread_list = []
+    for seq in seqs:
+        ID = seq.id.split("/")[0].split("|")[:2][-1]
+        label = retrieve_label(ID)
+        thread_list.append((ID, label))
+        print(".", end = "")
+
+    with lock:
+        outlist += thread_list
+        print(f"List: {thread_list}")
+
+def parallel_retrieve_labels(infile, outfile):
+    print("Creating threads...")
+    seqs = list(SeqIO.parse(infile, "fasta"))
+    threads = []
+    results = []
+    chunk_size = 10
+    for i in range(len(seqs) // chunk_size):
+        args = [seqs[i * chunk_size:(i + 1) * chunk_size], results]
+        threads.append(threading.Thread(target = retrieve_many_labels, args = args))
+
+    print(f"Created {len(threads)} threads.")
+    print("Starting threads...")
+    for thread in threads:
+        thread.start()
+
+    print("Joining on threads...")
+    joined = 0
+    for thread in threads:
+        thread.join()
+        joined += 1
+        print(f"Joined on {joined} threads.")
+
+    breakpoint()
+    with open(outfile, "w") as out:
+        pass
+
+    out.close()
+
 def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")
     uniprot = UniProt()
@@ -183,4 +252,6 @@ def retrieve_labels(infile, outfile):
             out.write(f"{seq.id}: {label}\n")
 
 if __name__ == "__main__":
-    retrieve_labels(Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48.a2m"), Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48_LABELS.a2m"))
+    infile = Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48.a2m")
+    outfile = Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48_LABELS.a2m")
+    parallel_retrieve_labels(infile, outfile)
