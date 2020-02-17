@@ -17,6 +17,7 @@ class VAE(nn.Module):
         self.layer_sizes = layer_sizes
         self.num_tokens = num_tokens
         self.dropout = dropout
+        self.seq_len = self.layer_sizes[0] // self.num_tokens
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -58,7 +59,8 @@ class VAE(nn.Module):
         E_dim = 40
 
         # W_tilde_3: E_dim (40) x size of h_2 (2000)
-        self.weight = nn.Parameter(torch.randn(E_dim, self.layer_sizes[-2]))
+        self.weight = nn.Parameter(torch.randn(self.seq_len, E_dim, self.layer_sizes[-2]))
+        self.bias = nn.Parameter(torch.randn(self.num_tokens, self.seq_len))
 
         # C: q (30) x E (40)
         self.dictionary = nn.Parameter(torch.randn(self.num_tokens, E_dim))
@@ -67,7 +69,7 @@ class VAE(nn.Module):
         self.inverse_temp_param = nn.Parameter(torch.randn(1))
 
         # S_tilde: h_2/k (500) x L (263)
-        self.scale_param = nn.Parameter(torch.randn(self.layer_sizes[-2] // 4, self.layer_sizes[0] // self.num_tokens) * 4 - 12.36)
+        self.scale_param = nn.Parameter(torch.randn(self.layer_sizes[-2] // 4, self.seq_len) * 4 - 12.36)
 
     def encode(self, x):
         x = F.one_hot(x, self.num_tokens).to(torch.float).flatten(1)
@@ -114,7 +116,20 @@ class VAE(nn.Module):
         return mean + eps * std
 
     def insane_decode(self, z):
-        breakpoint()
+        h2 = self.decode_layers[:-1](z)
+        s = self.scale_matrix()
+        sh = h2[:, :, None] * s[None, :, :]
+        inv_temp = self.inverse_temp()
+        cw = inv_temp * (self.dictionary @ self.weight)
+
+        result = torch.zeros(sh.size(0), cw.size(1), cw.size(0), device = next(self.parameters()).device)
+        for b in range(sh.size(0)):
+            for i in range(cw.size(0)):
+                result[b, :, i] = cw[i] @ sh[b, :, i]
+        result += b
+        result = result.permute(0, 2, 1)
+        softmax = torch.log_softmax(result, dim = -1)
+        return softmax
 
     def decode(self, z):
         # Send z through all decode layers
@@ -141,7 +156,7 @@ class VAE(nn.Module):
         mean, logvar = self.encode(x)
         z = self.reparameterize(mean, logvar)
         recon_x = self.insane_decode(z)
-        recon_x = self.decode(z)
+        # recon_x = self.decode(z)
         loss = self.vae_loss(recon_x, x, mean, logvar)
         weighted_loss = torch.sum(loss * weights)
 
@@ -202,10 +217,10 @@ class VAE(nn.Module):
         return nll_loss + kld_loss
 
     #! CRAZY MODE
-    def scale_matrix():
+    def scale_matrix(self):
         s1 = 1 / (1 + self.scale_param.exp())
         s2 = torch.stack([s1, s1, s1, s1])
-        return s2.transpose(0, 1).reshape(-1, self.layer_sizes[0] / self.num_tokens)
+        return s2.transpose(0, 1).reshape(-1, self.layer_sizes[0] // self.num_tokens)
 
-    def inverse_temp():
+    def inverse_temp(self):
         return F.softplus(self.inverse_temp_param)
