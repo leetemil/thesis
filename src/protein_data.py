@@ -53,17 +53,16 @@ IUPAC_IDX2SEQ = OrderedDict(IUPAC_IDX_AMINO_PAIRS)
 IUPAC_SEQ2IDX["-"] = IUPAC_SEQ2IDX["<mask>"]
 IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 
+# Add small letters as the same as mask
+for amino, idx in IUPAC_AMINO_IDX_PAIRS:
+    if len(amino) == 1:
+        IUPAC_SEQ2IDX[amino] = IUPAC_SEQ2IDX["<mask>"]
+
 def seq2idx(seq, device = None):
     return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq], device = device)
 
 def idx2seq(idxs):
     return "".join([IUPAC_IDX2SEQ[i] for i in idxs])
-
-def process_seq(seq, device = None):
-    seq_id = seq.id
-    seq_offset = int(seq.id.split("/")[1].split('-')[0])
-    seq_encoded = seq2idx(seq.upper(), device)
-    return seq_id, seq_offset, seq_encoded
 
 class ProteinDataset(Dataset):
     def __init__(self, seqs, device = None):
@@ -71,7 +70,7 @@ class ProteinDataset(Dataset):
         self.device = device
 
         self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
-        self.encoded_seqs = torch.stack([seq2idx(seq.upper(), device) for seq in self.seqs])
+        self.encoded_seqs = torch.stack([seq2idx(seq, device) for seq in self.seqs])
         self.weights = torch.stack([1.0 / (t != self.encoded_seqs).to(torch.float).mean(1).lt(0.2).to(torch.float).sum() for t in self.encoded_seqs])
 
     def __len__(self):
