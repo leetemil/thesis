@@ -56,7 +56,7 @@ IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 # Add small letters as the same as mask
 for amino, idx in IUPAC_AMINO_IDX_PAIRS:
     if len(amino) == 1:
-        IUPAC_SEQ2IDX[amino] = IUPAC_SEQ2IDX["<mask>"]
+        IUPAC_SEQ2IDX[amino.lower()] = IUPAC_SEQ2IDX["<mask>"]
 
 def seq2idx(seq, device = None):
     return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq], device = device)
