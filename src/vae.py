@@ -53,6 +53,22 @@ class VAE(nn.Module):
 
         self.decode_layers = nn.Sequential(*decode_layers)
 
+        #! CRAZY MODE
+
+        E_dim = 40
+
+        # W_tilde_3: E_dim (40) x size of h_2 (2000)
+        self.weight = nn.Parameter(torch.randn(E_dim, self.layer_sizes[-2]))
+
+        # C: q (30) x E (40)
+        self.dictionary = nn.Parameter(torch.randn(self.num_tokens, E_dim))
+
+        # Lambda tilde : scalar
+        self.inverse_temp_param = nn.Parameter(torch.randn(1))
+
+        # S_tilde: h_2/k (500) x L (263)
+        self.scale_param = nn.Parameter(torch.randn(self.layer_sizes[-2] // 4, self.layer_sizes[0] // self.num_tokens) * 4 - 12.36)
+
     def encode(self, x):
         x = F.one_hot(x, self.num_tokens).to(torch.float).flatten(1)
 
@@ -97,6 +113,9 @@ class VAE(nn.Module):
         # Sample by multiplying the unit Gaussian with standard deviation and adding the mean
         return mean + eps * std
 
+    def insane_decode(self, z):
+        breakpoint()
+
     def decode(self, z):
         # Send z through all decode layers
         z = self.decode_layers(z)
@@ -121,6 +140,7 @@ class VAE(nn.Module):
         # Forward pass + loss + metrics
         mean, logvar = self.encode(x)
         z = self.reparameterize(mean, logvar)
+        recon_x = self.insane_decode(z)
         recon_x = self.decode(z)
         loss = self.vae_loss(recon_x, x, mean, logvar)
         weighted_loss = torch.sum(loss * weights)
@@ -180,3 +200,12 @@ class VAE(nn.Module):
         nll_loss = self.nll_loss(recon_x, x)
         kld_loss = self.kld_loss(mean, logvar)
         return nll_loss + kld_loss
+
+    #! CRAZY MODE
+    def scale_matrix():
+        s1 = 1 / (1 + self.scale_param.exp())
+        s2 = torch.stack([s1, s1, s1, s1])
+        return s2.transpose(0, 1).reshape(-1, self.layer_sizes[0] / self.num_tokens)
+
+    def inverse_temp():
+        return F.softplus(self.inverse_temp_param)
