@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser(description = "Mutation prediction and analysis
 parser.add_argument("protein_family", type = str, help = "Protein family alignment data")
 parser.add_argument("data_sheet", type = str, help = "Protein family data sheet in mutation_data.pickle.")
 parser.add_argument("metric", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
+parser.add_argument("model_path", type = Path, help = "The path of the model")
 
 args = parser.parse_args()
 
@@ -78,11 +79,12 @@ PICKLE_FILE = Path('data/mutation_data.pickle')
 SHEET = args.data_sheet#'PABP_YEAST_Fields2013-singles'
 PROTEIN_FAMILY = ALIGNPATH / Path(args.protein_family)
 METRIC_COLUMN = args.metric
+MODEL = args.model_path
 
 # only tested on cpu device ...
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-protein_dataset, *_ = get_datasets(PROTEIN_FAMILY, device, None)
+protein_dataset, *_ = get_datasets(PROTEIN_FAMILY, device, 0.8)
 print('Data loaded')
 
 wt, _, wt_seq = protein_dataset[0]
@@ -91,7 +93,7 @@ size = len(wt) * NUM_TOKENS
 wt = wt.unsqueeze(0)
 
 model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
-model.load_state_dict(torch.load("model.torch", map_location=device))
+model.load_state_dict(torch.load(MODEL, map_location=device))
 
 def protein_accuracy(trials = 100, model = model, data = protein_dataset):
     model.eval()
@@ -109,25 +111,27 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
 
     with open(PICKLE_FILE, 'rb') as f:
         proteins = pickle.load(f)
-        p = proteins[SHEET]
+        p = proteins[SHEET].dropna(subset=['mutation_effect_prediction_vae_ensemble']).reset_index(drop=True)
 
     wt, _, wt_seq = data[0]
-
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
     def h(s, offset = offset):
         wildtype = IUPAC_SEQ2IDX[s[0]]
         mutant = IUPAC_SEQ2IDX[s[-1]]
+        if s[1:-1] == '':
+            breakpoint()
         location = int(s[1:-1]) - offset
         return wildtype, mutant, location
 
-    df = pd.DataFrame([h(s) for s in p.mutant], columns = ['wt', 'mt', 'loc'])
+    df = pd.DataFrame([h(s) for s in p.mutant if s != 'WT'], columns = ['wt', 'mt', 'loc'])
 
-    df = pd.concat([p.loc[:, [METRIC_COLUMN]], df], axis = 1)
+    df = pd.concat([p.loc[:, [METRIC_COLUMN]], df], axis = 1)#.dropna()
+    # breakpoint()
     data_size = len(df)
-
     mutants = torch.stack([wt.squeeze(0)] * data_size)
-    idx = range(data_size), df['loc'][:data_size]
-    mutants[idx] = torch.tensor(df['mt'], device = device)
+    idx = range(data_size), df['loc'].to_list()
+
+    mutants[idx] = torch.tensor(df['mt'].astype('int64').to_list(), device = device)
     m_elbo, m_logp, m_kld = model.protein_logp(mutants)
     wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
@@ -143,6 +147,6 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
 
 with torch.no_grad():
     cor, pval = mutation_effect_prediction()
-    protein_accuracy()
+    # protein_accuracy()
 
     print(f'Spearman\'s Rho: {cor:5.3f}. Pval: {pval}')

@@ -193,8 +193,6 @@ def parallel_retrieve_labels(infile, outfile):
     with open(outfile, "w") as out:
         pass
 
-    out.close()
-
 def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")
     uniprot = UniProt()
