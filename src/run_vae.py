@@ -1,10 +1,9 @@
 # First, command-line arguments
-from arguments import args
+from arguments import get_vae_args
+args = get_vae_args()
 
 import time
 from pathlib import Path
-# import logging
-# logging.basicConfig(level = args.log_level, format = "[{levelname}] {asctime} {module}:{funcName}:{lineno}: {message}", style = "{")
 
 import torch
 from torch import optim
@@ -87,8 +86,8 @@ if __name__ == "__main__" or __name__ == "__console__":
                 if patience == 0:
                     print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
                     break
-
             print("")
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
+        breakpoint()
