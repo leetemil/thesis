@@ -1,7 +1,11 @@
 from arguments import get_unirep_args
 args = get_unirep_args()
 
+import time
+from pathlib import Path
+
 import torch
+from torch import optim
 
 from unirep import UniRep
 from protein_data import IterProteinDataset, get_iter_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
@@ -30,7 +34,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     val_loader = get_iter_protein_DataLoader(validation_data, batch_size = args.batch_size)
     print("Data loaded!")
 
-    model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers)
+    model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 

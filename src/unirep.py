@@ -39,7 +39,7 @@ class UniRep(nn.Module):
         # Get length of each sequence by looking at pad values
         lengths = (xb != self.padding_idx).sum(dim = 1)
 
-        pred = predict(xb, lengths)
+        pred = self.predict(xb, lengths)
 
         # Calculate loss
         device = next(self.parameters()).device

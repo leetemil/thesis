@@ -84,14 +84,13 @@ class IterProteinDataset(IterableDataset):
         super().__init__()
         self.file = file
         self.device = device
-        self.length = length
 
         with open(self.file) as f:
             self.length = int(f.readline().replace("#", ""))
 
     def __iter__(self):
-        CLS = IUPAC_SEQ2IDX["<cls>"]
-        SEP = IUPAC_SEQ2IDX["<sep>"]
+        CLS = "<cls>"
+        SEP = "<sep>"
 
         raw_seqs = SeqIO.parse(self.file, "fasta")
         list_seqs = map(lambda x: [CLS] + list(str(x.seq)) + [SEP], raw_seqs)

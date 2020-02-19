@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 import torch
+from torch import Tensor
 
 from utils import make_loading_bar, readable_time, eta, get_gradient_norm
 
@@ -33,6 +34,7 @@ def train(epoch, model, optimizer, train_loader, log_interval):
 
     progressed_data = 0
     data_len = len(train_loader.dataset)
+    num_batches = (data_len // train_loader.batch_size) + 1
     if log_interval != 0:
         log_progress(epoch, 0, 0, progressed_data, data_len, "\r", Loss = 0)
     last_log_time = time.time()
@@ -50,7 +52,10 @@ def train(epoch, model, optimizer, train_loader, log_interval):
         optimizer.zero_grad()
 
         # Push whole batch of data through model.forward()
-        loss, batch_metrics_dict = model(*xb if isinstance(xb, Iterable) else xb)
+        if isinstance(xb, Iterable) and not isinstance(xb, Tensor):
+            loss, batch_metrics_dict = model(*xb)
+        else:
+            loss, batch_metrics_dict = model(xb)
 
         # Calculate accumulated metrics
         for key, value in batch_metrics_dict.items():
@@ -72,7 +77,7 @@ def train(epoch, model, optimizer, train_loader, log_interval):
 
         if log_interval != 0 and (log_interval == "batch" or time.time() - last_log_time > log_interval):
             last_log_time = time.time()
-            log_progress(epoch, time.time() - start_time, (batch_idx + 1) / len(train_loader), progressed_data, data_len, "\r", Loss = train_loss / train_count, **metrics_dict)
+            log_progress(epoch, time.time() - start_time, (batch_idx + 1) / num_batches, progressed_data, data_len, "\r", Loss = train_loss / train_count, **metrics_dict)
 
     average_loss = train_loss / train_count
     if log_interval != 0:

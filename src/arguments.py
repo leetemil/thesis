@@ -40,7 +40,7 @@ def get_unirep_args():
 	parser.add_argument("validation_data", type = Path, help = "Fasta input file for validation.")
 
 	parser.add_argument("--embed_size", type = int, default = 10, help = "Size of the amino acid embedding.")
-	parser.add_argument("--hidden_size", type = int, default = 1024, help = "Size of the hidden state of the LSTM.")
+	parser.add_argument("--hidden_size", type = int, default = 512, help = "Size of the hidden state of the LSTM.")
 	parser.add_argument("--num_layers", type = int, default = 1, help = "Number of layers of the LSTM.")
 
 	args = parser.parse_args()
