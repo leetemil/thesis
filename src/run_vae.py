@@ -9,7 +9,7 @@ import torch
 from torch import optim
 from torch.utils.data import random_split
 
-from vae import VAE
+from doubly_vae import DoublyVAE as VAE
 from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, get_datasets
 from training import train, validate
 from utils import readable_time, get_memory_usage

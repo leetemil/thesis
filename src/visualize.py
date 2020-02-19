@@ -54,8 +54,8 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
     with torch.no_grad():
         for xb, weights, seqs in dataloader:
             ids = [s.id for s in seqs]
-            mean, _ = model.encode(xb)
-            mean = mean.cpu()
+            dist = model.encode(xb)
+            mean = dist.mean.cpu()
             for point, ID in zip(mean, ids):
                 try:
                     label = BLAT_HMMERBIT_LABEL_DICT[ID]

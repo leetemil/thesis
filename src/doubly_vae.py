@@ -7,6 +7,8 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.distributions.normal import Normal
 
+from variational import variational
+
 class DoublyVAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with variational approximation of global parameters"""
 
@@ -38,13 +40,13 @@ class DoublyVAE(nn.Module):
         decode_layers = []
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
         for s1, s2 in layer_sizes_doubles[:-2]:
-            decode_layers.append(nn.Linear(s1, s2))
+            decode_layers.append(variational(nn.Linear(s1, s2)))
             decode_layers.append(nn.ReLU())
             decode_layers.append(nn.Dropout(self.dropout))
 
         # Second-to-last decode layer has sigmoid activation
         s1, s2 = layer_sizes_doubles[-2]
-        decode_layers.append(nn.Linear(s1, s2))
+        decode_layers.append(variational(nn.Linear(s1, s2)))
         decode_layers.append(nn.Sigmoid())
         decode_layers.append(nn.Dropout(self.dropout))
 
@@ -99,10 +101,10 @@ class DoublyVAE(nn.Module):
 
         # Accuracy
         with torch.no_grad():
-            acc = (self.decode(mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
+            acc = (self.decode(encoded_distribution.mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
             metrics_dict["accuracy"] = acc
 
-        return weighted_loss, metrics_dict
+        return scaled_loss, metrics_dict
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
