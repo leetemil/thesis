@@ -8,10 +8,10 @@ from torch import Tensor
 
 from utils import make_loading_bar, readable_time, eta, get_gradient_norm
 
-def log_progress(epoch, time, fraction_done, progress, total, end, **kwargs):
+def log_progress(epoch, time, progress, total, end, **kwargs):
     report = f"Epoch: {epoch:5} "
     digits = int(math.log10(total)) + 1
-    report += f"Time: {readable_time(time)} ETA: {readable_time(eta(time, fraction_done))} [{progress:{digits}}/{total}] {make_loading_bar(40, fraction_done)}"
+    report += f"Time: {readable_time(time)} ETA: {readable_time(eta(time, progress / total))} [{progress:{digits}}/{total}] {make_loading_bar(40, progress / total)}"
 
     for key, value in kwargs.items():
         if type(value) == int:
@@ -36,7 +36,7 @@ def train(epoch, model, optimizer, train_loader, log_interval):
     data_len = len(train_loader.dataset)
     num_batches = (data_len // train_loader.batch_size) + 1
     if log_interval != 0:
-        log_progress(epoch, 0, 0, progressed_data, data_len, "\r", Loss = 0)
+        log_progress(epoch, 0, progressed_data, data_len, "\r", Loss = 0)
     last_log_time = time.time()
 
     train_loss = 0
@@ -45,7 +45,7 @@ def train(epoch, model, optimizer, train_loader, log_interval):
 
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):
-        batch_size, seq_len = xb.shape if isinstance(xb, torch.Tensor) else xb[0].shape
+        batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
         progressed_data += batch_size
 
         # Reset gradient for next batch
@@ -70,18 +70,18 @@ def train(epoch, model, optimizer, train_loader, log_interval):
         optimizer.step()
 
         train_loss += loss.item()
-        train_count += batch_size * seq_len
+        train_count += 1
 
         # Last usage of loss above: Delete it
         del loss
 
         if log_interval != 0 and (log_interval == "batch" or time.time() - last_log_time > log_interval):
             last_log_time = time.time()
-            log_progress(epoch, time.time() - start_time, (batch_idx + 1) / num_batches, progressed_data, data_len, "\r", Loss = train_loss / train_count, **metrics_dict)
+            log_progress(epoch, time.time() - start_time, progressed_data, data_len, "\r", Loss = train_loss / train_count, **metrics_dict)
 
     average_loss = train_loss / train_count
     if log_interval != 0:
-        log_progress(epoch, time.time() - start_time, 1.0, progressed_data, data_len, "\n", Loss = train_loss / train_count, **metrics_dict)
+        log_progress(epoch, time.time() - start_time, data_len, data_len, "\n", Loss = train_loss / train_count, **metrics_dict)
     return average_loss
 
 def validate(epoch, model, validation_loader):
@@ -90,14 +90,17 @@ def validate(epoch, model, validation_loader):
     validation_loss = 0
     validation_count = 0
     with torch.no_grad():
-        for i, (xb, weights) in enumerate(validation_loader):
-            batch_size, seq_len = xb.shape
+        for i, xb in enumerate(validation_loader):
+            batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
             # Push whole batch of data through model.forward()
-            loss, metrics_dict = model(xb, weights)
+            if isinstance(xb, Tensor):
+                loss, batch_metrics_dict = model(xb)
+            else:
+                loss, batch_metrics_dict = model(*xb)
 
             validation_loss += loss.item()
-            validation_count += batch_size * seq_len
+            validation_count += 1
 
         average_loss = validation_loss / validation_count
     return average_loss

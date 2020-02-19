@@ -5,9 +5,10 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from torch.distributions.normal import Normal
 
-class VAE(nn.Module):
-    """Variational Auto-Encoder for protein sequences"""
+class DoublyVAE(nn.Module):
+    """Variational Auto-Encoder for protein sequences with variational approximation of global parameters"""
 
     def __init__(self, layer_sizes, num_tokens, dropout = 0.5):
         super().__init__()
@@ -61,41 +62,7 @@ class VAE(nn.Module):
 
         mean = self.encode_mean(x)
         logvar = self.encode_logvar(x)
-        return mean, logvar
-
-    def reparameterize(self, mean, logvar):
-        """THE REPARAMETERIZATION IDEA:
-
-        For each training sample
-
-        - take the current learned mean, stddev for each of the ZDIMS
-          dimensions and draw a random sample from that distribution
-        - the whole network is trained so that these randomly drawn
-          samples decode to output that looks like the input
-        - which will mean that the std, mean will be learned
-          *distributions* that correctly encode the inputs
-        - due to the additional KLD term (see loss_function() below)
-          the distribution will tend to unit Gaussians
-
-        Parameters
-        ----------
-        mean : [BATCH_SIZE, ZDIMS] mean matrix
-        logvar : [BATCH_SIZE, ZDIMS] variance matrix
-
-        Returns
-        -------
-
-        During training random sample from the learned ZDIMS-dimensional
-        normal distribution; during inference its mean.
-
-        """
-
-        # Multiply log variance with 0.5, then exponent yielding the standard deviation
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-
-        # Sample by multiplying the unit Gaussian with standard deviation and adding the mean
-        return mean + eps * std
+        return Normal(mean, logvar.mul(0.5).exp())
 
     def decode(self, z):
         # Send z through all decode layers
@@ -114,16 +81,16 @@ class VAE(nn.Module):
         return self.sample(z)
 
     def reconstruct(self, x):
-        mean, _ = self.encode(x)
-        return self.sample(mean)
+        encoded_distribution = self.encode(x)
+        return self.sample(encoded_distribution.mean)
 
     def forward(self, x, weights):
         batch_size, seq_len = x.shape
         # Forward pass + loss + metrics
-        mean, logvar = self.encode(x)
-        z = self.reparameterize(mean, logvar)
+        encoded_distribution = self.encode(x)
+        z = encoded_distribution.rsample()
         recon_x = self.decode(z)
-        loss = self.vae_loss(recon_x, x, mean, logvar)
+        loss = self.vae_loss(recon_x, x, encoded_distribution)
         weighted_loss = torch.sum(loss * weights)
         scaled_loss = weighted_loss / (batch_size * seq_len)
 
@@ -135,7 +102,7 @@ class VAE(nn.Module):
             acc = (self.decode(mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
             metrics_dict["accuracy"] = acc
 
-        return scaled_loss, metrics_dict
+        return weighted_loss, metrics_dict
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
@@ -146,7 +113,9 @@ class VAE(nn.Module):
                 f"  Parameters:  {num_params:,}\n")
 
     def protein_logp(self, x):
-        mean, logvar = self.encode(x)
+        encoded_distribution = self.encode(x)
+        mean = encoded_distribution.mean
+        logvar = encoded_distribution.variance.log()
         kld = 0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
 
         recon_x = self.decode(mean).permute(0, 2, 1)
@@ -164,7 +133,7 @@ class VAE(nn.Module):
         # amino acid probabilities are independent conditioned on z
         return nll
 
-    def kld_loss(self, mean, logvar):
+    def kld_loss(self, encoded_distribution):
         # kld is Kullback–Leibler divergence -- how much does one learned
         # distribution deviate from another, in this specific case the
         # learned distribution from the unit Gaussian
@@ -175,10 +144,12 @@ class VAE(nn.Module):
         # - D_{KL} = 0.5 * sum(1 + log(sigma^2) - mean^2 - sigma^2)
         # Note the negative D_{KL} in appendix B of the paper
 
+        mean = encoded_distribution.mean
+        logvar = encoded_distribution.variance.log()
         kld = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp(), dim = 1)
         return kld
 
-    def vae_loss(self, recon_x, x, mean, logvar):
+    def vae_loss(self, recon_x, x, encoded_distribution):
         nll_loss = self.nll_loss(recon_x, x)
-        kld_loss = self.kld_loss(mean, logvar)
+        kld_loss = self.kld_loss(encoded_distribution)
         return nll_loss + kld_loss
