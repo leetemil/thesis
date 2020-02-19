@@ -15,7 +15,7 @@ echo ""
 
 # Script:
 # -u: Unbuffered output
-python3 -u run_vae.py "$@"
+python3 -u run_unirep.py "$@"
 
 # End
 echo ""
