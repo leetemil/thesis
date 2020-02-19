@@ -1,11 +1,10 @@
-# 38_836_200
 from arguments import get_unirep_args
 args = get_unirep_args()
 
 import torch
 
 from unirep import UniRep
-from protein_data import IterProteinDataset, get_iter_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX
+from protein_data import IterProteinDataset, get_iter_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from utils import readable_time, get_memory_usage
 from training import train, validate
 from visualize import plot_data
@@ -24,9 +23,13 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device.type.upper()}")
 
     # Load data
-    # get_iter_protein_dataloader something something
+    train_data = IterProteinDataset(args.train_data, device = device)
+    validation_data = IterProteinDataset(args.validation_data, device = device)
 
+    train_loader = get_iter_protein_DataLoader(train_data, batch_size = args.batch_size)
+    val_loader = get_iter_protein_DataLoader(validation_data, batch_size = args.batch_size)
     print("Data loaded!")
+
     model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
@@ -37,17 +40,8 @@ if __name__ == "__main__" or __name__ == "__console__":
         model.load_state_dict(torch.load(model_save_name, map_location = device))
         print(f"Model loaded.")
 
-    # Train, validate, save
-    show = False
-    save = False
-    if args.visualize_style == "show" or args.visualize_style == "both":
-        show = True
-    if args.visualize_style == "save" or args.visualize_style == "both":
-        save = True
-
     best_val_loss = float("inf")
     patience = args.patience
-
     try:
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()

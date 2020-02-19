@@ -6,7 +6,7 @@ import threading
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, IterableDataset, DataLoader
 from Bio import SeqIO
 from bioservices import UniProt
 
@@ -79,6 +79,28 @@ class ProteinDataset(Dataset):
     def __getitem__(self, i):
         return self.encoded_seqs[i], self.weights[i], self.seqs[i]
 
+class IterProteinDataset(IterableDataset):
+    def __init__(self, file, device = None):
+        super().__init__()
+        self.file = file
+        self.device = device
+        self.length = length
+
+        with open(self.file) as f:
+            self.length = int(f.readline().replace("#", ""))
+
+    def __iter__(self):
+        CLS = IUPAC_SEQ2IDX["<cls>"]
+        SEP = IUPAC_SEQ2IDX["<sep>"]
+
+        raw_seqs = SeqIO.parse(self.file, "fasta")
+        list_seqs = map(lambda x: [CLS] + list(str(x.seq)) + [SEP], raw_seqs)
+        encodedSeqs = map(lambda x: seq2idx(x, self.device), list_seqs)
+        return encodedSeqs
+
+    def __len__(self):
+        return self.length
+
 def get_datasets(file, device, train_ratio):
     saved_datasets = file.with_suffix(".saved_datasets")
     if saved_datasets.exists():
@@ -127,6 +149,12 @@ def discard_seqs_collate(tensors):
 
 def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_seqs = False):
     return DataLoader(dataset, batch_size = batch_size, shuffle = False, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)
+
+def variable_length_sequence_collate(sequences):
+    return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True)
+
+def get_iter_protein_DataLoader(dataset, batch_size = 32):
+    return DataLoader(dataset, batch_size = batch_size, collate_fn = variable_length_sequence_collate)
 
 def retrieve_label_from_uniprot_df(ID):
     uniprot = UniProt()
