@@ -5,6 +5,7 @@ from collections.abc import Iterable
 
 import torch
 from torch import Tensor
+from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
 from utils import make_loading_bar, readable_time, eta, get_gradient_norm
 
@@ -22,7 +23,7 @@ def log_progress(epoch, time, progress, total, end, **kwargs):
             report += (f" {key}: {value}")
     print(report, end = end)
 
-def train(epoch, model, optimizer, train_loader, log_interval):
+def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None):
     """
         epoch: Index of the epoch to run
         model: The model to run data through. Forward should return a tuple of (loss, metrics_dict).
@@ -45,17 +46,9 @@ def train(epoch, model, optimizer, train_loader, log_interval):
 
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):
-        batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
+        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value)
+
         progressed_data += batch_size
-
-        # Reset gradient for next batch
-        optimizer.zero_grad()
-
-        # Push whole batch of data through model.forward()
-        if isinstance(xb, Iterable) and not isinstance(xb, Tensor):
-            loss, batch_metrics_dict = model(*xb)
-        else:
-            loss, batch_metrics_dict = model(xb)
 
         # Calculate accumulated metrics
         for key, value in batch_metrics_dict.items():
@@ -63,17 +56,8 @@ def train(epoch, model, optimizer, train_loader, log_interval):
             acc_metrics_dict[key + "_count"] += 1
         metrics_dict = {k: acc_metrics_dict[k] / acc_metrics_dict[k + "_count"] for k in acc_metrics_dict.keys() if not k.endswith("_count")}
 
-        # Calculate the gradient of the loss w.r.t. the graph leaves
-        loss.backward()
-
-        # Step in the direction of the gradient
-        optimizer.step()
-
-        train_loss += loss.item()
+        train_loss += loss
         train_count += 1
-
-        # Last usage of loss above: Delete it
-        del loss
 
         if log_interval != 0 and (log_interval == "batch" or time.time() - last_log_time > log_interval):
             last_log_time = time.time()
@@ -83,6 +67,36 @@ def train(epoch, model, optimizer, train_loader, log_interval):
     if log_interval != 0:
         log_progress(epoch, time.time() - start_time, data_len, data_len, "\n", Loss = train_loss / train_count, **metrics_dict)
     return average_loss
+
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None):
+    batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
+
+    # Reset gradient for next batch
+    optimizer.zero_grad()
+
+    # Push whole batch of data through model.forward()
+    if isinstance(xb, Iterable) and not isinstance(xb, Tensor):
+        loss, batch_metrics_dict = model(*xb)
+    else:
+        loss, batch_metrics_dict = model(xb)
+
+    # Calculate the gradient of the loss w.r.t. the graph leaves
+    loss.backward()
+
+    if clip_grad_norm is not None:
+        clip_grad_norm_(model.parameters(), clip_grad_norm)
+    if clip_grad_value is not None:
+        clip_grad_value_(model.parameters(), clip_grad_value)
+
+    # Step in the direction of the gradient
+    optimizer.step()
+
+    loss_return = loss.item()
+
+    # Last usage of loss above: Delete it
+    del loss
+
+    return batch_size, loss_return, batch_metrics_dict
 
 def validate(epoch, model, validation_loader):
     model.eval()

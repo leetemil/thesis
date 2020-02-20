@@ -29,6 +29,8 @@ class DoublyVAE(nn.Module):
         for s1, s2 in layer_sizes_doubles[:-1]:
             encode_layers.append(nn.Linear(s1, s2))
             encode_layers.append(nn.ReLU())
+            encode_layers.append(nn.BatchNorm1d(s2))
+            encode_layers.append(nn.Dropout(self.dropout))
         self.encode_layers = nn.Sequential(*encode_layers)
 
         # Last two layers to get to bottleneck size
@@ -39,16 +41,18 @@ class DoublyVAE(nn.Module):
         # Construct decode layers
         decode_layers = []
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
-        for s1, s2 in layer_sizes_doubles[:-2]:
+        for s1, s2 in layer_sizes_doubles[:-1]:
             decode_layers.append(variational(nn.Linear(s1, s2)))
             decode_layers.append(nn.ReLU())
+            decode_layers.append(nn.BatchNorm1d(s2))
             decode_layers.append(nn.Dropout(self.dropout))
 
         # Second-to-last decode layer has sigmoid activation
-        s1, s2 = layer_sizes_doubles[-2]
-        decode_layers.append(variational(nn.Linear(s1, s2)))
-        decode_layers.append(nn.Sigmoid())
-        decode_layers.append(nn.Dropout(self.dropout))
+        # s1, s2 = layer_sizes_doubles[-2]
+        # decode_layers.append(variational(nn.Linear(s1, s2)))
+        # decode_layers.append(nn.Sigmoid())
+        # decode_layers.append(nn.BatchNorm1d(s2))
+        # decode_layers.append(nn.Dropout(self.dropout))
 
         # Last decode layer has no activation
         s1, s2 = layer_sizes_doubles[-1]

@@ -11,7 +11,7 @@ from torch.utils.data import random_split
 
 from doubly_vae import DoublyVAE as VAE
 from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, get_datasets
-from training import train, validate
+from training import train_epoch, validate
 from utils import readable_time, get_memory_usage
 from visualize import plot_data
 
@@ -63,7 +63,7 @@ if __name__ == "__main__" or __name__ == "__console__":
             plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show)
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss = train(epoch, model, optimizer, train_loader, args.log_interval)
+            train_loss = train_epoch(epoch, model, optimizer, train_loader, args.log_interval)
             val_loss = validate(epoch, model, val_loader)
 
             print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")

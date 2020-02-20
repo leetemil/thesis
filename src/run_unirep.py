@@ -10,7 +10,7 @@ from torch import optim
 from unirep import UniRep
 from protein_data import IterProteinDataset, get_iter_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from utils import readable_time, get_memory_usage
-from training import train, validate
+from training import train_epoch, validate
 from visualize import plot_data
 
 if __name__ == "__main__" or __name__ == "__console__":
@@ -49,7 +49,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     try:
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss = train(epoch, model, optimizer, train_loader, args.log_interval)
+            train_loss = train_epoch(epoch, model, optimizer, train_loader, args.log_interval)
             val_loss = validate(epoch, model, val_loader)
 
             print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")

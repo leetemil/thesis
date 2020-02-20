@@ -17,9 +17,9 @@ class UniRep(nn.Module):
         # Define layers
         self.embed = nn.Embedding(self.num_tokens, self.embed_size, padding_idx = self.padding_idx)
 
-        self.lin = nn.Linear(self.hidden_size, self.num_tokens)
-
         self.rnn = nn.LSTM(self.embed_size, self.hidden_size, num_layers = self.num_layers, batch_first = True)
+
+        self.lin = nn.Linear(self.hidden_size, self.num_tokens)
 
     def predict(self, xb, lengths):
         # Convert indices to embedded vectors
@@ -42,8 +42,7 @@ class UniRep(nn.Module):
         pred = self.predict(xb, lengths)
 
         # Calculate loss
-        device = next(self.parameters()).device
-        true = torch.zeros(xb.shape, dtype = torch.int64, device = device) + self.padding_idx
+        true = torch.zeros(xb.shape, dtype = torch.int64, device = xb.device) + self.padding_idx
         true[:, :-1] = xb[:, 1:]
 
         # Flatten the sequence dimension to compare each timestep in cross entropy loss

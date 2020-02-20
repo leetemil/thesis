@@ -6,6 +6,8 @@ from typing import Union
 def basic_args(parser):
 	parser.add_argument("--epochs", type = int, default = 10, help = "Maximum number of epochs to train (patience may cause fewer epochs to be run).")
 	parser.add_argument("--batch_size", type = int, default = 128, help = "Input batch size for training.")
+	parser.add_argument("--clip_grad_norm", type = lambda x: None if x is None else float(x), default = None, help = "Gradient will be clipped to this norm. Disabled if None.")
+	parser.add_argument("--clip_grad_value", type = lambda x: None if x is None else float(x), default = None, help = "Gradient values will be clipped to this value. Disabled if None.")
 	parser.add_argument("--device", type = str, default = "cuda", choices = ["cpu", "cuda"], help = "Which device to use (CPU or CUDA for GPU).")
 	parser.add_argument("--patience", type = int, default = 50, help = "Training will stop if the model does not improve on the validation set for this many epochs.")
 	parser.add_argument("--log_interval", type = lambda x: x if x == "batch" else float(x), default = 1, help = "How many seconds to wait between training status logging. 0 to disable loading bar progress. \"batch\" for log at every batch.")
