@@ -29,7 +29,7 @@ class DoublyVAE(nn.Module):
         for s1, s2 in layer_sizes_doubles[:-1]:
             encode_layers.append(nn.Linear(s1, s2))
             encode_layers.append(nn.ReLU())
-            encode_layers.append(nn.BatchNorm1d(s2))
+            # encode_layers.append(nn.BatchNorm1d(s2))
             encode_layers.append(nn.Dropout(self.dropout))
         self.encode_layers = nn.Sequential(*encode_layers)
 
@@ -44,7 +44,7 @@ class DoublyVAE(nn.Module):
         for s1, s2 in layer_sizes_doubles[:-1]:
             decode_layers.append(variational(nn.Linear(s1, s2)))
             decode_layers.append(nn.ReLU())
-            decode_layers.append(nn.BatchNorm1d(s2))
+            # decode_layers.append(nn.BatchNorm1d(s2))
             decode_layers.append(nn.Dropout(self.dropout))
 
         # Second-to-last decode layer has sigmoid activation
