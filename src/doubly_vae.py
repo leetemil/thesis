@@ -52,7 +52,7 @@ class DoublyVAE(nn.Module):
 
         # Last decode layer has no activation
         s1, s2 = layer_sizes_doubles[-1]
-        decode_layers.append(nn.Linear(s1, s2))
+        decode_layers.append(variational(nn.Linear(s1, s2)))
 
         self.decode_layers = nn.Sequential(*decode_layers)
 
