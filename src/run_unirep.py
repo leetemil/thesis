@@ -10,7 +10,7 @@ from torch import optim
 from unirep import UniRep
 from protein_data import IterProteinDataset, get_iter_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from utils import readable_time, get_memory_usage
-from training import train_epoch, validate
+from training import train_epoch, train_batch, validate
 from visualize import plot_data
 
 if __name__ == "__main__" or __name__ == "__console__":
@@ -29,6 +29,8 @@ if __name__ == "__main__" or __name__ == "__console__":
     # Load data
     train_data = IterProteinDataset(args.train_data, device = device)
     validation_data = IterProteinDataset(args.validation_data, device = device)
+    val_len = len(validation_data)
+    train_seqs_per_epoch = val_len * 9
 
     train_loader = get_iter_protein_DataLoader(train_data, batch_size = args.batch_size)
     val_loader = get_iter_protein_DataLoader(validation_data, batch_size = args.batch_size)
@@ -46,29 +48,47 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     best_val_loss = float("inf")
     patience = args.patience
+    seqs_processed = 0
+    acc_train_loss = 0
+    train_loss_count = 0
+    prev_time = time.time()
+    epoch = 0
     try:
-        for epoch in range(1, args.epochs + 1):
-            start_time = time.time()
-            train_loss = train_epoch(epoch, model, optimizer, train_loader, args.log_interval)
-            val_loss = validate(epoch, model, val_loader)
+        while True:
+            for batch_idx, xb in enumerate(train_loader):
+                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value)
+                seqs_processed += batch_size
+                acc_train_loss += batch_train_loss
+                train_loss_count += 1
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")
+                if seqs_processed >= train_seqs_per_epoch:
+                    epoch += 1
+                    train_loss = acc_train_loss / train_loss_count
+                    seqs_processed = 0
+                    acc_train_loss = 0
+                    train_loss_count = 0
+                    val_loss = validate(epoch, model, val_loader)
 
-            improved = val_loss < best_val_loss
+                    print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - prev_time)} Memory: {get_memory_usage(device):.2f}GiB")
+                    prev_time = time.time()
 
-            if improved:
-                # If model improved, save the model
-                torch.save(model.state_dict(), model_save_name)
-                print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
-                best_val_loss = val_loss
-                patience = args.patience
-            elif args.patience:
-                # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
-                patience -= 1
-                if patience == 0:
-                    print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
-                    break
-            print("")
+                    improved = val_loss < best_val_loss
+
+                    if improved:
+                        # If model improved, save the model
+                        torch.save(model.state_dict(), model_save_name)
+                        print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
+                        best_val_loss = val_loss
+                        patience = args.patience
+                    elif args.patience:
+                        # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
+                        patience -= 1
+                        if patience == 0:
+                            print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
+                            break
+                    print("")
+                    if epoch >= args.epochs:
+                        break
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
