@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.distributions.normal import Normal
+from torch.distributions import kl_divergence
 
 from variational import variational
 
@@ -96,9 +97,11 @@ class DoublyVAE(nn.Module):
         encoded_distribution = self.encode(x)
         z = encoded_distribution.rsample()
         recon_x = self.decode(z)
-        loss = self.vae_loss(recon_x, x, encoded_distribution)
-        weighted_loss = torch.sum(loss * weights)
-        scaled_loss = weighted_loss / (batch_size * seq_len)
+        loss = self.vae_loss(recon_x, x, encoded_distribution, weights)
+        scaled_loss = loss / (batch_size * seq_len)
+
+        # parameter_loss = self.global_parameter_kld()
+        # breakpoint()
 
         # Metrics
         metrics_dict = {}
@@ -123,7 +126,6 @@ class DoublyVAE(nn.Module):
         mean = encoded_distribution.mean
         logvar = encoded_distribution.variance.log()
         kld = 0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
-
         recon_x = self.decode(mean).permute(0, 2, 1)
         logp = F.nll_loss(recon_x, x, reduction = "none").mul(-1).sum(1)
         elbo = logp + kld
@@ -150,12 +152,48 @@ class DoublyVAE(nn.Module):
         # - D_{KL} = 0.5 * sum(1 + log(sigma^2) - mean^2 - sigma^2)
         # Note the negative D_{KL} in appendix B of the paper
 
-        mean = encoded_distribution.mean
-        logvar = encoded_distribution.variance.log()
-        kld = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp(), dim = 1)
+        # mean = encoded_distribution.mean
+        # logvar = encoded_distribution.variance.log()
+        # kld = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp(), dim = 1)
+
+        prior = Normal(torch.zeros_like(encoded_distribution.mean), torch.ones_like(encoded_distribution.variance.sqrt()))
+        kld = kl_divergence(encoded_distribution, prior).sum(dim = 1)
+
         return kld
 
-    def vae_loss(self, recon_x, x, encoded_distribution):
+    def global_parameter_kld(self):
+
+        global_kld = 0
+
+        for layer in self.decode_layers:
+            if isinstance(layer, torch.nn.Linear):
+                # get weight and bias distributions
+                weight_mean = layer.weight_mean
+                weight_std = layer.weight_logvar.mul(1/2).exp()
+                bias_mean = layer.bias_mean
+                bias_std = layer.bias_logvar.mul(1/2).exp()
+
+                q_weight = Normal(weight_mean, weight_std)
+                q_bias = Normal(bias_mean, bias_std)
+
+                # all layers has a unit Gaussian prior
+                p_weight = Normal(torch.zeros_like(weight_mean), torch.ones_like(weight_std))
+                p_bias = Normal(torch.zeros_like(bias_mean), torch.ones_like(bias_std))
+
+                weight_kld = kl_divergence(q_weight, p_weight).sum()
+                bias_kld = kl_divergence(q_bias, p_bias).sum()
+                global_kld += weight_kld + bias_kld
+
+        return global_kld
+
+    def vae_loss(self, recon_x, x, encoded_distribution, weights):
         nll_loss = self.nll_loss(recon_x, x)
         kld_loss = self.kld_loss(encoded_distribution)
-        return nll_loss + kld_loss
+
+        #! --- mean or sum? ---
+        weighted_loss = torch.mean((nll_loss + kld_loss) * weights)
+
+        param_kld = self.global_parameter_kld()
+        total = weighted_loss + param_kld
+        # print(f'weigted loss is {weighted_loss/total} and param_kld is {param_kld / total}.')
+        return total
