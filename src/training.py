@@ -31,8 +31,6 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
         train_loader: PyTorch DataLoader to generate batches of training data
         log_interval: Interval in seconds of how often to log training progress (0 to disable batch progress logging)
     """
-    model.train()
-
     progressed_data = 0
     data_len = len(train_loader.dataset)
     num_batches = (data_len // train_loader.batch_size) + 1
@@ -69,6 +67,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     return average_loss
 
 def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None):
+    model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
     # Reset gradient for next batch
