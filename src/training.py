@@ -74,10 +74,10 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
     optimizer.zero_grad()
 
     # Push whole batch of data through model.forward()
-    if isinstance(xb, Iterable) and not isinstance(xb, Tensor):
-        loss, batch_metrics_dict = model(*xb)
-    else:
+    if isinstance(xb, Tensor):
         loss, batch_metrics_dict = model(xb)
+    else:
+        loss, batch_metrics_dict = model(*xb)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
     loss.backward()
