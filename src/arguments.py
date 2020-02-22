@@ -20,6 +20,7 @@ def get_vae_args():
 
 	parser.add_argument("data", type = Path, help = "Fasta input file of sequences")
 	parser.add_argument("layer_sizes", type = int, nargs = "+", help = "Sizes of the hidden layers of the VAE, except the first and last, which will be inferred from the data argument. The smallest size is understood as the bottleneck size and will be the size of the output of the encoder, and the size of the input of the decoder.")
+	parser.add_argument("--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
 	parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
 	parser.add_argument("--visualize_interval", type = str, default = "improvement", choices = ["always", "improvement", "never"], help = "Visualize the output at every epoch (always), only at validation loss improvement or never.")
 	parser.add_argument("--visualize_style", type = str, default = "save", choices = ["save", "show", "both"], help = "Save or show the visualization, or both.")

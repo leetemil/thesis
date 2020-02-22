@@ -38,7 +38,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     # Define model and optimizer
     data_size = all_data[0][0].size(-1) * NUM_TOKENS
-    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS).to(device)
+    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS, layer_mod = args.layer_mod).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 

@@ -1,8 +1,10 @@
+import math
 from collections.abc import Iterable
 
 import torch
 from torch.distributions.normal import Normal
 from torch.nn.parameter import Parameter
+from torch.nn.init import kaiming_uniform_, uniform_
 
 def variational(module, parameter_names = ["weight", "bias"]):
     if isinstance(parameter_names, str):
@@ -15,6 +17,7 @@ def variational(module, parameter_names = ["weight", "bias"]):
     return module
 
 class Variational:
+    last_fan_in = 0
     def __init__(self, name):
         self.name = name
 
@@ -32,28 +35,29 @@ class Variational:
         mean_parameter = Parameter(torch.zeros_like(parameter))
         logvar_parameter = Parameter(torch.zeros_like(parameter))
 
+        with torch.no_grad():
+            # Initialize
+            if len(parameter.shape) == 1:
+                bound = 1 / math.sqrt(Variational.last_fan_in)
+                variance = ((bound * 2) ** 2) / 12
+                logvar_parameter[:] = math.log(variance)
+            elif len(parameter.shape) >= 2:
+                Variational.last_fan_in = mean_parameter.size(1)
+                variance = 2 / (parameter.size(0) + parameter.size(1))
+                logvar_parameter[:] = math.log(variance)
+
         module.register_parameter(parameter_name + "_mean", mean_parameter)
         module.register_parameter(parameter_name + "_logvar", logvar_parameter)
-        setattr(module, parameter_name, hook.sample(module))
+        setattr(module, parameter_name, hook.rsample(module))
 
         module.register_forward_pre_hook(hook)
         return hook
 
-    def sample(self, module):
+    def rsample(self, module):
         mean = getattr(module, self.name + '_mean')
         logvar = getattr(module, self.name + '_logvar')
         distribution = Normal(mean, logvar.mul(0.5).exp())
         return distribution.rsample()
 
     def __call__(self, module, inputs):
-        setattr(module, self.name, self.sample(module))
-
-if __name__ == "__main__":
-    l = torch.nn.Linear(10, 20)
-    vl = variational(l, ["weight", "bias"])
-
-    inputs = torch.randn(10)
-    result = vl(inputs)
-    loss = result.sum()
-
-    breakpoint()
+        setattr(module, self.name, self.rsample(module))

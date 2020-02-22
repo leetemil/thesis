@@ -1,6 +1,7 @@
 # Inspired by:
 #   https://github.com/pytorch/examples/blob/master/vae/main.py
 #   https://vxlabs.com/2017/12/08/variational-autoencoder-in-pytorch-commented-and-annotated/
+from enum import Enum
 
 import torch
 import torch.nn as nn
@@ -10,10 +11,14 @@ from torch.distributions import kl_divergence
 
 from variational import variational
 
-class DoublyVAE(nn.Module):
-    """Variational Auto-Encoder for protein sequences with variational approximation of global parameters"""
+class LayerModification(Enum):
+    NONE        = 1 << 0
+    VARIATIONAL = 1 << 1
 
-    def __init__(self, layer_sizes, num_tokens, dropout = 0.5):
+class DoublyVAE(nn.Module):
+    """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
+
+    def __init__(self, layer_sizes, num_tokens, dropout = 0.5, layer_mod = "variational"):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -21,6 +26,7 @@ class DoublyVAE(nn.Module):
         self.layer_sizes = layer_sizes
         self.num_tokens = num_tokens
         self.dropout = dropout
+        self.layer_mod = LayerModification.__members__[layer_mod.upper()]
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -40,24 +46,31 @@ class DoublyVAE(nn.Module):
         self.encode_logvar = nn.Linear(s1, s2)
 
         # Construct decode layers
+        if self.layer_mod == LayerModification.VARIATIONAL:
+            decode_mod = variational
+        elif self.layer_mod == LayerModification.NONE:
+            decode_mod = lambda x: x
+        else:
+            raise NotImplementedError("Unsupported layer modification.")
+
         decode_layers = []
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
         for s1, s2 in layer_sizes_doubles[:-2]:
-            decode_layers.append(variational(nn.Linear(s1, s2)))
+            decode_layers.append(decode_mod(nn.Linear(s1, s2)))
             decode_layers.append(nn.ReLU())
             # decode_layers.append(nn.BatchNorm1d(s2))
             decode_layers.append(nn.Dropout(self.dropout))
 
         # Second-to-last decode layer has sigmoid activation
         s1, s2 = layer_sizes_doubles[-2]
-        decode_layers.append(variational(nn.Linear(s1, s2)))
-        decode_layers.append(nn.Sigmoid())
+        decode_layers.append(decode_mod(nn.Linear(s1, s2)))
+        decode_layers.append(nn.ReLU())
         # decode_layers.append(nn.BatchNorm1d(s2))
         decode_layers.append(nn.Dropout(self.dropout))
 
         # Last decode layer has no activation
         s1, s2 = layer_sizes_doubles[-1]
-        decode_layers.append(variational(nn.Linear(s1, s2)))
+        decode_layers.append(decode_mod(nn.Linear(s1, s2)))
 
         self.decode_layers = nn.Sequential(*decode_layers)
 
@@ -119,7 +132,8 @@ class DoublyVAE(nn.Module):
 
         return (f"Variational Auto-Encoder summary:\n"
                 f"  Layer sizes: {self.layer_sizes}\n"
-                f"  Parameters:  {num_params:,}\n")
+                f"  Parameters:  {num_params:,}\n"
+                f"  Layer modification:  {str(self.layer_mod).split('.', maxsplit = 1)[1].title()}\n")
 
     def protein_logp(self, x):
         encoded_distribution = self.encode(x)
@@ -193,7 +207,11 @@ class DoublyVAE(nn.Module):
         #! --- mean or sum? ---
         weighted_loss = torch.mean((nll_loss + kld_loss) * weights)
 
-        param_kld = self.global_parameter_kld()
-        total = weighted_loss + param_kld
+        # if self.layer_mod == LayerModification.VARIATIONAL:
+        #     param_kld = self.global_parameter_kld()
+        # elif self.layer_mod == LayerModification.NONE:
+        #     param_kld = 0
+
+        total = weighted_loss# + param_kld
         # print(f'weigted loss is {weighted_loss/total} and param_kld is {param_kld / total}.')
         return total

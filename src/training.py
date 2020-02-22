@@ -54,8 +54,8 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
             acc_metrics_dict[key + "_count"] += 1
         metrics_dict = {k: acc_metrics_dict[k] / acc_metrics_dict[k + "_count"] for k in acc_metrics_dict.keys() if not k.endswith("_count")}
 
-        train_loss += loss
-        train_count += 1
+        train_loss += loss * batch_size
+        train_count += batch_size
 
         if log_interval != 0 and (log_interval == "batch" or time.time() - last_log_time > log_interval):
             last_log_time = time.time()
