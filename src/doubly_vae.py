@@ -205,14 +205,15 @@ class DoublyVAE(nn.Module):
         weighted_loss = torch.mean((nll_loss + kld_loss) * weights)
 
         if self.layer_mod == LayerModification.VARIATIONAL:
-            param_kld = self.global_parameter_kld()
+            # todo: get true Neff
+            Neff = 8000
+            batch_size, _ = x.shape
+            param_kld = (batch_size/Neff) * self.global_parameter_kld()
+
         elif self.layer_mod == LayerModification.NONE:
             param_kld = 0
 
-        # todo: get true Neff
-        Neff = 8000
-        batch_size, _ = x.shape
 
-        total = weighted_loss + (batch_size/Neff) * param_kld
-        # print(f'weigted loss is {weighted_loss/total} and param_kld is {param_kld / total}.')
+        total = weighted_loss + param_kld
+        print(f'weigted loss is {weighted_loss/total} and param_kld is {param_kld / total}.')
         return total
