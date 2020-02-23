@@ -215,5 +215,5 @@ class DoublyVAE(nn.Module):
 
 
         total = weighted_loss + param_kld
-        print(f'weigted loss is {weighted_loss/total} and param_kld is {param_kld / total}.')
+        print(f'weigted loss is {weighted_loss/total:5.3f} and param_kld is {param_kld / total:5.3f}.')
         return total
