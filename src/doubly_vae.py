@@ -113,9 +113,6 @@ class DoublyVAE(nn.Module):
         loss = self.vae_loss(recon_x, x, encoded_distribution, weights)
         scaled_loss = loss / (batch_size * seq_len)
 
-        # parameter_loss = self.global_parameter_kld()
-        # breakpoint()
-
         # Metrics
         metrics_dict = {}
 
@@ -207,11 +204,15 @@ class DoublyVAE(nn.Module):
         #! --- mean or sum? ---
         weighted_loss = torch.mean((nll_loss + kld_loss) * weights)
 
-        # if self.layer_mod == LayerModification.VARIATIONAL:
-        #     param_kld = self.global_parameter_kld()
-        # elif self.layer_mod == LayerModification.NONE:
-        #     param_kld = 0
+        if self.layer_mod == LayerModification.VARIATIONAL:
+            param_kld = self.global_parameter_kld()
+        elif self.layer_mod == LayerModification.NONE:
+            param_kld = 0
 
-        total = weighted_loss# + param_kld
+        # todo: get true Neff
+        Neff = 8000
+        batch_size, _ = x.shape
+
+        total = weighted_loss + (batch_size/Neff) * param_kld
         # print(f'weigted loss is {weighted_loss/total} and param_kld is {param_kld / total}.')
         return total
