@@ -50,11 +50,11 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
 
         # Calculate accumulated metrics
         for key, value in batch_metrics_dict.items():
-            acc_metrics_dict[key] += value
-            acc_metrics_dict[key + "_count"] += 1
+            acc_metrics_dict[key] += value * batch_size
+            acc_metrics_dict[key + "_count"] += batch_size
         metrics_dict = {k: acc_metrics_dict[k] / acc_metrics_dict[k + "_count"] for k in acc_metrics_dict.keys() if not k.endswith("_count")}
 
-        train_loss += loss * batch_size
+        train_loss += loss.item() * batch_size
         train_count += batch_size
 
         if log_interval != 0 and (log_interval == "batch" or time.time() - last_log_time > log_interval):
@@ -64,7 +64,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     average_loss = train_loss / train_count
     if log_interval != 0:
         log_progress(epoch, time.time() - start_time, data_len, data_len, "\n", Loss = train_loss / train_count, **metrics_dict)
-    return average_loss
+    return average_loss, metrics_dict
 
 def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None):
     model.train()
@@ -90,12 +90,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
     # Step in the direction of the gradient
     optimizer.step()
 
-    loss_return = loss.item()
-
-    # Last usage of loss above: Delete it
-    del loss
-
-    return batch_size, loss_return, batch_metrics_dict
+    return batch_size, loss, batch_metrics_dict
 
 def validate(epoch, model, validation_loader):
     model.eval()
@@ -103,6 +98,7 @@ def validate(epoch, model, validation_loader):
     validation_loss = 0
     validation_count = 0
     with torch.no_grad():
+        acc_metrics_dict = defaultdict(lambda: 0)
         for i, xb in enumerate(validation_loader):
             batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
@@ -112,8 +108,14 @@ def validate(epoch, model, validation_loader):
             else:
                 loss, batch_metrics_dict = model(*xb)
 
-            validation_loss += loss.item()
-            validation_count += 1
+            # Calculate accumulated metrics
+            for key, value in batch_metrics_dict.items():
+                acc_metrics_dict[key] += value * batch_size
+                acc_metrics_dict[key + "_count"] += batch_size
 
+            validation_loss += loss.item() * batch_size
+            validation_count += batch_size
+
+        metrics_dict = {k: acc_metrics_dict[k] / acc_metrics_dict[k + "_count"] for k in acc_metrics_dict.keys() if not k.endswith("_count")}
         average_loss = validation_loss / validation_count
-    return average_loss
+    return average_loss, metrics_dict

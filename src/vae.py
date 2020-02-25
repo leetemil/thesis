@@ -110,8 +110,8 @@ class VAE(nn.Module):
         encoded_distribution = self.encode(x)
         z = encoded_distribution.rsample()
         recon_x = self.decode(z)
-        loss = self.vae_loss(recon_x, x, encoded_distribution, weights)
-        scaled_loss = loss / (batch_size * seq_len)
+        total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights)
+        scaled_loss = total_loss / (batch_size * seq_len)
 
         # Metrics
         metrics_dict = {}
@@ -120,6 +120,9 @@ class VAE(nn.Module):
         with torch.no_grad():
             acc = (self.decode(encoded_distribution.mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
             metrics_dict["accuracy"] = acc
+            metrics_dict["nll_loss"] = nll_loss
+            metrics_dict["kld_loss"] = kld_loss
+            metrics_dict["param_kld"] = param_kld
 
         return scaled_loss, metrics_dict
 
@@ -206,11 +209,11 @@ class VAE(nn.Module):
         return global_kld
 
     def vae_loss(self, recon_x, x, encoded_distribution, weights):
-        nll_loss = self.nll_loss(recon_x, x)
-        kld_loss = self.kld_loss(encoded_distribution)
+        nll_loss = self.nll_loss(recon_x, x) * weights
+        kld_loss = self.kld_loss(encoded_distribution) * weights
 
         #! --- mean or sum? ---
-        weighted_loss = torch.mean((nll_loss + kld_loss) * weights)
+        weighted_loss = torch.mean(nll_loss + kld_loss)
 
         if self.layer_mod == LayerModification.VARIATIONAL:
             param_kld = self.global_parameter_kld() / 2500
@@ -221,4 +224,4 @@ class VAE(nn.Module):
 
         total = weighted_loss + param_kld
         # print(f'weigted loss is {weighted_loss/total:5.3f} and param_kld is {param_kld / total:5.3f}.')
-        return total
+        return total, nll_loss.sum().item(), kld_loss.sum().item(), param_kld.item()

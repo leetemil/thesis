@@ -13,7 +13,7 @@ from vae import VAE
 from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, get_datasets
 from training import train_epoch, validate
 from utils import readable_time, get_memory_usage
-from visualize import plot_data
+from visualize import plot_data, plot_loss
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -59,17 +59,37 @@ if __name__ == "__main__" or __name__ == "__console__":
     best_val_loss = float("inf")
     patience = args.patience
     try:
+        epochs = []
+        train_nll_losses = []
+        train_kld_losses = []
+        train_param_klds = []
+        train_total_losses = []
+        val_nll_losses = []
+        val_kld_losses = []
+        val_param_klds = []
+        val_total_losses = []
         if args.visualize_interval != "never":
             plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show)
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
-            val_loss = validate(epoch, model, val_loader)
+            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
+            val_loss, val_metrics = validate(epoch, model, val_loader)
 
             print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")
 
-            improved = val_loss < best_val_loss
+            epochs.append(epoch)
+            train_nll_losses.append(train_metrics["nll_loss"])
+            train_kld_losses.append(train_metrics["kld_loss"])
+            train_param_klds.append(train_metrics["param_kld"])
+            train_total_losses.append(train_loss)
+            val_nll_losses.append(val_metrics["nll_loss"])
+            val_kld_losses.append(val_metrics["kld_loss"])
+            val_param_klds.append(val_metrics["param_kld"])
+            val_total_losses.append(val_loss)
+            train_name = args.results_dir / Path("Train_losses.png")
+            plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, train_name, figure_type = args.figure_type, show = show)
 
+            improved = val_loss < best_val_loss
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
                 plot_data(name, args.figure_type, model, all_data, args.batch_size, show = show)
@@ -91,3 +111,6 @@ if __name__ == "__main__" or __name__ == "__console__":
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
         breakpoint()
+    finally:
+        train_name = args.results_dir / Path("Train_losses.png")
+        plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_name, figure_type = args.figure_type, show = show)
