@@ -5,11 +5,9 @@ parser = argparse.ArgumentParser(description = "Mutation prediction and analysis
 # Required arguments
 parser.add_argument("protein_family", type = Path, help = "Protein family alignment data")
 parser.add_argument("data_sheet", type = str, help = "Protein family data sheet in mutation_data.pickle.")
-parser.add_argument("metric", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
+parser.add_argument("metric_column", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
 parser.add_argument("model_path", type = Path, help = "The path of the model")
 parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
-
-args = parser.parse_args()
 
 from datetime import datetime
 import pickle
@@ -23,10 +21,7 @@ from scipy.stats import spearmanr
 from vae import VAE
 from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 
-print("Arguments given:")
-for arg, value in args.__dict__.items():
-	print(f"  {arg}: {value}")
-print("")
+PICKLE_FILE = Path('data/mutation_data.pickle')
 
 """
 BRCA1_HUMAN_BRCT
@@ -75,60 +70,44 @@ TIM_THEMA_b0
 BG505_env_Bloom2018
 """
 
-ALIGNPATH = Path('data/alignments')
-PICKLE_FILE = Path('data/mutation_data.pickle')
+# def protein_accuracy(trials = 100, model = model, data = protein_dataset):
+#     model.eval()
+#     print(f'{wt_id}: Prediction accuracies for {trials} proteins.')
+#     data = iter(data)
+#     for _ in range(trials):
+#         p, _,  p_seq = next(data)
+#         p_recon = model.reconstruct(p.unsqueeze(0)).squeeze(0).numpy()
+#         p = p.numpy()
+#         loss = 1 - (p == p_recon).mean()
+#         print(f'{p_seq.id:<60s}{100 * loss:>4.1f}%')
 
-SHEET = args.data_sheet#'PABP_YEAST_Fields2013-singles'
-PROTEIN_FAMILY = args.protein_family
-METRIC_COLUMN = args.metric
-MODEL = args.model_path
-
-# only tested on cpu device ...
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-protein_dataset, *_ = get_datasets(PROTEIN_FAMILY, device, 0.8)
-print('Data loaded')
-
-wt, _, wt_seq = protein_dataset[0]
-wt_id = wt_seq.id
-size = len(wt) * NUM_TOKENS
-wt = wt.unsqueeze(0)
-
-model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
-model.load_state_dict(torch.load(MODEL, map_location=device))
-
-def protein_accuracy(trials = 100, model = model, data = protein_dataset):
-    model.eval()
-    print(f'{wt_id}: Prediction accuracies for {trials} proteins.')
-    data = iter(data)
-    for _ in range(trials):
-        p, _,  p_seq = next(data)
-        p_recon = model.reconstruct(p.unsqueeze(0)).squeeze(0).numpy()
-        p = p.numpy()
-        loss = 1 - (p == p_recon).mean()
-        print(f'{p_seq.id:<60s}{100 * loss:>4.1f}%')
-
-def mutation_effect_prediction(model = model, data = protein_dataset):
+def mutation_effect_prediction(model, data_path, sheet, metric_column, ensemble_count = 500, show_scatter = False):
     model.eval()
 
+    # load mutation and experimental pickle
     with open(PICKLE_FILE, 'rb') as f:
         proteins = pickle.load(f)
-        p = proteins[SHEET].dropna(subset=['mutation_effect_prediction_vae_ensemble']).reset_index(drop=True)
+        p = proteins[sheet].dropna(subset=['mutation_effect_prediction_vae_ensemble']).reset_index(drop=True)
+
+    # load dataset
+    data, *_ = get_datasets(data_path, device, 0.8)
 
     wt, _, wt_seq = data[0]
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
     def h(s, offset = offset):
         wildtype = IUPAC_SEQ2IDX[s[0]]
         mutant = IUPAC_SEQ2IDX[s[-1]]
+
+        # should not happen
         if s[1:-1] == '':
             breakpoint()
+
         location = int(s[1:-1]) - offset
         return wildtype, mutant, location
 
     df = pd.DataFrame([h(s) for s in p.mutant if s != 'WT'], columns = ['wt', 'mt', 'loc'])
 
-    df = pd.concat([p.loc[:, [METRIC_COLUMN]], df], axis = 1)#.dropna()
-    # breakpoint()
+    df = pd.concat([p.loc[:, [metric_column]], df], axis = 1)
     data_size = len(df)
     mutants = torch.stack([wt.squeeze(0)] * data_size)
     idx = range(data_size), df['loc'].to_list()
@@ -137,7 +116,8 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
 
     acc_m_elbo = 0
     acc_wt_elbo = 0
-    for i in range(args.ensemble_count):
+
+    for i in range(ensemble_count):
         print(f"Doing model {i}...", end = "\r")
         model.sample_new_decoder()
         m_elbo, m_logp, m_kld = model.protein_logp(mutants)
@@ -151,17 +131,37 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
     ensemble_wt_elbo = acc_wt_elbo / args.ensemble_count
 
     predictions = ensemble_m_elbo - ensemble_wt_elbo
-    scores = df[METRIC_COLUMN]
+    scores = df[metric_column]
 
-    # plt.scatter(predictions, scores)
-    # plt.show()
+    if show_scatter:
+        plt.scatter(predictions, scores)
+        plt.show()
 
     cor, pval = spearmanr(scores, predictions.cpu())
 
     return cor, pval
 
-with torch.no_grad():
-    cor, pval = mutation_effect_prediction()
-    # protein_accuracy()
+if __name__ in ["__main__", "__console__"]:
+    with torch.no_grad():
+        args = parser.parse_args()
 
-    print(f'Spearman\'s Rho: {cor:5.3f}. Pval: {pval}')
+        print("Arguments given:")
+        for arg, value in args.__dict__.items():
+            print(f"  {arg}: {value}")
+        print("")
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        protein_dataset, *_ = get_datasets(args.protein_family, device, 0.8)
+        print('Data loaded')
+
+        wt, *_ = protein_dataset[0]
+        size = len(wt) * NUM_TOKENS
+
+        # load model
+        model = VAE([size, 1500, 1500, 2, 100, 2000, size], NUM_TOKENS).to(device)
+        model.load_state_dict(torch.load(args.model_path, map_location=device))
+
+        cor, pval = mutation_effect_prediction(model, args.protein_family, args.data_sheet, args.metric_column, args.ensemble_count)
+        # protein_accuracy()
+
+        print(f'Spearman\'s Rho: {cor:5.3f}. Pval: {pval}')
