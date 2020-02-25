@@ -118,29 +118,30 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
     plt.close(pca_fig)
 
 def plot_loss(epochs, train_recon_loss, train_kld_loss, train_param_loss, train_total_loss, val_recon_loss, val_kld_loss, val_param_loss, val_total_loss, name, figure_type = 'png', show = False):
-    fig, axs = plt.subplots(2, 2)
+    fig, axs = plt.subplots(2, 2, figsize = (12, 7))
     axs[0, 0].plot(epochs, train_recon_loss, label = "Train")
     axs[0, 0].plot(epochs, val_recon_loss, label = "Validation")
     axs[0, 0].legend()
     axs[0, 0].set_title('Reconstruction Loss')
+    axs[0, 0].set(ylabel='Loss')
     axs[0, 1].plot(epochs, train_param_loss, label = "Train")
     axs[0, 1].plot(epochs, val_param_loss, label = "Validation")
     axs[0, 1].legend()
     axs[0, 1].set_title('$\\theta$ loss')
+    axs[0, 1].set(ylabel='Loss')
     axs[1, 0].plot(epochs, train_kld_loss, label = "Train")
     axs[1, 0].plot(epochs, val_kld_loss, label = "Validation")
     axs[1, 0].legend()
     axs[1, 0].set_title('KLD loss')
+    axs[1, 0].set(xlabel='Epoch', ylabel='Loss')
     axs[1, 1].plot(epochs, train_total_loss, label = "Train")
     axs[1, 1].plot(epochs, val_total_loss, label = "Validation")
     axs[1, 1].legend()
     axs[1, 1].set_title('Total loss')
+    axs[1, 1].set(xlabel='Epoch', ylabel='Loss')
 
     axs[0, 1].yaxis.tick_right()
     axs[1, 1].yaxis.tick_right()
-
-    for ax in axs.flat:
-        ax.set(xlabel='Epoch', ylabel='Loss')
 
     # Hide x labels and tick labels for top plots and y ticks for right plots.
     # for ax in axs.flat:

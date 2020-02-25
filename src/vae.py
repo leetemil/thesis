@@ -18,13 +18,14 @@ class LayerModification(Enum):
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, dropout = 0.5, layer_mod = "variational"):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational"):
         super().__init__()
 
         assert len(layer_sizes) >= 2
 
         self.layer_sizes = layer_sizes
         self.num_tokens = num_tokens
+        self.z_samples = z_samples
         self.dropout = dropout
         self.layer_mod = LayerModification.__members__[layer_mod.upper()]
 
@@ -108,9 +109,8 @@ class VAE(nn.Module):
         batch_size, seq_len = x.shape
         # Forward pass + loss + metrics
         encoded_distribution = self.encode(x)
-        z = encoded_distribution.rsample()
-        breakpoint()
-        recon_x = self.decode(z)
+        z = encoded_distribution.rsample((self.z_samples,))
+        recon_x = self.decode(z.flatten(0, 1))
         total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights, neff)
         scaled_loss = total_loss / (batch_size * seq_len)
 
@@ -159,7 +159,10 @@ class VAE(nn.Module):
     def nll_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
         # CE = F.cross_entropy(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
-        nll = F.nll_loss(recon_x.permute(0, 2, 1), x, reduction = "none").sum(1)
+        recon_x = recon_x.view(self.z_samples, -1, recon_x.size(1), self.num_tokens).permute(1, 3, 2, 0)
+        x = x.unsqueeze(-1).expand(-1, -1, self.z_samples)
+
+        nll = F.nll_loss(recon_x, x, reduction = "none").mean(-1).sum(1)
 
         # amino acid probabilities are independent conditioned on z
         return nll

@@ -39,7 +39,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     # Define model and optimizer
     data_size = all_data[0][0].size(-1) * NUM_TOKENS
-    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS, dropout = args.dropout, layer_mod = args.layer_mod).to(device)
+    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS, z_samples = args.z_samples, dropout = args.dropout, layer_mod = args.layer_mod).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 
@@ -110,8 +110,8 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             print("")
 
-        print('Computing mutation effect prediction correlation.')
-        cor = mutation_effect_prediction(model, args.data, 'BLAT_ECOLX_Ranganathan2015', '2500', device, 100)
+        print('Computing mutation effect prediction correlation...')
+        cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count)
         print(f'Spearman\'s Rho: {cor}')
 
     except KeyboardInterrupt:
