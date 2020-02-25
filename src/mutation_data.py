@@ -137,9 +137,9 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, ensemble_
         plt.scatter(predictions, scores)
         plt.show()
 
-    cor, pval = spearmanr(scores, predictions.cpu())
+    cor, _ = spearmanr(scores, predictions.cpu())
 
-    return cor, pval
+    return cor
 
 if __name__ in ["__main__", "__console__"]:
     with torch.no_grad():
@@ -158,10 +158,10 @@ if __name__ in ["__main__", "__console__"]:
         size = len(wt) * NUM_TOKENS
 
         # load model
-        model = VAE([size, 1500, 1500, 2, 100, 2000, size], NUM_TOKENS).to(device)
+        model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
         model.load_state_dict(torch.load(args.model_path, map_location=device))
 
-        cor, pval = mutation_effect_prediction(model, args.protein_family, args.data_sheet, args.metric_column, args.ensemble_count)
+        cor = mutation_effect_prediction(model, args.protein_family, args.data_sheet, args.metric_column, args.ensemble_count)
         # protein_accuracy()
 
-        print(f'Spearman\'s Rho: {cor:5.3f}. Pval: {pval}')
+        print(f'Spearman\'s Rho: {cor:5.3f}')
