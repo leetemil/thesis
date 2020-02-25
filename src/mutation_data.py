@@ -81,7 +81,7 @@ BG505_env_Bloom2018
 #         loss = 1 - (p == p_recon).mean()
 #         print(f'{p_seq.id:<60s}{100 * loss:>4.1f}%')
 
-def mutation_effect_prediction(model, data_path, sheet, metric_column, ensemble_count = 500, show_scatter = False):
+def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, show_scatter = False):
     model.eval()
 
     # load mutation and experimental pickle
@@ -161,7 +161,7 @@ if __name__ in ["__main__", "__console__"]:
         model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
         model.load_state_dict(torch.load(args.model_path, map_location=device))
 
-        cor = mutation_effect_prediction(model, args.protein_family, args.data_sheet, args.metric_column, args.ensemble_count)
+        cor = mutation_effect_prediction(model, args.protein_family, args.data_sheet, device, args.metric_column, args.ensemble_count)
         # protein_accuracy()
 
         print(f'Spearman\'s Rho: {cor:5.3f}')

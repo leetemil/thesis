@@ -14,6 +14,7 @@ from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, get
 from training import train_epoch, validate
 from utils import readable_time, get_memory_usage
 from visualize import plot_data, plot_loss
+from mutation_data import mutation_effect_prediction
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -106,7 +107,12 @@ if __name__ == "__main__" or __name__ == "__console__":
                 if patience == 0:
                     print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
                     break
+
             print("")
+
+        print('Computing mutation effect prediction correlation.')
+        cor = mutation_effect_prediction(model, args.data, 'BLAT_ECOLX_Ranganathan2015', '2500', device, 100)
+        print(f'Spearman\'s Rho: {cor}')
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
