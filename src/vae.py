@@ -104,13 +104,14 @@ class VAE(nn.Module):
         encoded_distribution = self.encode(x)
         return self.sample(encoded_distribution.mean)
 
-    def forward(self, x, weights):
+    def forward(self, x, weights, neff):
         batch_size, seq_len = x.shape
         # Forward pass + loss + metrics
         encoded_distribution = self.encode(x)
         z = encoded_distribution.rsample()
+        breakpoint()
         recon_x = self.decode(z)
-        total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights)
+        total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights, neff)
         scaled_loss = total_loss / (batch_size * seq_len)
 
         # Metrics
@@ -208,20 +209,19 @@ class VAE(nn.Module):
 
         return global_kld
 
-    def vae_loss(self, recon_x, x, encoded_distribution, weights):
+    def vae_loss(self, recon_x, x, encoded_distribution, weights, neff):
         nll_loss = self.nll_loss(recon_x, x) * weights
         kld_loss = self.kld_loss(encoded_distribution) * weights
 
-        #! --- mean or sum? ---
         weighted_loss = torch.mean(nll_loss + kld_loss)
 
         if self.layer_mod == LayerModification.VARIATIONAL:
-            param_kld = self.global_parameter_kld() / 2500
+            param_kld = self.global_parameter_kld() / neff
+            total = weighted_loss + param_kld
         elif self.layer_mod == LayerModification.NONE:
-            param_kld = 0
+            param_kld = torch.zeros(1)
+            total = weighted_loss
         else:
             raise NotImplementedError("Unsupported layer modification.")
 
-        total = weighted_loss + param_kld
-        # print(f'weigted loss is {weighted_loss/total:5.3f} and param_kld is {param_kld / total:5.3f}.')
         return total, nll_loss.sum().item(), kld_loss.sum().item(), param_kld.item()

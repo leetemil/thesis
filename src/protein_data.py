@@ -72,12 +72,13 @@ class ProteinDataset(Dataset):
         self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
         self.encoded_seqs = torch.stack([seq2idx(seq, device) for seq in self.seqs])
         self.weights = torch.stack([1.0 / (t != self.encoded_seqs).to(torch.float).mean(1).lt(0.2).to(torch.float).sum() for t in self.encoded_seqs])
+        self.neff = self.weights.sum()
 
     def __len__(self):
         return len(self.encoded_seqs)
 
     def __getitem__(self, i):
-        return self.encoded_seqs[i], self.weights[i], self.seqs[i]
+        return self.encoded_seqs[i], self.weights[i], self.neff, self.seqs[i]
 
 class IterProteinDataset(IterableDataset):
     def __init__(self, file, device = None):
@@ -139,12 +140,12 @@ def get_datasets_from_raw_data(file, device, train_ratio):
     return all_data, train_data, val_data
 
 def get_seqs_collate(tensors):
-    encoded_seq, weights, seq = zip(*tensors)
-    return torch.stack(encoded_seq), torch.stack(weights), list(seq)
+    encoded_seq, weights, neffs, seq = zip(*tensors)
+    return torch.stack(encoded_seq), torch.stack(weights), neffs[0], list(seq)
 
 def discard_seqs_collate(tensors):
-    encoded_seq, weights, seq = zip(*tensors)
-    return torch.stack(encoded_seq), torch.stack(weights)
+    encoded_seq, weights, neffs, seq = zip(*tensors)
+    return torch.stack(encoded_seq), torch.stack(weights), neffs[0]
 
 def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_seqs = False):
     return DataLoader(dataset, batch_size = batch_size, shuffle = False, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)

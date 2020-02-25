@@ -52,7 +52,7 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
 
     scatter_dict = defaultdict(lambda: [])
     with torch.no_grad():
-        for xb, weights, seqs in dataloader:
+        for xb, weights, neff, seqs in dataloader:
             ids = [s.id for s in seqs]
             dist = model.encode(xb)
             mean = dist.mean.cpu()
@@ -117,16 +117,23 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
 
     plt.close(pca_fig)
 
-def plot_loss(epochs, recon_loss, kld_loss, param_loss, total_loss, name, figure_type = 'png', show = False):
-    loss_fig = plt.figure()
+def plot_loss(epochs, train_recon_loss, train_kld_loss, train_param_loss, train_total_loss, val_recon_loss, val_kld_loss, val_param_loss, val_total_loss, name, figure_type = 'png', show = False):
     fig, axs = plt.subplots(2, 2)
-    axs[0, 0].plot(epochs, recon_loss)
+    axs[0, 0].plot(epochs, train_recon_loss, label = "Train")
+    axs[0, 0].plot(epochs, val_recon_loss, label = "Validation")
+    axs[0, 0].legend()
     axs[0, 0].set_title('Reconstruction Loss')
-    axs[0, 1].plot(epochs, param_loss, 'tab:orange')
+    axs[0, 1].plot(epochs, train_param_loss, label = "Train")
+    axs[0, 1].plot(epochs, val_param_loss, label = "Validation")
+    axs[0, 1].legend()
     axs[0, 1].set_title('$\\theta$ loss')
-    axs[1, 0].plot(epochs, kld_loss, 'tab:green')
+    axs[1, 0].plot(epochs, train_kld_loss, label = "Train")
+    axs[1, 0].plot(epochs, val_kld_loss, label = "Validation")
+    axs[1, 0].legend()
     axs[1, 0].set_title('KLD loss')
-    axs[1, 1].plot(epochs, total_loss, 'tab:red')
+    axs[1, 1].plot(epochs, train_total_loss, label = "Train")
+    axs[1, 1].plot(epochs, val_total_loss, label = "Validation")
+    axs[1, 1].legend()
     axs[1, 1].set_title('Total loss')
 
     axs[0, 1].yaxis.tick_right()
@@ -145,7 +152,7 @@ def plot_loss(epochs, recon_loss, kld_loss, param_loss, total_loss, name, figure
     if show:
         plt.show()
 
-    plt.close(loss_fig)
+    plt.close(fig)
 
 if __name__ == "__main__":
     device = torch.device("cuda")

@@ -38,7 +38,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     # Define model and optimizer
     data_size = all_data[0][0].size(-1) * NUM_TOKENS
-    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS, layer_mod = args.layer_mod).to(device)
+    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS, dropout = args.dropout, layer_mod = args.layer_mod).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 
@@ -87,7 +87,7 @@ if __name__ == "__main__" or __name__ == "__console__":
             val_param_klds.append(val_metrics["param_kld"])
             val_total_losses.append(val_loss)
             train_name = args.results_dir / Path("Train_losses.png")
-            plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, train_name, figure_type = args.figure_type, show = show)
+            plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
 
             improved = val_loss < best_val_loss
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
@@ -113,4 +113,4 @@ if __name__ == "__main__" or __name__ == "__console__":
         breakpoint()
     finally:
         train_name = args.results_dir / Path("Train_losses.png")
-        plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_name, figure_type = args.figure_type, show = show)
+        plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
