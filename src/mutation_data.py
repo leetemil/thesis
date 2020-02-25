@@ -1,25 +1,27 @@
-import pandas as pd
-import pickle
-import torch
-import numpy as np
-from vae import VAE
-from pathlib import Path
-from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
-import matplotlib.pyplot as plt
-from scipy.stats import spearmanr
-
 import argparse
-from datetime import datetime
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description = "Mutation prediction and analysis", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
-
 # Required arguments
-parser.add_argument("protein_family", type = str, help = "Protein family alignment data")
+parser.add_argument("protein_family", type = Path, help = "Protein family alignment data")
 parser.add_argument("data_sheet", type = str, help = "Protein family data sheet in mutation_data.pickle.")
 parser.add_argument("metric", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
 parser.add_argument("model_path", type = Path, help = "The path of the model")
+parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
 
 args = parser.parse_args()
+
+from datetime import datetime
+import pickle
+
+import numpy as np
+import torch
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import spearmanr
+
+from vae import VAE
+from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 
 print("Arguments given:")
 for arg, value in args.__dict__.items():
@@ -77,7 +79,7 @@ ALIGNPATH = Path('data/alignments')
 PICKLE_FILE = Path('data/mutation_data.pickle')
 
 SHEET = args.data_sheet#'PABP_YEAST_Fields2013-singles'
-PROTEIN_FAMILY = ALIGNPATH / Path(args.protein_family)
+PROTEIN_FAMILY = args.protein_family
 METRIC_COLUMN = args.metric
 MODEL = args.model_path
 
@@ -132,10 +134,23 @@ def mutation_effect_prediction(model = model, data = protein_dataset):
     idx = range(data_size), df['loc'].to_list()
 
     mutants[idx] = torch.tensor(df['mt'].astype('int64').to_list(), device = device)
-    m_elbo, m_logp, m_kld = model.protein_logp(mutants)
-    wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
-    predictions = m_elbo - wt_elbo
+    acc_m_elbo = 0
+    acc_wt_elbo = 0
+    for i in range(args.ensemble_count):
+        print(f"Doing model {i}...", end = "\r")
+        model.sample_new_decoder()
+        m_elbo, m_logp, m_kld = model.protein_logp(mutants)
+        wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
+
+        acc_m_elbo += m_elbo
+        acc_wt_elbo += wt_elbo
+    print("Done!" + " " * 50)
+
+    ensemble_m_elbo = acc_m_elbo / args.ensemble_count
+    ensemble_wt_elbo = acc_wt_elbo / args.ensemble_count
+
+    predictions = ensemble_m_elbo - ensemble_wt_elbo
     scores = df[METRIC_COLUMN]
 
     # plt.scatter(predictions, scores)

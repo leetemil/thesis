@@ -1,15 +1,24 @@
 # Inspired by:
 #   https://github.com/pytorch/examples/blob/master/vae/main.py
 #   https://vxlabs.com/2017/12/08/variational-autoencoder-in-pytorch-commented-and-annotated/
+from enum import Enum
 
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from torch.distributions.normal import Normal
+from torch.distributions import kl_divergence
+
+from variational import variational, Variational
+
+class LayerModification(Enum):
+    NONE        = 1 << 0
+    VARIATIONAL = 1 << 1
 
 class VAE(nn.Module):
-    """Variational Auto-Encoder for protein sequences"""
+    """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, dropout = 0.5):
+    def __init__(self, layer_sizes, num_tokens, dropout = 0.5, layer_mod = "variational"):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -17,6 +26,7 @@ class VAE(nn.Module):
         self.layer_sizes = layer_sizes
         self.num_tokens = num_tokens
         self.dropout = dropout
+        self.layer_mod = LayerModification.__members__[layer_mod.upper()]
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -26,6 +36,8 @@ class VAE(nn.Module):
         for s1, s2 in layer_sizes_doubles[:-1]:
             encode_layers.append(nn.Linear(s1, s2))
             encode_layers.append(nn.ReLU())
+            # encode_layers.append(nn.BatchNorm1d(s2))
+            encode_layers.append(nn.Dropout(self.dropout))
         self.encode_layers = nn.Sequential(*encode_layers)
 
         # Last two layers to get to bottleneck size
@@ -34,22 +46,31 @@ class VAE(nn.Module):
         self.encode_logvar = nn.Linear(s1, s2)
 
         # Construct decode layers
+        if self.layer_mod == LayerModification.VARIATIONAL:
+            decode_mod = variational
+        elif self.layer_mod == LayerModification.NONE:
+            decode_mod = lambda x: x
+        else:
+            raise NotImplementedError("Unsupported layer modification.")
+
         decode_layers = []
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
         for s1, s2 in layer_sizes_doubles[:-2]:
-            decode_layers.append(nn.Linear(s1, s2))
+            decode_layers.append(decode_mod(nn.Linear(s1, s2)))
             decode_layers.append(nn.ReLU())
+            # decode_layers.append(nn.BatchNorm1d(s2))
             decode_layers.append(nn.Dropout(self.dropout))
 
         # Second-to-last decode layer has sigmoid activation
         s1, s2 = layer_sizes_doubles[-2]
-        decode_layers.append(nn.Linear(s1, s2))
-        decode_layers.append(nn.Sigmoid())
+        decode_layers.append(decode_mod(nn.Linear(s1, s2)))
+        decode_layers.append(nn.ReLU())
+        # decode_layers.append(nn.BatchNorm1d(s2))
         decode_layers.append(nn.Dropout(self.dropout))
 
         # Last decode layer has no activation
         s1, s2 = layer_sizes_doubles[-1]
-        decode_layers.append(nn.Linear(s1, s2))
+        decode_layers.append(decode_mod(nn.Linear(s1, s2)))
 
         self.decode_layers = nn.Sequential(*decode_layers)
 
@@ -61,41 +82,7 @@ class VAE(nn.Module):
 
         mean = self.encode_mean(x)
         logvar = self.encode_logvar(x)
-        return mean, logvar
-
-    def reparameterize(self, mean, logvar):
-        """THE REPARAMETERIZATION IDEA:
-
-        For each training sample
-
-        - take the current learned mean, stddev for each of the ZDIMS
-          dimensions and draw a random sample from that distribution
-        - the whole network is trained so that these randomly drawn
-          samples decode to output that looks like the input
-        - which will mean that the std, mean will be learned
-          *distributions* that correctly encode the inputs
-        - due to the additional KLD term (see loss_function() below)
-          the distribution will tend to unit Gaussians
-
-        Parameters
-        ----------
-        mean : [BATCH_SIZE, ZDIMS] mean matrix
-        logvar : [BATCH_SIZE, ZDIMS] variance matrix
-
-        Returns
-        -------
-
-        During training random sample from the learned ZDIMS-dimensional
-        normal distribution; during inference its mean.
-
-        """
-
-        # Multiply log variance with 0.5, then exponent yielding the standard deviation
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-
-        # Sample by multiplying the unit Gaussian with standard deviation and adding the mean
-        return mean + eps * std
+        return Normal(mean, logvar.mul(0.5).exp())
 
     def decode(self, z):
         # Send z through all decode layers
@@ -114,25 +101,24 @@ class VAE(nn.Module):
         return self.sample(z)
 
     def reconstruct(self, x):
-        mean, _ = self.encode(x)
-        return self.sample(mean)
+        encoded_distribution = self.encode(x)
+        return self.sample(encoded_distribution.mean)
 
     def forward(self, x, weights):
         batch_size, seq_len = x.shape
         # Forward pass + loss + metrics
-        mean, logvar = self.encode(x)
-        z = self.reparameterize(mean, logvar)
+        encoded_distribution = self.encode(x)
+        z = encoded_distribution.rsample()
         recon_x = self.decode(z)
-        loss = self.vae_loss(recon_x, x, mean, logvar)
-        weighted_loss = torch.sum(loss * weights)
-        scaled_loss = weighted_loss / (batch_size * seq_len)
+        loss = self.vae_loss(recon_x, x, encoded_distribution, weights)
+        scaled_loss = loss / (batch_size * seq_len)
 
         # Metrics
         metrics_dict = {}
 
         # Accuracy
         with torch.no_grad():
-            acc = (self.decode(mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
+            acc = (self.decode(encoded_distribution.mean).exp().argmax(dim = -1) == x).to(torch.float).mean().item()
             metrics_dict["accuracy"] = acc
 
         return scaled_loss, metrics_dict
@@ -143,18 +129,28 @@ class VAE(nn.Module):
 
         return (f"Variational Auto-Encoder summary:\n"
                 f"  Layer sizes: {self.layer_sizes}\n"
-                f"  Parameters:  {num_params:,}\n")
+                f"  Parameters:  {num_params:,}\n"
+                f"  Layer modification:  {str(self.layer_mod).split('.', maxsplit = 1)[1].title()}\n")
 
     def protein_logp(self, x):
-        mean, logvar = self.encode(x)
-        kld = 0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
-
-        recon_x = self.decode(mean).permute(0, 2, 1)
+        encoded_distribution = self.encode(x)
+        mean = encoded_distribution.mean
+        logvar = encoded_distribution.variance.log()
+        kld = self.kld_loss(encoded_distribution)
+        # kld = 0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
+        z = encoded_distribution.rsample()
+        recon_x = self.decode(z).permute(0, 2, 1)
         logp = F.nll_loss(recon_x, x, reduction = "none").mul(-1).sum(1)
         elbo = logp + kld
 
         # amino acid probabilities are independent conditioned on z
         return elbo, logp, kld
+
+    def sample_new_decoder(self):
+        for layer in self.decode_layers:
+            for hook in layer._forward_pre_hooks.values():
+                if isinstance(hook, Variational):
+                    hook.rsample_new(layer)
 
     def nll_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
@@ -164,7 +160,7 @@ class VAE(nn.Module):
         # amino acid probabilities are independent conditioned on z
         return nll
 
-    def kld_loss(self, mean, logvar):
+    def kld_loss(self, encoded_distribution):
         # kld is Kullback–Leibler divergence -- how much does one learned
         # distribution deviate from another, in this specific case the
         # learned distribution from the unit Gaussian
@@ -175,10 +171,54 @@ class VAE(nn.Module):
         # - D_{KL} = 0.5 * sum(1 + log(sigma^2) - mean^2 - sigma^2)
         # Note the negative D_{KL} in appendix B of the paper
 
-        kld = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp(), dim = 1)
+        # mean = encoded_distribution.mean
+        # logvar = encoded_distribution.variance.log()
+        # kld = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp(), dim = 1)
+
+        prior = Normal(torch.zeros_like(encoded_distribution.mean), torch.ones_like(encoded_distribution.variance.sqrt()))
+        kld = kl_divergence(encoded_distribution, prior).sum(dim = 1)
+
         return kld
 
-    def vae_loss(self, recon_x, x, mean, logvar):
+    def global_parameter_kld(self):
+
+        global_kld = 0
+
+        for layer in self.decode_layers:
+            if isinstance(layer, torch.nn.Linear):
+                # get weight and bias distributions
+                weight_mean = layer.weight_mean
+                weight_std = layer.weight_logvar.mul(1/2).exp()
+                bias_mean = layer.bias_mean
+                bias_std = layer.bias_logvar.mul(1/2).exp()
+
+                q_weight = Normal(weight_mean, weight_std)
+                q_bias = Normal(bias_mean, bias_std)
+
+                # all layers has a unit Gaussian prior
+                p_weight = Normal(torch.zeros_like(weight_mean), torch.ones_like(weight_std))
+                p_bias = Normal(torch.zeros_like(bias_mean), torch.ones_like(bias_std))
+
+                weight_kld = kl_divergence(q_weight, p_weight).sum()
+                bias_kld = kl_divergence(q_bias, p_bias).sum()
+                global_kld += weight_kld + bias_kld
+
+        return global_kld
+
+    def vae_loss(self, recon_x, x, encoded_distribution, weights):
         nll_loss = self.nll_loss(recon_x, x)
-        kld_loss = self.kld_loss(mean, logvar)
-        return nll_loss + kld_loss
+        kld_loss = self.kld_loss(encoded_distribution)
+
+        #! --- mean or sum? ---
+        weighted_loss = torch.mean((nll_loss + kld_loss) * weights)
+
+        if self.layer_mod == LayerModification.VARIATIONAL:
+            param_kld = self.global_parameter_kld() / 2500
+        elif self.layer_mod == LayerModification.NONE:
+            param_kld = 0
+        else:
+            raise NotImplementedError("Unsupported layer modification.")
+
+        total = weighted_loss + param_kld
+        # print(f'weigted loss is {weighted_loss/total:5.3f} and param_kld is {param_kld / total:5.3f}.')
+        return total

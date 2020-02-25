@@ -59,5 +59,9 @@ class Variational:
         distribution = Normal(mean, logvar.mul(0.5).exp())
         return distribution.rsample()
 
-    def __call__(self, module, inputs):
+    def rsample_new(self, module):
         setattr(module, self.name, self.rsample(module))
+
+    def __call__(self, module, inputs):
+        if module.training:
+            self.rsample_new(module)
