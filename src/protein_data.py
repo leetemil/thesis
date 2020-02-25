@@ -6,6 +6,7 @@ import threading
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 from Bio import SeqIO
 from bioservices import UniProt
@@ -51,27 +52,37 @@ IUPAC_IDX2SEQ = OrderedDict(IUPAC_IDX_AMINO_PAIRS)
 
 # Add gap tokens as the same as mask
 IUPAC_SEQ2IDX["-"] = IUPAC_SEQ2IDX["<mask>"]
-IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
+# IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 
 # Add small letters as the same as mask
-for amino, idx in IUPAC_AMINO_IDX_PAIRS:
-    if len(amino) == 1:
-        IUPAC_SEQ2IDX[amino.lower()] = IUPAC_SEQ2IDX["<mask>"]
+# for amino, idx in IUPAC_AMINO_IDX_PAIRS:
+#     if len(amino) == 1:
+#         IUPAC_SEQ2IDX[amino.lower()] = IUPAC_SEQ2IDX["<mask>"]
 
 def seq2idx(seq, device = None):
-    return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq], device = device)
+    return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq if s == s.upper() and s != "."], device = device)
 
 def idx2seq(idxs):
     return "".join([IUPAC_IDX2SEQ[i] for i in idxs])
 
 class ProteinDataset(Dataset):
-    def __init__(self, seqs, device = None):
+    def __init__(self, seqs, device = None, weight_batch_size = 1000):
         super().__init__()
         self.device = device
 
         self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
         self.encoded_seqs = torch.stack([seq2idx(seq, device) for seq in self.seqs])
-        self.weights = torch.stack([1.0 / (t != self.encoded_seqs).to(torch.float).mean(1).lt(0.2).to(torch.float).sum() for t in self.encoded_seqs])
+
+        # Calculate weights
+        weights = []
+        flat_one_hot = F.one_hot(self.encoded_seqs).float().flatten(1)
+        for i in range(self.encoded_seqs.size(0) // weight_batch_size + 1):
+            x = flat_one_hot[i * weight_batch_size : (i + 1) * weight_batch_size]
+            similarities = torch.mm(x, flat_one_hot.T)
+            lengths = (self.encoded_seqs[i * weight_batch_size : (i + 1) * weight_batch_size] != 1).sum(1).unsqueeze(-1)
+            w = 1.0 / (similarities / lengths).gt(0.8).sum(1).float()
+            weights.append(w)
+        self.weights = torch.cat(weights)
         self.neff = self.weights.sum()
 
     def __len__(self):
@@ -101,9 +112,9 @@ class IterProteinDataset(IterableDataset):
     def __len__(self):
         return self.length
 
-def get_datasets(file, device, train_ratio):
+def get_datasets(file, device, train_ratio, use_saved = False):
     saved_datasets = file.with_suffix(".saved_datasets")
-    if saved_datasets.exists():
+    if saved_datasets.exists() and use_saved:
         print(f"Loading data from preprocessed {saved_datasets}")
         return get_datasets_from_saved_data(saved_datasets, device)
     else:
