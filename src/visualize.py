@@ -117,6 +117,33 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
 
     plt.close(pca_fig)
 
+def plot_loss(epochs, recon_loss, param_loss, kld_loss, name, figure_type = 'png', show = False):
+    loss_fig = plt.figure()
+    fig, axs = plt.subplots(2, 2)
+    axs[0, 0].plot(epochs, recon_loss)
+    axs[0, 0].set_title('Reconstruction Loss')
+    axs[0, 1].plot(epochs, param_loss, 'tab:orange')
+    axs[0, 1].set_title('$\\theta$ loss')
+    axs[1, 0].plot(epochs, kld_loss, 'tab:green')
+    axs[1, 0].set_title('KLD loss')
+    axs[1, 1].plot(epochs, recon_loss + param_loss + kld_loss, 'tab:red')
+    axs[1, 1].set_title('Total loss')
+
+    for ax in axs.flat:
+        ax.set(xlabel='Epoch', ylabel='Loss')
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+
+    if name is not None:
+        plt.savefig(name.with_suffix(figure_type))
+
+    if show:
+        plt.show()
+
+    loss_fig.close()
+
 if __name__ == "__main__":
     device = torch.device("cuda")
 
