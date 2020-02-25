@@ -111,7 +111,7 @@ if __name__ == "__main__" or __name__ == "__console__":
             print("")
 
         print('Computing mutation effect prediction correlation.')
-        cor = mutation_effect_prediction(model, args.data, 'BLAT_ECOLX_Ranganathan2015', '2500', device, 100)
+        cor = mutation_effect_prediction(model, args.data, 'BLAT_ECOLX_Ranganathan2015', '2500', device, 500)
         print(f'Spearman\'s Rho: {cor}')
 
     except KeyboardInterrupt:
