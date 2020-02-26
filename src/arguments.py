@@ -30,6 +30,8 @@ def get_vae_args():
 	parser.add_argument("--visualize_interval", type = str, default = "improvement", choices = ["always", "improvement", "never"], help = "Visualize the output at every epoch (always), only at validation loss improvement or never.")
 	parser.add_argument("--visualize_style", type = str, default = "save", choices = ["save", "show", "both"], help = "Save or show the visualization, or both.")
 	parser.add_argument("--figure_type", type = str, default = ".png", help = "Filetype of the visualization figures.")
+	parser.add_argument("--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
+	parser.add_argument("--no_param_loss", action = "store_false", dest = "param_loss", default = False, help = "Disables the param loss")
 
 	args = parser.parse_args()
 
