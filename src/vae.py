@@ -105,13 +105,13 @@ class VAE(nn.Module):
         encoded_distribution = self.encode(x)
         return self.sample(encoded_distribution.mean)
 
-    def forward(self, x, weights, neff):
+    def forward(self, x, weights, neff, warm_up_scale = 1):
         batch_size, seq_len = x.shape
         # Forward pass + loss + metrics
         encoded_distribution = self.encode(x)
         z = encoded_distribution.rsample((self.z_samples,))
         recon_x = self.decode(z.flatten(0, 1))
-        total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights, neff)
+        total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights, neff, warm_up_scale)
         scaled_loss = total_loss / (batch_size * seq_len)
 
         # Metrics
@@ -212,14 +212,14 @@ class VAE(nn.Module):
 
         return global_kld
 
-    def vae_loss(self, recon_x, x, encoded_distribution, weights, neff):
+    def vae_loss(self, recon_x, x, encoded_distribution, weights, neff, warm_up_scale):
         nll_loss = self.nll_loss(recon_x, x) * weights
         kld_loss = self.kld_loss(encoded_distribution) * weights
 
         weighted_loss = torch.mean(nll_loss + kld_loss)
-
+        breakpoint()
         if self.layer_mod == LayerModification.VARIATIONAL:
-            param_kld = self.global_parameter_kld() / neff
+            param_kld = warm_up_scale * self.global_parameter_kld() / neff
             total = weighted_loss + param_kld
         elif self.layer_mod == LayerModification.NONE:
             param_kld = torch.zeros(1)
