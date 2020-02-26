@@ -17,6 +17,7 @@ import torch
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
+from Bio import SeqIO
 
 from vae import VAE
 from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
@@ -81,7 +82,7 @@ BG505_env_Bloom2018
 #         loss = 1 - (p == p_recon).mean()
 #         print(f'{p_seq.id:<60s}{100 * loss:>4.1f}%')
 
-def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, show_scatter = False):
+def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, results_dir = Path(".")):
     model.eval()
 
     # load mutation and experimental pickle
@@ -90,10 +91,13 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
         p = proteins[sheet].dropna(subset=['mutation_effect_prediction_vae_ensemble']).reset_index(drop=True)
 
     # load dataset
-    data, *_ = get_datasets(data_path, device, 0.8)
+    wt_seq = next(SeqIO.parse(data_path, "fasta"))
+    wt_indices = np.array([i for i, c in enumerate(str(wt_seq.seq)) if c == c.upper() and c != "."])
+    wt = seq2idx(wt_seq, device)
 
-    wt, _, wt_seq = data[0]
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
+    positions = wt_indices + offset
+    positions_dict = {pos: i for i, pos in enumerate(positions)}
     def h(s, offset = offset):
         wildtype = IUPAC_SEQ2IDX[s[0]]
         mutant = IUPAC_SEQ2IDX[s[-1]]
@@ -102,7 +106,7 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
         if s[1:-1] == '':
             breakpoint()
 
-        location = int(s[1:-1]) - offset
+        location = positions_dict[int(s[1:-1])]
         return wildtype, mutant, location
 
     df = pd.DataFrame([h(s) for s in p.mutant if s != 'WT'], columns = ['wt', 'mt', 'loc'])
@@ -127,15 +131,17 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
         acc_wt_elbo += wt_elbo
     print("Done!" + " " * 50)
 
-    ensemble_m_elbo = acc_m_elbo / args.ensemble_count
-    ensemble_wt_elbo = acc_wt_elbo / args.ensemble_count
+    ensemble_m_elbo = acc_m_elbo / ensemble_count
+    ensemble_wt_elbo = acc_wt_elbo / ensemble_count
 
     predictions = ensemble_m_elbo - ensemble_wt_elbo
     scores = df[metric_column]
 
-    if show_scatter:
-        plt.scatter(predictions, scores)
-        plt.show()
+    plt.scatter(predictions.cpu(), scores)
+    plt.title("Correlation")
+    plt.xlabel("$\\Delta$-elbo")
+    plt.ylabel("Experimental value")
+    plt.savefig(results_dir / Path("Correlation_scatter.png"))
 
     cor, _ = spearmanr(scores, predictions.cpu())
 

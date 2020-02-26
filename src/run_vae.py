@@ -111,7 +111,8 @@ if __name__ == "__main__" or __name__ == "__console__":
             print("")
 
         print('Computing mutation effect prediction correlation...')
-        cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count)
+        with torch.no_grad():
+            cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
         print(f'Spearman\'s Rho: {cor}')
 
     except KeyboardInterrupt:
