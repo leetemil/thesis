@@ -113,7 +113,7 @@ class VAE(nn.Module):
         z = encoded_distribution.rsample((self.z_samples,))
         recon_x = self.decode(z.flatten(0, 1))
         total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights, neff, warm_up_scale)
-        scaled_loss = total_loss / (batch_size * seq_len)
+        scaled_loss = total_loss #/ (batch_size * seq_len)
 
         # Metrics
         metrics_dict = {}
