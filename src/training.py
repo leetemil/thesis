@@ -50,7 +50,6 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
         warm_up_scale = current_batch / warm_up if current_batch < warm_up else 1
 
         current_batch += 1
-        breakpoint()
 
         batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, warm_up_scale)
 
@@ -80,7 +79,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Reset gradient for next batch
     optimizer.zero_grad()
-    breakpoint()
+
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
         loss, batch_metrics_dict = model(xb, warm_up_scale = warm_up_scale)

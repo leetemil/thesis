@@ -18,7 +18,7 @@ class LayerModification(Enum):
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational"):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", use_param_loss = True):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -28,6 +28,7 @@ class VAE(nn.Module):
         self.z_samples = z_samples
         self.dropout = dropout
         self.layer_mod = LayerModification.__members__[layer_mod.upper()]
+        self.use_param_loss = use_param_loss
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -217,11 +218,10 @@ class VAE(nn.Module):
         kld_loss = self.kld_loss(encoded_distribution) * weights
 
         weighted_loss = torch.mean(nll_loss + kld_loss)
-        breakpoint()
         if self.layer_mod == LayerModification.VARIATIONAL:
             param_kld = warm_up_scale * self.global_parameter_kld() / neff
             total = weighted_loss + param_kld
-        elif self.layer_mod == LayerModification.NONE:
+        elif self.layer_mod == LayerModification.NONE or not self.use_param_loss:
             param_kld = torch.zeros(1)
             total = weighted_loss
         else:
