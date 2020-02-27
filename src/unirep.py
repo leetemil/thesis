@@ -60,8 +60,7 @@ class UniRep(nn.Module):
         pred = self.predict(xb, lengths)
 
         # Calculate loss
-        device = next(self.parameters()).device
-        true = torch.zeros(xb.shape, dtype = torch.int64, device = device) + self.padding_idx
+        true = torch.zeros(xb.shape, dtype = torch.int64, device = xb.device) + self.padding_idx
         true[:, :-1] = xb[:, 1:]
 
         # Flatten the sequence dimension to compare each timestep in cross entropy loss

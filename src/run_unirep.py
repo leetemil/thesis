@@ -24,7 +24,12 @@ if __name__ == "__main__" or __name__ == "__console__":
     if args.device == "cuda" and not torch.cuda.is_available():
         raise ValueError("CUDA device specified, but CUDA is not available. Use --device cpu.")
     device = torch.device(args.device)
-    print(f"Using device: {device.type.upper()}")
+    try:
+        device_name = torch.cuda.get_device_name()
+    except:
+        device_name = "CPU"
+
+    print(f"Using device: {device_name}")
 
     # Load data
     train_data = IterProteinDataset(args.train_data, device = device)
