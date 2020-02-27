@@ -34,6 +34,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     progressed_data = 0
     data_len = len(train_loader.dataset)
     num_batches = (data_len // train_loader.batch_size) + 1
+
     if log_interval != 0:
         log_progress(epoch, 0, progressed_data, data_len, "\r", Loss = 0)
     last_log_time = time.time()
@@ -42,14 +43,11 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     train_count = 0
     start_time = time.time()
 
-    current_batch = 0
+    warm_up_scale = (epoch - 1) / warm_up if (epoch - 1) < warm_up else 1
+    print(warm_up_scale)
 
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):
-
-        warm_up_scale = current_batch / warm_up if current_batch < warm_up else 1
-
-        current_batch += 1
 
         batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, warm_up_scale)
 
