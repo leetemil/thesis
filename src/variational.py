@@ -6,7 +6,7 @@ from torch.distributions.normal import Normal
 from torch.nn.parameter import Parameter
 from torch.nn.init import kaiming_uniform_, uniform_
 
-def variational(module, parameter_names = ["weight", "bias"]):
+def variational(module, parameter_names = "weight_and_bias"):
     if isinstance(parameter_names, str):
         Variational.apply(module, parameter_names)
     elif isinstance(parameter_names, Iterable):
@@ -17,12 +17,56 @@ def variational(module, parameter_names = ["weight", "bias"]):
     return module
 
 class Variational:
-    last_fan_in = 0
     def __init__(self, name):
         self.name = name
 
     @staticmethod
+    def apply_linear(module):
+        for hook in module._forward_pre_hooks.values():
+            if isinstance(hook, Variational) and hook.name == "weight" or hook.name == "bias":
+                raise RuntimeError(f"Cannot register two variational hooks on the same parameter.")
+
+        hook_weight = Variational("weight")
+        hook_bias = Variational("bias")
+
+        weight = getattr(module, "weight")
+        bias = getattr(module, "bias")
+
+        del module._parameters["weight"]
+        del module._parameters["bias"]
+
+        weight_mean_parameter = Parameter(torch.zeros_like(weight))
+        weight_logvar_parameter = Parameter(torch.zeros_like(weight))
+
+        bias_mean_parameter = Parameter(torch.zeros_like(bias))
+        bias_logvar_parameter = Parameter(torch.zeros_like(bias))
+
+        with torch.no_grad():
+            variance = 2 / (weight.size(0) + weight.size(1))
+            weight_logvar_parameter[:] = math.log(variance)
+
+            bound = 1 / math.sqrt(weight.size(1))
+            variance = ((bound * 2) ** 2) / 12
+            bias_logvar_parameter[:] = math.log(variance)
+
+        module.register_parameter("weight_mean", weight_mean_parameter)
+        module.register_parameter("weight_logvar", weight_logvar_parameter)
+        module.register_parameter("bias_mean", bias_mean_parameter)
+        module.register_parameter("bias_logvar", bias_logvar_parameter)
+        setattr(module, "weight", hook_weight.rsample(module))
+        setattr(module, "bias", hook_bias.rsample(module))
+        setattr(module, "sample_new_weight", lambda: hook_weight.rsample_new(module))
+        setattr(module, "sample_new_bias", lambda: hook_bias.rsample_new(module))
+
+        module.register_forward_pre_hook(hook_weight)
+        module.register_forward_pre_hook(hook_bias)
+        return hook_weight, hook_bias
+
+    @staticmethod
     def apply(module, parameter_name):
+        if parameter_name == "weight_and_bias":
+            return Variational.apply_linear(module)
+
         for hook in module._forward_pre_hooks.values():
             if isinstance(hook, Variational) and hook.name == parameter_name:
                 raise RuntimeError(f"Cannot register two variational hooks on the same parameter {parameter_name}")
@@ -37,18 +81,13 @@ class Variational:
 
         with torch.no_grad():
             # Initialize
-            if len(parameter.shape) == 1:
-                bound = 1 / math.sqrt(Variational.last_fan_in)
-                variance = ((bound * 2) ** 2) / 12
-                logvar_parameter[:] = math.log(variance)
-            elif len(parameter.shape) >= 2:
-                Variational.last_fan_in = mean_parameter.size(1)
-                variance = 2 / (parameter.size(0) + parameter.size(1))
-                logvar_parameter[:] = math.log(variance)
+            variance = 2 / (sum(parameter.shape))
+            logvar_parameter[:] = math.log(variance)
 
         module.register_parameter(parameter_name + "_mean", mean_parameter)
         module.register_parameter(parameter_name + "_logvar", logvar_parameter)
         setattr(module, parameter_name, hook.rsample(module))
+        setattr(module, "sample_new_" + parameter_name, lambda: hook.rsample_new(module))
 
         module.register_forward_pre_hook(hook)
         return hook

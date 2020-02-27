@@ -32,7 +32,7 @@ def get_vae_args():
     parser.add_argument("--figure_type", type = str, default = ".png", help = "Filetype of the visualization figures.")
     parser.add_argument("--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
     parser.add_argument("--no_param_loss", action = "store_false", dest = "param_loss", default = False, help = "Disables the param loss")
-    parser.add_argument("--warm_up", type = int, default = 0, help = "Batch number of warm-ups. Will affect the scale of global param loss during warm-up.")
+    parser.add_argument("--warm_up", type = int, default = 0, help = "Number of warm-up epochs. Will affect the scale of global param loss during warm-up.")
 
     args = parser.parse_args()
 

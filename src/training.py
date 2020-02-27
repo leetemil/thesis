@@ -44,7 +44,6 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     start_time = time.time()
 
     warm_up_scale = (epoch - 1) / warm_up if (epoch - 1) < warm_up else 1
-    print(warm_up_scale)
 
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):

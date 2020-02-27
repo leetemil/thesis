@@ -18,16 +18,19 @@ class LayerModification(Enum):
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", use_param_loss = True):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True):
         super().__init__()
 
         assert len(layer_sizes) >= 2
 
         self.layer_sizes = layer_sizes
         self.num_tokens = num_tokens
+        self.sequence_length = self.layer_sizes[0] // self.num_tokens
         self.z_samples = z_samples
         self.dropout = dropout
         self.layer_mod = LayerModification.__members__[layer_mod.upper()]
+        self.num_patterns = num_patterns
+        self.inner_CW_dim = inner_CW_dim
         self.use_param_loss = use_param_loss
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
@@ -51,7 +54,8 @@ class VAE(nn.Module):
         if self.layer_mod == LayerModification.VARIATIONAL:
             decode_mod = variational
         elif self.layer_mod == LayerModification.NONE:
-            decode_mod = lambda x: x
+            def decode_mod(x, *args, **kwargs):
+                return x
         else:
             raise NotImplementedError("Unsupported layer modification.")
 
@@ -70,11 +74,19 @@ class VAE(nn.Module):
         # decode_layers.append(nn.BatchNorm1d(s2))
         decode_layers.append(nn.Dropout(self.dropout))
 
-        # Last decode layer has no activation
-        s1, s2 = layer_sizes_doubles[-1]
-        decode_layers.append(decode_mod(nn.Linear(s1, s2)))
+        # # Last decode layer has no activation
+        # s1, s2 = layer_sizes_doubles[-1]
+        # decode_layers.append(decode_mod(nn.Linear(s1, s2)))
 
         self.decode_layers = nn.Sequential(*decode_layers)
+
+        self.W3 = decode_mod(nn.Linear(s2, self.inner_CW_dim * self.sequence_length, bias = False), "weight")
+        self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
+        self.b3_logvar = nn.Parameter(torch.Tensor([-10.0] * self.num_tokens * self.sequence_length))
+        self.S = decode_mod(nn.Linear(self.sequence_length, s2 // self.num_patterns, bias = False), "weight")
+        self.C = decode_mod(nn.Linear(self.num_tokens, self.inner_CW_dim, bias = False), "weight")
+        self.l_mean = nn.Parameter(torch.Tensor([1]))
+        self.l_logvar = nn.Parameter(torch.Tensor([-10.0]))
 
     def encode(self, x):
         x = F.one_hot(x, self.num_tokens).to(torch.float).flatten(1)
@@ -89,9 +101,29 @@ class VAE(nn.Module):
     def decode(self, z):
         # Send z through all decode layers
         z = self.decode_layers(z)
-        z = z.view(z.size(0), -1, self.num_tokens)
-        z = torch.log_softmax(z, dim = -1)
-        return z
+
+        self.S.sample_new_weight()
+        S = torch.sigmoid(self.S.weight.repeat(self.num_patterns, 1))
+
+        self.W3.sample_new_weight()
+        W3 = self.W3.weight.view(self.layer_sizes[-2] * self.sequence_length, -1)
+
+        self.C.sample_new_weight()
+        W_out = W3 @ self.C.weight
+
+        W_out = W_out.view(-1, self.sequence_length, self.num_tokens)
+        W_out = W_out * S.unsqueeze(2)
+        W_out = W_out.view(-1, self.sequence_length * self.num_tokens)
+
+        bias = Normal(self.b3_mean, self.b3_logvar.mul(0.5).exp()).rsample()
+        h3 = F.linear(z, W_out.T, bias)
+
+        l = Normal(self.l_mean, self.l_logvar.mul(0.5).exp()).rsample()
+        h3 = h3 * torch.log(1 + l.exp())
+
+        h3 = h3.view(h3.size(0), self.sequence_length, self.num_tokens)
+        h3 = torch.log_softmax(h3, dim = -1)
+        return h3
 
     def sample(self, z):
         z = self.decode(z)
@@ -211,11 +243,32 @@ class VAE(nn.Module):
                 bias_kld = kl_divergence(q_bias, p_bias).sum()
                 global_kld += weight_kld + bias_kld
 
+        # W3 loss
+        W3_distribution = Normal(self.W3.weight_mean, self.W3.weight_logvar.mul(0.5).exp())
+        W3_unit_guassian = Normal(torch.zeros_like(self.W3.weight_mean), torch.ones_like(self.W3.weight_logvar))
+        global_kld += kl_divergence(W3_distribution, W3_unit_guassian).sum()
+
+        b3_distribution = Normal(self.b3_mean, self.b3_logvar.mul(0.5).exp())
+        b3_unit_guassian = Normal(torch.zeros_like(self.b3_mean), torch.ones_like(self.b3_logvar))
+        global_kld += kl_divergence(b3_distribution, b3_unit_guassian).sum()
+
+        C_distribution = Normal(self.C.weight_mean, self.C.weight_logvar.mul(0.5).exp())
+        C_unit_guassian = Normal(torch.zeros_like(self.C.weight_mean), torch.ones_like(self.C.weight_logvar))
+        global_kld += kl_divergence(C_distribution, C_unit_guassian).sum()
+
+        S_distribution = Normal(self.S.weight_mean, self.S.weight_logvar.mul(0.5).exp())
+        S_unit_guassian = Normal(torch.zeros_like(self.S.weight_mean) - 12.36, torch.exp(torch.zeros_like(self.S.weight_logvar) + 0.602))
+        global_kld += kl_divergence(S_distribution, S_unit_guassian).sum()
+
+        l_distribution = Normal(self.l_mean, self.l_logvar.mul(0.5).exp())
+        l_unit_guassian = Normal(0, 1)
+        global_kld += kl_divergence(l_distribution, l_unit_guassian).sum()
+
         return global_kld
 
     def vae_loss(self, recon_x, x, encoded_distribution, weights, neff, warm_up_scale):
         nll_loss = self.nll_loss(recon_x, x) * weights
-        kld_loss = self.kld_loss(encoded_distribution) * weights
+        kld_loss = self.kld_loss(encoded_distribution)
 
         weighted_loss = torch.mean(nll_loss + kld_loss)
         if self.layer_mod == LayerModification.VARIATIONAL:
