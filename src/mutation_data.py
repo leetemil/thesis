@@ -20,6 +20,7 @@ from scipy.stats import spearmanr
 from Bio import SeqIO
 
 from vae import VAE
+# from unirep import UniRep
 from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 
 PICKLE_FILE = Path('data/mutation_data.pickle')
@@ -118,23 +119,30 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
 
     mutants[idx] = torch.tensor(df['mt'].astype('int64').to_list(), device = device)
 
-    acc_m_elbo = 0
-    acc_wt_elbo = 0
+    if isinstance(model, VAE):
+        acc_m_elbo = 0
+        acc_wt_elbo = 0
 
-    for i in range(ensemble_count):
-        print(f"Doing model {i}...", end = "\r")
-        model.sample_new_decoder()
-        m_elbo, m_logp, m_kld = model.protein_logp(mutants)
-        wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
+        for i in range(ensemble_count):
+            print(f"Doing model {i}...", end = "\r")
+            if isinstance(model, VAE):
+                model.sample_new_decoder()
+                m_elbo, m_logp, m_kld = model.protein_logp(mutants)
+                wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
-        acc_m_elbo += m_elbo
-        acc_wt_elbo += wt_elbo
-    print("Done!" + " " * 50)
+            acc_m_elbo += m_elbo
+            acc_wt_elbo += wt_elbo
+        print("Done!" + " " * 50)
 
-    ensemble_m_elbo = acc_m_elbo / ensemble_count
-    ensemble_wt_elbo = acc_wt_elbo / ensemble_count
+        ensemble_m_elbo = acc_m_elbo / ensemble_count
+        ensemble_wt_elbo = acc_wt_elbo / ensemble_count
+        predictions = ensemble_m_elbo - ensemble_wt_elbo
 
-    predictions = ensemble_m_elbo - ensemble_wt_elbo
+    else:
+        m_logp = model.protein_logp(mutants)
+        wt_logp = model.protein_logp(wt.unsqueeze(0))
+        predictions = m_logp - wt_logp
+
     scores = df[metric_column]
 
     plt.scatter(predictions.cpu(), scores)
@@ -147,27 +155,27 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
 
     return cor
 
-if __name__ in ["__main__", "__console__"]:
-    with torch.no_grad():
-        args = parser.parse_args()
+# if __name__ in ["__main__", "__console__"]:
+#     with torch.no_grad():
+#         args = parser.parse_args()
 
-        print("Arguments given:")
-        for arg, value in args.__dict__.items():
-            print(f"  {arg}: {value}")
-        print("")
+#         print("Arguments given:")
+#         for arg, value in args.__dict__.items():
+#             print(f"  {arg}: {value}")
+#         print("")
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        protein_dataset, *_ = get_datasets(args.protein_family, device, 0.8)
-        print('Data loaded')
+#         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#         protein_dataset, *_ = get_datasets(args.protein_family, device, 0.8)
+#         print('Data loaded')
 
-        wt, *_ = protein_dataset[0]
-        size = len(wt) * NUM_TOKENS
+#         wt, *_ = protein_dataset[0]
+#         size = len(wt) * NUM_TOKENS
 
-        # load model
-        model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
-        model.load_state_dict(torch.load(args.model_path, map_location=device))
+#         # load model
+#         model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
+#         model.load_state_dict(torch.load(args.model_path, map_location=device))
 
-        cor = mutation_effect_prediction(model, args.protein_family, args.data_sheet, device, args.metric_column, args.ensemble_count)
-        # protein_accuracy()
+#         cor = mutation_effect_prediction(model, args.protein_family, args.data_sheet, device, args.metric_column, args.ensemble_count)
+#         # protein_accuracy()
 
-        print(f'Spearman\'s Rho: {cor:5.3f}')
+#         print(f'Spearman\'s Rho: {cor:5.3f}')
