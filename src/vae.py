@@ -18,7 +18,7 @@ class LayerModification(Enum):
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = True):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -32,6 +32,7 @@ class VAE(nn.Module):
         self.num_patterns = num_patterns
         self.inner_CW_dim = inner_CW_dim
         self.use_param_loss = use_param_loss
+        self.use_dictionary = use_dictionary
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -41,7 +42,6 @@ class VAE(nn.Module):
         for s1, s2 in layer_sizes_doubles[:-1]:
             encode_layers.append(nn.Linear(s1, s2))
             encode_layers.append(nn.ReLU())
-            # encode_layers.append(nn.BatchNorm1d(s2))
             encode_layers.append(nn.Dropout(self.dropout))
         self.encode_layers = nn.Sequential(*encode_layers)
 
@@ -64,29 +64,28 @@ class VAE(nn.Module):
         for s1, s2 in layer_sizes_doubles[:-2]:
             decode_layers.append(decode_mod(nn.Linear(s1, s2)))
             decode_layers.append(nn.ReLU())
-            # decode_layers.append(nn.BatchNorm1d(s2))
             decode_layers.append(nn.Dropout(self.dropout))
 
         # Second-to-last decode layer has sigmoid activation
         s1, s2 = layer_sizes_doubles[-2]
         decode_layers.append(decode_mod(nn.Linear(s1, s2)))
         decode_layers.append(nn.ReLU())
-        # decode_layers.append(nn.BatchNorm1d(s2))
         decode_layers.append(nn.Dropout(self.dropout))
 
-        # # Last decode layer has no activation
-        # s1, s2 = layer_sizes_doubles[-1]
-        # decode_layers.append(decode_mod(nn.Linear(s1, s2)))
+        if not self.use_dictionary:
+            # Last decode layer has no activation
+            s1, s2 = layer_sizes_doubles[-1]
+            decode_layers.append(decode_mod(nn.Linear(s1, s2)))
+        else:
+            self.W3 = decode_mod(nn.Linear(s2, self.inner_CW_dim * self.sequence_length, bias = False), "weight")
+            self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
+            self.b3_logvar = nn.Parameter(torch.Tensor([-10.0] * self.num_tokens * self.sequence_length))
+            self.S = decode_mod(nn.Linear(self.sequence_length, s2 // self.num_patterns, bias = False), "weight")
+            self.C = decode_mod(nn.Linear(self.num_tokens, self.inner_CW_dim, bias = False), "weight")
+            self.l_mean = nn.Parameter(torch.Tensor([1]))
+            self.l_logvar = nn.Parameter(torch.Tensor([-10.0]))
 
         self.decode_layers = nn.Sequential(*decode_layers)
-
-        self.W3 = decode_mod(nn.Linear(s2, self.inner_CW_dim * self.sequence_length, bias = False), "weight")
-        self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
-        self.b3_logvar = nn.Parameter(torch.Tensor([-10.0] * self.num_tokens * self.sequence_length))
-        self.S = decode_mod(nn.Linear(self.sequence_length, s2 // self.num_patterns, bias = False), "weight")
-        self.C = decode_mod(nn.Linear(self.num_tokens, self.inner_CW_dim, bias = False), "weight")
-        self.l_mean = nn.Parameter(torch.Tensor([1]))
-        self.l_logvar = nn.Parameter(torch.Tensor([-10.0]))
 
     def encode(self, x):
         x = F.one_hot(x, self.num_tokens).to(torch.float).flatten(1)
@@ -101,6 +100,11 @@ class VAE(nn.Module):
     def decode(self, z):
         # Send z through all decode layers
         z = self.decode_layers(z)
+
+        if not self.use_dictionary:
+            z = z.view(z.size(0), self.sequence_length, self.num_tokens)
+            z = torch.log_softmax(z, dim = -1)
+            return z
 
         self.S.sample_new_weight()
         S = torch.sigmoid(self.S.weight.repeat(self.num_patterns, 1))
@@ -242,6 +246,9 @@ class VAE(nn.Module):
                 weight_kld = kl_divergence(q_weight, p_weight).sum()
                 bias_kld = kl_divergence(q_bias, p_bias).sum()
                 global_kld += weight_kld + bias_kld
+
+        if not self.use_dictionary:
+            return global_kld
 
         # W3 loss
         W3_distribution = Normal(self.W3.weight_mean, self.W3.weight_logvar.mul(0.5).exp())
