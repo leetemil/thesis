@@ -18,7 +18,7 @@ class LayerModification(Enum):
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = True):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = True, warm_up = 0):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -33,6 +33,8 @@ class VAE(nn.Module):
         self.inner_CW_dim = inner_CW_dim
         self.use_param_loss = use_param_loss
         self.use_dictionary = use_dictionary
+        self.warm_up = warm_up
+        self.warm_up_scale = 0
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -142,7 +144,14 @@ class VAE(nn.Module):
         encoded_distribution = self.encode(x)
         return self.sample(encoded_distribution.mean)
 
-    def forward(self, x, weights, neff, warm_up_scale = 1):
+    def forward(self, x, weights, neff):
+        if self.training:
+            self.warm_up_scale += 1 / (1 + self.warm_up)
+            self.warm_up_scale = min(1, self.warm_up_scale)
+            warm_up_scale = self.warm_up_scale
+        else:
+            warm_up_scale = 1
+
         batch_size, seq_len = x.shape
         # Forward pass + loss + metrics
         encoded_distribution = self.encode(x)
@@ -279,7 +288,7 @@ class VAE(nn.Module):
 
         weighted_loss = torch.mean(nll_loss + kld_loss)
         if self.layer_mod == LayerModification.VARIATIONAL:
-            param_kld = warm_up_scale * self.global_parameter_kld() / neff
+            param_kld = self.warm_up_scale * self.global_parameter_kld() / neff
             total = weighted_loss + param_kld
         elif self.layer_mod == LayerModification.NONE or not self.use_param_loss:
             param_kld = torch.zeros(1)

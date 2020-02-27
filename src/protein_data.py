@@ -91,6 +91,21 @@ class ProteinDataset(Dataset):
     def __getitem__(self, i):
         return self.encoded_seqs[i], self.weights[i], self.neff, self.seqs[i]
 
+class VariableLengthProteinDataset(Dataset):
+    def __init__(self, seqs, device = None):
+        super().__init__()
+        self.device = device
+
+        self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
+        unpadded_seqs = [[CLS] + list(str(s.seq).replace(".", "").replace("-", "").upper()) + [SEP] for s in seqs]
+        self.encoded_seqs = [seq2idx(seq, device) for seq in unpadded_seqs]
+
+    def __len__(self):
+        return len(self.encoded_seqs)
+
+    def __getitem__(self, i):
+        return self.encoded_seqs[i]
+
 class IterProteinDataset(IterableDataset):
     def __init__(self, file, device = None):
         super().__init__()
@@ -164,7 +179,7 @@ def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_seqs =
 def variable_length_sequence_collate(sequences):
     return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True)
 
-def get_iter_protein_DataLoader(dataset, batch_size = 32):
+def get_variable_length_protein_DataLoader(dataset, batch_size = 32):
     return DataLoader(dataset, batch_size = batch_size, collate_fn = variable_length_sequence_collate)
 
 def retrieve_label_from_uniprot_df(ID):

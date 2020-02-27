@@ -23,7 +23,7 @@ def log_progress(epoch, time, progress, total, end, **kwargs):
             report += (f" {key}: {value}")
     print(report, end = end)
 
-def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, warm_up = 0):
+def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None):
     """
         epoch: Index of the epoch to run
         model: The model to run data through. Forward should return a tuple of (loss, metrics_dict).
@@ -43,12 +43,10 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     train_count = 0
     start_time = time.time()
 
-    warm_up_scale = (epoch - 1) / warm_up if (epoch - 1) < warm_up else 1
-
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):
 
-        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, warm_up_scale)
+        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value)
 
         progressed_data += batch_size
 
@@ -70,7 +68,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
         log_progress(epoch, time.time() - start_time, data_len, data_len, "\n", Loss = train_loss / train_count, **metrics_dict)
     return average_loss, metrics_dict
 
-def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, warm_up_scale = 1):
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None):
     model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
@@ -79,9 +77,9 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
-        loss, batch_metrics_dict = model(xb, warm_up_scale = warm_up_scale)
+        loss, batch_metrics_dict = model(xb)
     else:
-        loss, batch_metrics_dict = model(*xb, warm_up_scale = warm_up_scale)
+        loss, batch_metrics_dict = model(*xb)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
     loss.backward()

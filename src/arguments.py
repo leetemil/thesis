@@ -20,11 +20,11 @@ def get_vae_args():
 
     parser.add_argument("--layer_sizes", type = int, default = [1500, 1500, 30, 100, 2000], nargs = "+", help = "Sizes of the hidden layers of the VAE, except the first and last, which will be inferred from the data argument. The smallest size is understood as the bottleneck size and will be the size of the output of the encoder, and the size of the input of the decoder.")
     parser.add_argument("--data", type = Path, default = Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
-    parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
     parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
     parser.add_argument("--dropout", type = float, default = 0.5, help = "Rate of dropout to apply to the encoder and decoder layers.")
     parser.add_argument("--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
     parser.add_argument("--z_samples", type = int, default = 4, help = "How many latent variables to sample per batch point.")
+    parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
     parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
     parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("--dictionary", action = "store_true", dest = "dictionary", default = True, help = "Enables the dictionary of the VAE.")
@@ -58,6 +58,30 @@ def get_unirep_args():
 
     args = parser.parse_args()
 
+    args.results_dir.mkdir(exist_ok = True)
+    print_args(args)
+    return args
+
+def get_unirep_finetune_args():
+    parser = argparse.ArgumentParser(description = "UniRep model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    basic_args(parser)
+
+    # Data
+    parser.add_argument("--data", type = Path, default = Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("--load_model", type = Path, default = Path("."), help = "The model to load before training. Can be omitted.")
+    parser.add_argument("--save_model", type = Path, default = Path("results_unirep_finetuned/model.torch"), help = "The path to save the trained model to.")
+    parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
+    parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
+    parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
+    parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
+
+    parser.add_argument("--embed_size", type = int, default = 10, help = "Size of the amino acid embedding.")
+    parser.add_argument("--hidden_size", type = int, default = 512, help = "Size of the hidden state of the LSTM.")
+    parser.add_argument("--num_layers", type = int, default = 1, help = "Number of layers of the LSTM.")
+
+    args = parser.parse_args()
+
+    args.train_ratio = 1 - args.val_ratio
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args

@@ -8,7 +8,7 @@ import torch
 from torch import optim
 
 from unirep import UniRep
-from protein_data import IterProteinDataset, get_iter_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
+from protein_data import IterProteinDataset, get_variable_length_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from utils import readable_time, get_memory_usage
 from training import train_epoch, train_batch, validate
 from visualize import plot_data
@@ -32,8 +32,8 @@ if __name__ == "__main__" or __name__ == "__console__":
     val_len = len(validation_data)
     train_seqs_per_epoch = val_len * 9
 
-    train_loader = get_iter_protein_DataLoader(train_data, batch_size = args.batch_size)
-    val_loader = get_iter_protein_DataLoader(validation_data, batch_size = args.batch_size)
+    train_loader = get_variable_length_protein_DataLoader(train_data, batch_size = args.batch_size)
+    val_loader = get_variable_length_protein_DataLoader(validation_data, batch_size = args.batch_size)
     print("Data loaded!")
 
     model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers).to(device)

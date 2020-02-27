@@ -39,7 +39,16 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     # Define model and optimizer
     data_size = all_data[0][0].size(-1) * NUM_TOKENS
-    model = VAE([data_size] + args.layer_sizes + [data_size], NUM_TOKENS, z_samples = args.z_samples, dropout = args.dropout, layer_mod = args.layer_mod, use_param_loss = args.param_loss, use_dictionary = args.dictionary).to(device)
+    model = VAE(
+        [data_size] + args.layer_sizes + [data_size],
+        NUM_TOKENS,
+        z_samples = args.z_samples,
+        dropout = args.dropout,
+        layer_mod = args.layer_mod,
+        use_param_loss = args.param_loss,
+        use_dictionary = args.dictionary,
+        warm_up = args.warm_up
+    ).to(device)
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 
@@ -73,7 +82,7 @@ if __name__ == "__main__" or __name__ == "__console__":
             plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show)
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, args.warm_up)
+            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
             val_loss, val_metrics = validate(epoch, model, val_loader)
 
             print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")
