@@ -96,8 +96,10 @@ class VariableLengthProteinDataset(Dataset):
         super().__init__()
         self.device = device
 
-        self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
-        unpadded_seqs = [[CLS] + list(str(s.seq).replace(".", "").replace("-", "").upper()) + [SEP] for s in seqs]
+        seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
+        CLS = "<cls>"
+        SEP = "<sep>"
+        unpadded_seqs = [[CLS] + list(str(s.seq).replace(".", "").replace("-", "")) + [SEP] for s in seqs]
         self.encoded_seqs = [seq2idx(seq, device) for seq in unpadded_seqs]
 
     def __len__(self):

@@ -1,4 +1,4 @@
-from arguments import get_unirep_args
+from arguments import get_unirep_finetune_args
 args = get_unirep_finetune_args()
 
 import time
@@ -10,8 +10,8 @@ from torch import optim
 from unirep import UniRep
 from protein_data import VariableLengthProteinDataset, get_variable_length_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from utils import readable_time, get_memory_usage
-from training import train_epoch, train_batch, validate
-from visualize import plot_data
+from training import train_epoch, validate
+from mutation_data import mutation_effect_prediction
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -79,7 +79,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         with torch.no_grad():
             if model_save_name.exists():
                 model.load_state_dict(torch.load(model_save_name, map_location = device))
-            cor = unirep_mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
+            cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
         print(f'Spearman\'s Rho: {cor}')
 
     except KeyboardInterrupt:

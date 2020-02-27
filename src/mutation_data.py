@@ -139,9 +139,17 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
         predictions = ensemble_m_elbo - ensemble_wt_elbo
 
     else:
-        m_logp = model.protein_logp(mutants)
         wt_logp = model.protein_logp(wt.unsqueeze(0))
-        predictions = m_logp - wt_logp
+
+        batch_size = 128
+        batches = len(mutants) // batch_size + 1
+        log_probs = []
+        for i in range(batches):
+            batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
+            m_logp = model.protein_logp(batch_mutants)
+            log_probs.append(m_logp)
+
+        predictions = torch.cat(log_probs) - wt_logp
 
     scores = df[metric_column]
 
