@@ -112,6 +112,8 @@ if __name__ == "__main__" or __name__ == "__console__":
 
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
+            if model_save_name.exists():
+                model.load_state_dict(torch.load(model_save_name, map_location = device))
             cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
         print(f'Spearman\'s Rho: {cor}')
 
