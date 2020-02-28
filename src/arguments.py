@@ -26,7 +26,7 @@ def get_vae_args():
     parser.add_argument("--z_samples", type = int, default = 4, help = "How many latent variables to sample per batch point.")
     parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
     parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
-    parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
+    parser.add_argument("--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("--dictionary", action = "store_true", dest = "dictionary", default = True, help = "Enables the dictionary of the VAE.")
     parser.add_argument("--no_dictionary", action = "store_false", dest = "dictionary", default = False, help = "Disables the dictionary of the VAE.")
     parser.add_argument("--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
@@ -73,7 +73,7 @@ def get_unirep_finetune_args():
     parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
     parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
     parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
-    parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
+    parser.add_argument("--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
 
     parser.add_argument("--embed_size", type = int, default = 10, help = "Size of the amino acid embedding.")
     parser.add_argument("--hidden_size", type = int, default = 512, help = "Size of the hidden state of the LSTM.")
