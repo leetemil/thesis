@@ -118,7 +118,6 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
     plt.close(pca_fig)
 
 def plot_spearman(name, rhos):
-    breakpoint()
     fig = plt.figure()
     plt.title('Spearman\'s $\\rho$')
     plt.plot(range(len(rhos)), rhos, '+--')
