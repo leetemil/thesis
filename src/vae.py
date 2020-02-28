@@ -287,7 +287,7 @@ class VAE(nn.Module):
         kld_loss = self.kld_loss(encoded_distribution)
 
         weighted_loss = torch.mean(nll_loss + kld_loss)
-        if self.layer_mod == LayerModification.VARIATIONAL:
+        if self.layer_mod == LayerModification.VARIATIONAL and self.use_param_loss:
             param_kld = self.warm_up_scale * self.global_parameter_kld() / neff
             total = weighted_loss + param_kld
         elif self.layer_mod == LayerModification.NONE or not self.use_param_loss:
