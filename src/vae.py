@@ -78,6 +78,7 @@ class VAE(nn.Module):
             # Last decode layer has no activation
             s1, s2 = layer_sizes_doubles[-1]
             decode_layers.append(decode_mod(nn.Linear(s1, s2)))
+
         else:
             self.W3 = decode_mod(nn.Linear(s2, self.inner_CW_dim * self.sequence_length, bias = False), "weight")
             self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
@@ -94,9 +95,9 @@ class VAE(nn.Module):
 
         # Encode x by sending it through all encode layers
         x = self.encode_layers(x)
-
         mean = self.encode_mean(x)
         logvar = self.encode_logvar(x)
+
         return Normal(mean, logvar.mul(0.5).exp())
 
     def decode(self, z):
@@ -129,6 +130,7 @@ class VAE(nn.Module):
 
         h3 = h3.view(h3.size(0), self.sequence_length, self.num_tokens)
         h3 = torch.log_softmax(h3, dim = -1)
+
         return h3
 
     def sample(self, z):
@@ -152,13 +154,11 @@ class VAE(nn.Module):
         else:
             warm_up_scale = 1
 
-        batch_size, seq_len = x.shape
         # Forward pass + loss + metrics
         encoded_distribution = self.encode(x)
         z = encoded_distribution.rsample((self.z_samples,))
         recon_x = self.decode(z.flatten(0, 1))
         total_loss, nll_loss, kld_loss, param_kld = self.vae_loss(recon_x, x, encoded_distribution, weights, neff, warm_up_scale)
-        scaled_loss = total_loss #/ (batch_size * seq_len)
 
         # Metrics
         metrics_dict = {}
@@ -171,7 +171,7 @@ class VAE(nn.Module):
             metrics_dict["kld_loss"] = kld_loss
             metrics_dict["param_kld"] = param_kld
 
-        return scaled_loss, metrics_dict
+        return total_loss, metrics_dict
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
@@ -290,6 +290,7 @@ class VAE(nn.Module):
         if self.layer_mod == LayerModification.VARIATIONAL and self.use_param_loss:
             param_kld = self.warm_up_scale * self.global_parameter_kld() / neff
             total = weighted_loss + param_kld
+
         elif self.layer_mod == LayerModification.NONE or not self.use_param_loss:
             param_kld = torch.zeros(1)
             total = weighted_loss

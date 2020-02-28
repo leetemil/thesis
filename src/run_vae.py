@@ -13,7 +13,7 @@ from vae import VAE
 from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, get_datasets
 from training import train_epoch, validate
 from utils import readable_time, get_memory_usage
-from visualize import plot_data, plot_loss
+from visualize import plot_data, plot_loss, plot_spearman
 from mutation_data import mutation_effect_prediction
 
 if __name__ == "__main__" or __name__ == "__console__":
@@ -83,6 +83,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         val_kld_losses = []
         val_param_klds = []
         val_total_losses = []
+        spearman_rhos = []
         if args.visualize_interval != "never":
             plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show)
         for epoch in range(1, args.epochs + 1):
@@ -108,6 +109,9 @@ if __name__ == "__main__" or __name__ == "__console__":
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
                 plot_data(name, args.figure_type, model, all_data, args.batch_size, show = show)
+                with torch.no_grad():
+                    rho = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 1, args.results_dir, savefig = False)
+                    spearman_rhos.append(rho)
 
             if improved:
                 # If model improved, save the model
@@ -135,5 +139,8 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
         breakpoint()
     finally:
+        spearman_name = args.results_dir / Path("spearman_rhos.png")
+        plot_spearman(spearman_name, spearman_rhos)
+
         train_name = args.results_dir / Path("Train_losses.png")
         plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)

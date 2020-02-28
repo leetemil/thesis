@@ -117,6 +117,14 @@ def plot_data(name, figure_type, model, dataset, batch_size = 64, only_subset_la
 
     plt.close(pca_fig)
 
+def plot_spearman(name, rhos):
+    breakpoint()
+    fig = plt.figure()
+    plt.title('Spearman\'s $\\rho$')
+    plt.plot(range(len(rhos)), rhos, '+--')
+    plt.savefig(name)
+    plt.close(fig)
+
 def plot_loss(epochs, train_recon_loss, train_kld_loss, train_param_loss, train_total_loss, val_recon_loss, val_kld_loss, val_param_loss, val_total_loss, name, figure_type = 'png', show = False):
     fig, axs = plt.subplots(2, 2, figsize = (12, 7))
     axs[0, 0].plot(epochs, train_recon_loss, label = "Train")

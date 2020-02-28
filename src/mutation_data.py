@@ -83,7 +83,7 @@ BG505_env_Bloom2018
 #         loss = 1 - (p == p_recon).mean()
 #         print(f'{p_seq.id:<60s}{100 * loss:>4.1f}%')
 
-def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, results_dir = Path(".")):
+def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True):
     model.eval()
 
     # load mutation and experimental pickle
@@ -153,14 +153,14 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
 
     scores = df[metric_column]
 
-    plt.scatter(predictions.cpu(), scores)
-    plt.title("Correlation")
-    plt.xlabel("$\\Delta$-elbo")
-    plt.ylabel("Experimental value")
-    plt.savefig(results_dir / Path("Correlation_scatter.png"))
+    if savefig:
+        plt.scatter(predictions.cpu(), scores)
+        plt.title("Correlation")
+        plt.xlabel("$\\Delta$-elbo")
+        plt.ylabel("Experimental value")
+        plt.savefig(results_dir / Path("Correlation_scatter.png"))
 
     cor, _ = spearmanr(scores, predictions.cpu())
-
     return cor
 
 # if __name__ in ["__main__", "__console__"]:
