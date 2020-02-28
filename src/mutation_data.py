@@ -124,7 +124,7 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
         acc_wt_elbo = 0
 
         for i in range(ensemble_count):
-            print(f"Doing model {i}...", end = "\r")
+            # print(f"Doing model {i}...", end = "\r")
             if isinstance(model, VAE):
                 model.sample_new_decoder()
                 m_elbo, m_logp, m_kld = model.protein_logp(mutants)
@@ -132,7 +132,7 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
 
             acc_m_elbo += m_elbo
             acc_wt_elbo += wt_elbo
-        print("Done!" + " " * 50)
+        # print("Done!" + " " * 50)
 
         ensemble_m_elbo = acc_m_elbo / ensemble_count
         ensemble_wt_elbo = acc_wt_elbo / ensemble_count
