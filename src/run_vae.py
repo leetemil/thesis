@@ -107,11 +107,13 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             improved = val_loss < best_val_loss
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
-                name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
-                plot_data(name, args.figure_type, model, all_data, args.batch_size, show = show)
                 with torch.no_grad():
-                    rho = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 1, args.results_dir, savefig = False)
+                    rho = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 20, args.results_dir, savefig = False)
+
                     spearman_rhos.append(rho)
+
+                name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
+                plot_data(name, args.figure_type, model, all_data, rho, args.batch_size, show = show)
 
             if improved:
                 # If model improved, save the model
