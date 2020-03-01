@@ -80,13 +80,20 @@ class VAE(nn.Module):
             decode_layers.append(decode_mod(nn.Linear(s1, s2)))
 
         else:
+            if self.layer_mod == LayerModification.VARIATIONAL:
+                self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
+                self.b3_logvar = nn.Parameter(torch.Tensor([-10.0] * self.num_tokens * self.sequence_length))
+                self.l_mean = nn.Parameter(torch.Tensor([1]))
+                self.l_logvar = nn.Parameter(torch.Tensor([-10.0]))
+
+            else:
+                # todo: initialize randomly
+                self.b3 = nn.Parameter(torch.Tensor([1]))
+                self.l = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
+
             self.W3 = decode_mod(nn.Linear(s2, self.inner_CW_dim * self.sequence_length, bias = False), "weight")
-            self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
-            self.b3_logvar = nn.Parameter(torch.Tensor([-10.0] * self.num_tokens * self.sequence_length))
             self.S = decode_mod(nn.Linear(self.sequence_length, s2 // self.num_patterns, bias = False), "weight")
             self.C = decode_mod(nn.Linear(self.num_tokens, self.inner_CW_dim, bias = False), "weight")
-            self.l_mean = nn.Parameter(torch.Tensor([1]))
-            self.l_logvar = nn.Parameter(torch.Tensor([-10.0]))
 
         self.decode_layers = nn.Sequential(*decode_layers)
 
@@ -109,23 +116,29 @@ class VAE(nn.Module):
             z = torch.log_softmax(z, dim = -1)
             return z
 
-        self.S.sample_new_weight()
+        if self.layer_mod == LayerModification.VARIATIONAL:
+            self.S.sample_new_weight()
+            self.W3.sample_new_weight()
+            self.C.sample_new_weight()
+            l = Normal(self.l_mean, self.l_logvar.mul(0.5).exp()).rsample()
+            b3 = Normal(self.b3_mean, self.b3_logvar.mul(0.5).exp()).rsample()
+
+        else:
+            l = self.l
+            b3 = self.b3
+
         S = torch.sigmoid(self.S.weight.repeat(self.num_patterns, 1))
 
-        self.W3.sample_new_weight()
         W3 = self.W3.weight.view(self.layer_sizes[-2] * self.sequence_length, -1)
 
-        self.C.sample_new_weight()
         W_out = W3 @ self.C.weight
 
         W_out = W_out.view(-1, self.sequence_length, self.num_tokens)
         W_out = W_out * S.unsqueeze(2)
         W_out = W_out.view(-1, self.sequence_length * self.num_tokens)
 
-        bias = Normal(self.b3_mean, self.b3_logvar.mul(0.5).exp()).rsample()
-        h3 = F.linear(z, W_out.T, bias)
+        h3 = F.linear(z, W_out.T, b3)
 
-        l = Normal(self.l_mean, self.l_logvar.mul(0.5).exp()).rsample()
         h3 = h3 * torch.log(1 + l.exp())
 
         h3 = h3.view(h3.size(0), self.sequence_length, self.num_tokens)
