@@ -78,14 +78,12 @@ class VAE(nn.Module):
             # Last decode layer has no activation
             s1, s2 = layer_sizes_doubles[-1]
             decode_layers.append(decode_mod(nn.Linear(s1, s2)))
-
         else:
             if self.layer_mod == LayerModification.VARIATIONAL:
                 self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
                 self.b3_logvar = nn.Parameter(torch.Tensor([-10.0] * self.num_tokens * self.sequence_length))
                 self.l_mean = nn.Parameter(torch.Tensor([1]))
                 self.l_logvar = nn.Parameter(torch.Tensor([-10.0]))
-
             else:
                 # todo: initialize randomly
                 self.b3 = nn.Parameter(torch.Tensor([1]))
@@ -122,7 +120,6 @@ class VAE(nn.Module):
             self.C.sample_new_weight()
             l = Normal(self.l_mean, self.l_logvar.mul(0.5).exp()).rsample()
             b3 = Normal(self.b3_mean, self.b3_logvar.mul(0.5).exp()).rsample()
-
         else:
             l = self.l
             b3 = self.b3
