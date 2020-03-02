@@ -200,7 +200,6 @@ class VAE(nn.Module):
         mean = encoded_distribution.mean
         logvar = encoded_distribution.variance.log()
         kld = self.kld_loss(encoded_distribution)
-        # kld = 0.5 * (1 + logvar - mean.pow(2) - logvar.exp()).sum(1)
         z = encoded_distribution.rsample()
         recon_x = self.decode(z).permute(0, 2, 1)
         logp = F.nll_loss(recon_x, x, reduction = "none").mul(-1).sum(1)
@@ -217,7 +216,6 @@ class VAE(nn.Module):
 
     def nll_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
-        # CE = F.cross_entropy(recon_x.view(-1, self.num_tokens), x.flatten(), reduction = "sum")
         recon_x = recon_x.view(self.z_samples, -1, recon_x.size(1), self.num_tokens).permute(1, 3, 2, 0)
         x = x.unsqueeze(-1).expand(-1, -1, self.z_samples)
 
@@ -227,20 +225,6 @@ class VAE(nn.Module):
         return nll
 
     def kld_loss(self, encoded_distribution):
-        # kld is Kullback–Leibler divergence -- how much does one learned
-        # distribution deviate from another, in this specific case the
-        # learned distribution from the unit Gaussian
-
-        # See Appendix B from VAE paper:
-        # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
-        # https://arxiv.org/abs/1312.6114
-        # - D_{KL} = 0.5 * sum(1 + log(sigma^2) - mean^2 - sigma^2)
-        # Note the negative D_{KL} in appendix B of the paper
-
-        # mean = encoded_distribution.mean
-        # logvar = encoded_distribution.variance.log()
-        # kld = -0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp(), dim = 1)
-
         prior = Normal(torch.zeros_like(encoded_distribution.mean), torch.ones_like(encoded_distribution.variance.sqrt()))
         kld = kl_divergence(encoded_distribution, prior).sum(dim = 1)
 
@@ -300,6 +284,7 @@ class VAE(nn.Module):
         kld_loss = self.kld_loss(encoded_distribution)
 
         weighted_loss = torch.mean(nll_loss + kld_loss)
+
         if self.layer_mod == LayerModification.VARIATIONAL and self.use_param_loss:
             param_kld = self.warm_up_scale * self.global_parameter_kld() / neff
             total = weighted_loss + param_kld
@@ -310,4 +295,4 @@ class VAE(nn.Module):
         else:
             raise NotImplementedError("Unsupported layer modification.")
 
-        return total, nll_loss.sum().item(), kld_loss.sum().item(), param_kld.item()
+        return total, nll_loss.mean().item(), kld_loss.mean().item(), param_kld.item()

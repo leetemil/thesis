@@ -109,7 +109,6 @@ if __name__ == "__main__" or __name__ == "__console__":
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 with torch.no_grad():
                     rho = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 20, args.results_dir, savefig = False)
-
                     spearman_rhos.append(rho)
 
                 name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
@@ -121,6 +120,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                 print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                 best_val_loss = val_loss
                 patience = args.patience
+
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                 patience -= 1
