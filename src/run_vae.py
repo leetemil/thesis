@@ -75,6 +75,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     patience = args.patience
     try:
         epochs = []
+        improved_epochs = []
         train_nll_losses = []
         train_kld_losses = []
         train_param_klds = []
@@ -106,6 +107,15 @@ if __name__ == "__main__" or __name__ == "__console__":
             plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
 
             improved = val_loss < best_val_loss
+
+            if improved:
+                # If model improved, save the model
+                torch.save(model.state_dict(), model_save_name)
+                print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
+                best_val_loss = val_loss
+                patience = args.patience
+                improved_epochs.append(epoch)
+
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 with torch.no_grad():
                     rho = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 500, args.results_dir, savefig = False)
@@ -115,12 +125,6 @@ if __name__ == "__main__" or __name__ == "__console__":
                 name = args.results_dir / Path(f"epoch_{epoch}_val_loss_{val_loss:.5f}.png") if save else None
                 plot_data(name, args.figure_type, model, all_data, rho, args.batch_size, show = show)
 
-            if improved:
-                # If model improved, save the model
-                torch.save(model.state_dict(), model_save_name)
-                print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
-                best_val_loss = val_loss
-                patience = args.patience
 
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
@@ -143,7 +147,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         breakpoint()
     finally:
         spearman_name = args.results_dir / Path("spearman_rhos.png")
-        plot_spearman(spearman_name, spearman_rhos)
+        plot_spearman(spearman_name, improved_epochs, spearman_rhos)
 
         train_name = args.results_dir / Path("Train_losses.png")
         plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
