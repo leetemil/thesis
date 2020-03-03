@@ -146,8 +146,13 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
         breakpoint()
     finally:
+        if args.visualize_interval == "always":
+            plot_epochs = range(len(spearman_rhos))
+        else:
+            plot_epochs = improved_epochs
+
         spearman_name = args.results_dir / Path("spearman_rhos.png")
-        plot_spearman(spearman_name, improved_epochs, spearman_rhos)
+        plot_spearman(spearman_name, plot_epochs, spearman_rhos)
 
         train_name = args.results_dir / Path("Train_losses.png")
         plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
