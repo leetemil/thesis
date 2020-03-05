@@ -222,7 +222,7 @@ class VAE(nn.Module):
         return nll
 
     def kld_loss(self, encoded_distribution):
-        prior = Normal(torch.zeros_like(encoded_distribution.mean), torch.ones_like(encoded_distribution.variance.sqrt()))
+        prior = Normal(torch.zeros_like(encoded_distribution.mean), torch.ones_like(encoded_distribution.variance))
         kld = kl_divergence(encoded_distribution, prior).sum(dim = 1)
 
         return kld

@@ -4,7 +4,7 @@ from collections.abc import Iterable
 import torch
 from torch.distributions.normal import Normal
 from torch.nn.parameter import Parameter
-from torch.nn.init import kaiming_uniform_, uniform_
+from torch.nn import init
 
 def variational(module, parameter_names = "weight_and_bias"):
     if isinstance(parameter_names, str):
@@ -41,13 +41,22 @@ class Variational:
         bias_mean_parameter = Parameter(torch.zeros_like(bias))
         bias_logvar_parameter = Parameter(torch.zeros_like(bias))
 
-        with torch.no_grad():
-            variance = 2 / (weight.size(0) + weight.size(1))
-            weight_logvar_parameter[:] = math.log(variance)
+        # Initialize weights
+        variance = 2 / (weight.size(0) + weight.size(1))
+        init.normal_(weight_mean_parameter, 0.0, std = math.sqrt(variance))
+        init.constant_(weight_logvar_parameter, -10.0)
 
-            bound = 1 / math.sqrt(weight.size(1))
-            variance = ((bound * 2) ** 2) / 12
-            bias_logvar_parameter[:] = math.log(variance)
+        # Initialize bias
+        init.constant_(bias_mean_parameter, 0.1)
+        init.constant_(bias_logvar_parameter, -10)
+
+        # with torch.no_grad():
+        #     variance = 2 / (weight.size(0) + weight.size(1))
+        #     weight_logvar_parameter[:] = math.log(variance)
+
+        #     bound = 1 / math.sqrt(weight.size(1))
+        #     variance = ((bound * 2) ** 2) / 12
+        #     bias_logvar_parameter[:] = math.log(variance)
 
         module.register_parameter("weight_mean", weight_mean_parameter)
         module.register_parameter("weight_logvar", weight_logvar_parameter)
@@ -79,10 +88,10 @@ class Variational:
         mean_parameter = Parameter(torch.zeros_like(parameter))
         logvar_parameter = Parameter(torch.zeros_like(parameter))
 
-        with torch.no_grad():
-            # Initialize
-            variance = 2 / (sum(parameter.shape))
-            logvar_parameter[:] = math.log(variance)
+        # Initialize
+        variance = 2 / sum(parameter.shape)
+        init.normal_(mean_parameter, 0.0, std = math.sqrt(variance))
+        init.constant_(logvar_parameter, -10.0)
 
         module.register_parameter(parameter_name + "_mean", mean_parameter)
         module.register_parameter(parameter_name + "_logvar", logvar_parameter)

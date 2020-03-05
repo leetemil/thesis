@@ -113,10 +113,6 @@ if __name__ == "__main__" or __name__ == "__console__":
             train_kld_losses.append(train_metrics["kld_loss"])
             train_param_klds.append(train_metrics["param_kld"])
             train_total_losses.append(train_loss)
-            train_name = args.results_dir / Path("Train_losses.png")
-            plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
-
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")
 
             if improved:
                 # If model improved, save the model
@@ -142,7 +138,18 @@ if __name__ == "__main__" or __name__ == "__console__":
                     print(f"Model has not improved for {args.patience} epochs. Stopping training. Best {loss_str.lower()} loss achieved was: {best_loss:.5f}.")
                     break
 
-            print("")
+            if args.visualize_interval == "always":
+                plot_epochs = range(len(spearman_rhos))
+            else:
+                plot_epochs = improved_epochs
+
+            spearman_name = args.results_dir / Path("spearman_rhos.png")
+            plot_spearman(spearman_name, plot_epochs, spearman_rhos)
+
+            train_name = args.results_dir / Path("Train_losses.png")
+            plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
+
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
 
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
