@@ -94,7 +94,8 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
         plt.legend()
 
         if name is not None:
-            variance_fig.savefig(name.with_name("variance_" + name.name).with_suffix(figure_type))
+            # variance_fig.savefig(name.with_name("variance_" + name.name).with_suffix(figure_type))
+            variance_fig.savefig('explained variance.png')
         plt.close(variance_fig)
         plt.figure(pca_fig.number)
 
