@@ -23,7 +23,7 @@ def get_vae_args():
     parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation. Set to 0 to disable validation (patience will then work on training loss).")
     parser.add_argument("--dropout", type = float, default = 0.0, help = "Rate of dropout to apply to the encoder and decoder layers.")
     parser.add_argument("--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
-    parser.add_argument("--z_samples", type = int, default = 4, help = "How many latent variables to sample per batch point.")
+    parser.add_argument("--z_samples", type = int, default = 1, help = "How many latent variables to sample per batch point.")
     parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
     parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
     parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
