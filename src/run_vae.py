@@ -155,6 +155,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         with torch.no_grad():
             if model_save_name.exists():
                 model.load_state_dict(torch.load(model_save_name, map_location = device))
+                print("Model loaded.")
             cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 4 * args.ensemble_count, args.results_dir)
         print(f'Spearman\'s Rho: {cor}')
 
