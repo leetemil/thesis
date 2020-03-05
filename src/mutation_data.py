@@ -93,7 +93,7 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
 
     # load dataset
     wt_seq = next(SeqIO.parse(data_path, "fasta"))
-    wt_indices = np.array([i for i, c in enumerate(str(wt_seq.seq)) if c == c.upper() and c != "."])
+    wt_indices = np.array([i for i, c in enumerate(str(wt_seq.seq))])# if c == c.upper() and c != "."])
     wt = seq2idx(wt_seq, device)
 
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
