@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Union
 
 def basic_args(parser):
-    parser.add_argument("--epochs", type = int, default = 10, help = "Maximum number of epochs to train (patience may cause fewer epochs to be run).")
+    parser.add_argument("--epochs", type = int, default = 10000, help = "Maximum number of epochs to train (patience may cause fewer epochs to be run).")
     parser.add_argument("--batch_size", type = int, default = 128, help = "Input batch size for training.")
     parser.add_argument("--clip_grad_norm", type = lambda x: None if x is None else float(x), default = None, help = "Gradient will be clipped to this norm. Disabled if None.")
     parser.add_argument("--clip_grad_value", type = lambda x: None if x is None else float(x), default = None, help = "Gradient values will be clipped to this value. Disabled if None.")
