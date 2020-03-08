@@ -1,14 +1,14 @@
 % Chapter formatting
-% \titleformat{\chapter} % command
-%     [display] % shape
-%     {\bfseries\huge} % format
-%     {\thechapter} % label
-%     {0.0pt} % separator
-%     {} % before-code
-%     [] % after-code
+\titleformat{\chapter} % command
+    [display] % shape
+    {\bfseries\huge} % format
+    {\thechapter} % label
+    {0.0pt} % separator
+    {} % before-code
+    [] % after-code
 
-% Spacing of sections         Left      Before spacing           After spacing      [right] (optional)
-% \titlespacing*{\chapter}      {0pt}{0pt plus 2pt minus 2pt}{8pt plus 2pt minus 2pt}
+% % Spacing of sections         Left      Before spacing           After spacing      [right] (optional)
+\titlespacing*{\chapter}      {0pt}{0pt plus 2pt minus 2pt}{8pt plus 2pt minus 2pt}
 % \titlespacing*{\section}      {0pt}{8pt plus 2pt minus 2pt}{4pt plus 1pt minus 1pt}
 % \titlespacing*{\subsection}   {0pt}{8pt plus 2pt minus 2pt}{2pt plus 1pt minus 1pt}
 % \titlespacing*{\subsubsection}{0pt}{4pt plus 1pt minus 1pt}{2pt plus 1pt minus 1pt}
@@ -21,12 +21,22 @@
 \newtheorem{corollary}{Corollary}
 \newtheorem{example}{Example}
 
+% Hyperref colors/setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,  
+    urlcolor=cyan,
+}
+
 % -- Commands
 % TODO macro
 \newcommand{\todo}[1]{{\color{red} TODO: { #1 }}}
 
 % Internal formatting method
 \newcommand{\mo}[1]{{\mathopen{} #1 \mathclose{}}}
+
+% Differential d
+\newcommand*\diff{\mathop{}\!\mathrm{d}}
 
 % Scaling parentheses
 \newcommand{\prts}[1]{\mo{\left( #1 \right)}}
@@ -41,13 +51,31 @@
 \newcommand{\bars}[1]{\mo{\left| #1 \right|}}
 
 % Expected value
-\newcommand{\E}[1]{\mathbb{E}{\mo{\left[ #1 \right]}}}
+\DeclareMathOperator*{\expectedvalue}{\mathbb{E}}
+\newcommand{\E}[1]{\expectedvalue{\mo{\left[ #1 \right]}}}
 % Variance
 \newcommand{\Var}[1]{\mathrm{Var}{\mo{\left[ #1 \right]}}}
+
+% frequent distributions
+\newcommand{\q}{q(\ve{z} \mid \ve{x})}
+\newcommand{\pzx}{p(\ve{z} \mid \ve{x})}
+\newcommand{\pxz}{p(\ve{x} \mid \ve{z})}
+\newcommand{\pz}{p(\ve{z})}
+\newcommand{\px}{p(\ve{x})}
+
+% Vector
+\newcommand{\ve}[1]{\bm{ #1 }}
+
+% Tensor
+\newcommand{\te}[1]{\mathsf{ #1 }}
 
 % Floor and ceil
 \newcommand{\ceil}[1]{\left\lceil #1 \right\rceil}
 \newcommand{\floor}[1]{\left\lfloor #1 \right\rfloor}
+
+% Kullback-Leibler
+\DeclareMathOperator{\kullbackliebler}{KL}
+\newcommand{\kl}[2]{\kullbackliebler\mo{\left(#1 \parallel #2\right)}}
 
 % Acknowledgements environment
 \makeatletter
