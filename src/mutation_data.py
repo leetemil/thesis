@@ -25,53 +25,6 @@ from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC
 
 PICKLE_FILE = Path('data/mutation_data.pickle')
 
-"""
-BRCA1_HUMAN_BRCT
-B3VI55_LIPSTSTABLE
-BLAT_ECOLX_Ranganathan2015
-F7YBW7_MESOW_vae
-RL401_YEAST_Fraser2016
-CALM1_HUMAN_Roth2017
-parEparD_Laub2015_all
-UBC9_HUMAN_Roth2017
-PABP_YEAST_Fields2013-doubles
-SUMO1_HUMAN_Roth2017
-RASH_HUMAN_Kuriyan
-BG_STRSQ_hmmerbit
-RL401_YEAST_Bolon2014
-MK01_HUMAN_Johannessen
-HSP82_YEAST_Bolon2016
-YAP1_HUMAN_Fields2012-singles
-BF520_env_Bloom2018
-UBE4B_MOUSE_Klevit2013-singles
-tRNA_mutation_effect
-HG_FLU_Bloom2016
-B3VI55_LIPST_Whitehead2015
-TPK1_HUMAN_Roth2017
-BLAT_ECOLX_Palzkill2012
-GAL4_YEAST_Shendure2015
-TIM_SULSO_b0
-POLG_HCVJF_Sun2014
-HIS7_YEAST_Kondrashov2017
-TPMT_HUMAN_Fowler2018
-DLG4_RAT_Ranganathan2012
-MTH3_HAEAESTABILIZED_Tawfik2015
-AMIE_PSEAE_Whitehead
-BLAT_ECOLX_Tenaillon2013
-BLAT_ECOLX_Ostermeier2014
-BRCA1_HUMAN_RING
-P84126_THETH_b0
-PTEN_HUMAN_Fowler2018
-PABP_YEAST_Fields2013-singles
-IF1_ECOLI_Kishony
-PA_FLU_Sun2015
-RL401_YEAST_Bolon2013
-KKA2_KLEPN_Mikkelsen2014
-POL_HV1N5-CA_Ndungu2014
-TIM_THEMA_b0
-BG505_env_Bloom2018
-"""
-
 # def protein_accuracy(trials = 100, model = model, data = protein_dataset):
 #     model.eval()
 #     print(f'{wt_id}: Prediction accuracies for {trials} proteins.')
@@ -99,14 +52,10 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
     positions = wt_indices + offset
     positions_dict = {pos: i for i, pos in enumerate(positions)}
+
     def h(s, offset = offset):
         wildtype = IUPAC_SEQ2IDX[s[0]]
         mutant = IUPAC_SEQ2IDX[s[-1]]
-
-        # should not happen
-        if s[1:-1] == '':
-            breakpoint()
-
         location = positions_dict[int(s[1:-1])]
         return wildtype, mutant, location
 
