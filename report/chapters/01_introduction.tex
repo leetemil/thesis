@@ -1,8 +1,49 @@
 \chapter{Introduction}
 
+\todo{general intro}
+
 \section{Proteins}
+The central objects of study in this work are proteins. The complexity of proteins begs some explanation, which we provide here for the non-biologically oriented reader, who may not already be familiar with this topic.
+
+Aside from this background, we do not further significantly concern ourselves with the biological particularities -- we are computer scientists, not biologists. For the same reason, we apologize for any errors or shortcomings of the following explanation.
+
+\subsection{Function}
+Proteins are large molecules (macromolecules) that are used by organisms in virtually every part of their function. For example, proteins are used as enzymes or hormones, to name just a few. However, proteins are also widely used in the biological industries for a variety of purposes, including medical purposes, food processing and biological detergents. These industries would benefit greatly from an increased understanding of proteins, as this would aid their efforts in protein engineering. Protein engineering is the process of developing and synthesizing proteins useful to the above-mentioned industries.
+
+The usefulness of proteins cement the reasoning for their extensive study, including this work. Proteins are incredibly complicated, intricate biological machinery. A better understanding of their complex behavior and properties could lead to the development of better, more useful proteins, which could ultimately decrease suffering and/or save lives in the medical area or decrease costs and increase efficiency in the other biological industries.
+
+%\subsection{Construction?}
+\subsection{Structure}
+Proteins are macromolecules, consisting of long chains of \textit{amino acids}. Amino acids are a class of organic compounds, of which about 20 are used in proteins. Proteins commonly consists of hundreds of amino acids, connected together in a sequence, making proteins molecules of potentially thousands of atoms. In nature, proteins are constructed by organisms by reading their genetic code, in the form of DNA. The genetic code (genes) of the DNA describes which amino acids to put together in a sequence, in order to construct the desired protein.
+
+A protein is in theory defined entirely by its amino acid sequence. However, when proteins are assembled, the chain of amino acids folds up into a complex 3-dimensional structure. This structure is what largely determines the function and properties of the protein. When speaking of protein structure, we concern ourselves with three main levels of structure:
+
+\begin{description}
+    \item[Primary Structure:] Purely the 1-dimensional amino acid sequence itself, with no additional information about the 3-dimensional structure of the protein.
+    \item[Secondary Structure:] 3-dimensional structure of local parts of the protein. When folding, local parts of the amino acid sequence arranges itself into certain structures, most commonly \textit{$\alpha$-helices} and \textit{$\beta$-sheets}. Secondary structure is knowledge of each amino acid's type of local structure.
+    \item[Tertiary Structure:] The full specification of the folded protein, that is, the 3-dimensional coordinates of all the amino acids.
+\end{description}
+
+See figure \ref{fig:protein_structure} for an illustration of the three levels of protein structure.
+
+\begin{figure}
+    \centering
+    \includegraphics[width = \linewidth]{report/figures/protein_structure.png}
+    \caption{Depiction of the levels of protein structure -- primary, secondary and tertiary. \cite{protein_structure_fig}}
+    \label{fig:protein_structure}
+\end{figure}
+
+A central task in protein machine learning is prediction of secondary or tertiary structure, given the primary structure. Many models have some success when predicting secondary structure, as it is not a very difficult task. Comparatively, predicting tertiary structure from primary structure alone is an incredibly difficult task, as the folding of a protein is such a complicated process.
+
+In this work, we concern ourselves with prediction of various protein properties (including secondary structure, but not tertiary structure), given only the protein's primary structure. In doing this, we consider the protein's primary structure as merely a sequence of the common amino acids. Since there are not that many, each amino acid can be assigned a letter of the alphabet, resulting in a protein being represented as merely a string of letters (for example, ``MSKG...'' \todo{insert some letters from actual protein here}).
+
+\subsection{Relation to Natural Language Processing}
+With the above format of the protein data in mind, the similarity between protein machine learning and natural language processing (NLP) becomes apparent. In NLP, the data is in the form of written text, most commonly represented as a sequence of words. We can view our protein data as a similar sequence, except that the words of proteins are amino acids, and while natural languages has hundreds of thousands of words, proteins have just 20 amino acids. Proteins can be thousands of amino acids long, and similarly, documents may be thousands (if not tens or hundreds of thousands) words long. It is clear that, despite some differences, the fields of NLP and protein machine learning are related.
+
+With this relation in mind, we should look to NLP for inspiration for methods in machine learning to apply to proteins. As it turns out, many of the ideas in NLP can also be used in protein machine learning.
 
 \section{Deep Learning}
+
 
 \section{Related Work}
 
@@ -58,7 +99,7 @@ In addition, it will be useful to use representations to explain the behavior of
 
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=\textwidth]{figure.pdf}
+    \includegraphics[width=\textwidth]{figures/figure.pdf}
     \caption{A 2-dimensional view of a protein sequence representation. Similar proteins have representations that are close together. With such a representation, small changes in protein can be explored in the space by looking at points close to the protein. Properties of unknown sequences (represented here by the question mark) could potentially be explored by examining the representation space.}
     \label{fig:latentSpace}
 \end{figure}
