@@ -69,7 +69,6 @@ def get_unirep_finetune_args():
     # Data
     parser.add_argument("--data", type = Path, default = Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
     parser.add_argument("--load_model", type = Path, default = Path("."), help = "The model to load before training. Can be omitted.")
-    parser.add_argument("--save_model", type = Path, default = Path("results_unirep_finetuned/model.torch"), help = "The path to save the trained model to.")
     parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
     parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
     parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
