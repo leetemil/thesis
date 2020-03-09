@@ -92,6 +92,7 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
         batch_size = 128
         batches = len(mutants) // batch_size + 1
         log_probs = []
+
         for i in range(batches):
             batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
             m_logp = model.protein_logp(batch_mutants)

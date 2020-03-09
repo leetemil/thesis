@@ -124,8 +124,14 @@ def plot_spearman(name, epochs, rhos):
     plt.savefig(name)
     plt.close(fig)
 
-def plot_loss(epochs, train_recon_loss, train_kld_loss, train_param_loss, train_total_loss, val_recon_loss, val_kld_loss, val_param_loss, val_total_loss, name, figure_type = 'png', show = False):
+def plot_loss(epochs, train_recon_loss, train_kld_loss, train_param_loss, train_total_loss, val_recon_loss, val_kld_loss, val_param_loss, val_total_loss, name, figure_type = 'png', show = False, logscale = True):
+
     fig, axs = plt.subplots(2, 2, figsize = (12, 7))
+
+    if logscale:
+        axs[0, 1].set(yscale = 'log')
+        axs[1, 1].set(yscale = 'log')
+
     axs[0, 0].plot(epochs, train_recon_loss, label = "Train")
     axs[0, 0].set_title('Reconstruction Loss')
     axs[0, 0].set(ylabel='Loss')
