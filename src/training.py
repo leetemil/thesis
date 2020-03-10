@@ -46,12 +46,8 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     acc_metrics_dict = defaultdict(lambda: 0)
     prev_time = time.time()
     for batch_idx, xb in enumerate(train_loader):
-        print(f"Everything else took {time.time() - prev_time}")
 
-        prev_time = time.time()
         batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value)
-        print(f"Batch took {time.time() - prev_time}")
-        prev_time = time.time()
 
         progressed_data += batch_size
 

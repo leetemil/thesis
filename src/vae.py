@@ -287,8 +287,8 @@ class VAE(nn.Module):
         return global_kld
 
     def vae_loss(self, recon_x, x, encoded_distribution, weights, neff, warm_up_scale):
-        nll_loss = self.nll_loss(recon_x, x)
-        kld_loss = self.kld_loss(encoded_distribution)
+        nll_loss = self.nll_loss(recon_x, x) * weights
+        kld_loss = self.kld_loss(encoded_distribution) * weights
 
         weighted_loss = torch.mean(nll_loss + kld_loss)
 
