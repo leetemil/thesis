@@ -7,7 +7,7 @@ import threading
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset, IterableDataset, DataLoader
+from torch.utils.data import Dataset, IterableDataset, DataLoader, WeightedRandomSampler
 from Bio import SeqIO
 from bioservices import UniProt
 
@@ -182,8 +182,8 @@ def discard_seqs_collate(tensors):
     encoded_seq, weights, neffs, seq = zip(*tensors)
     return torch.stack(encoded_seq), torch.stack(weights), neffs[0]
 
-def get_protein_dataloader(dataset, batch_size = 32, shuffle = False, get_seqs = False):
-    return DataLoader(dataset, batch_size = batch_size, shuffle = False, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)
+def get_protein_dataloader(dataset, batch_size = 128, get_seqs = False):
+    return DataLoader(dataset, batch_size = batch_size, sampler = WeightedRandomSampler(dataset.weights, max(1, len(dataset.weights))), collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)
 
 def variable_length_sequence_collate(sequences):
     return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True)

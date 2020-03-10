@@ -38,7 +38,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio)
 
     # Construct dataloaders for batches
-    train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size, shuffle = True)
+    train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size)
     val_loader = get_protein_dataloader(val_data, batch_size = args.batch_size)
     print("Data loaded!")
 
