@@ -6,6 +6,7 @@ from enum import Enum
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from torch.nn import init
 from torch.distributions.normal import Normal
 from torch.distributions import kl_divergence
 
@@ -42,7 +43,11 @@ class VAE(nn.Module):
         encode_layers = []
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[:bottleneck_idx], layer_sizes[1:])]
         for s1, s2 in layer_sizes_doubles[:-1]:
-            encode_layers.append(nn.Linear(s1, s2))
+            layer = nn.Linear(s1, s2)
+            # Initialization taken from Deep Sequence paper
+            init.xavier_normal_(layer.weight)
+            init.constant_(layer.bias, 0.1)
+            encode_layers.append(layer)
             encode_layers.append(nn.ReLU())
             encode_layers.append(nn.Dropout(self.dropout))
         self.encode_layers = nn.Sequential(*encode_layers)
@@ -51,6 +56,13 @@ class VAE(nn.Module):
         s1, s2 = layer_sizes_doubles[-1]
         self.encode_mean = nn.Linear(s1, s2)
         self.encode_logvar = nn.Linear(s1, s2)
+
+        # Initialize last encode layers
+        init.xavier_normal_(self.encode_mean.weight)
+        init.constant_(self.encode_mean.bias, 0.1)
+
+        init.xavier_normal_(self.encode_logvar.weight)
+        init.constant_(self.encode_logvar.bias, -10)
 
         # Construct decode layers
         if self.layer_mod == LayerModification.VARIATIONAL:
@@ -71,7 +83,7 @@ class VAE(nn.Module):
         # Second-to-last decode layer has sigmoid activation
         s1, s2 = layer_sizes_doubles[-2]
         decode_layers.append(decode_mod(nn.Linear(s1, s2)))
-        decode_layers.append(nn.ReLU())
+        decode_layers.append(nn.Sigmoid()) # Experimental
         decode_layers.append(nn.Dropout(self.dropout))
 
         if not self.use_dictionary:
