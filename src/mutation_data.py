@@ -3,6 +3,7 @@ from pathlib import Path
 
 from datetime import datetime
 import pickle
+import math
 
 import numpy as np
 import torch
@@ -28,9 +29,8 @@ PICKLE_FILE = Path('data/mutation_data.pickle')
 #         loss = 1 - (p == p_recon).mean()
 #         print(f'{p_seq.id:<60s}{100 * loss:>4.1f}%')
 
-def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True):
-    model.eval()
-
+def make_mutants(data_path, sheet, metric_column, device):
+    print("Making mutants...")
     # load mutation and experimental pickle
     with open(PICKLE_FILE, 'rb') as f:
         proteins = pickle.load(f)
@@ -45,35 +45,58 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
     positions = wt_indices + offset
     positions_dict = {pos: i for i, pos in enumerate(positions)}
 
-    def h(s, offset = offset):
-        breakpoint()
-        wildtype = IUPAC_SEQ2IDX[s[0]]
-        mutant = IUPAC_SEQ2IDX[s[-1]]
-        location = positions_dict[int(s[1:-1])]
-        return wildtype, mutant, location
+    mutants_list, scores = zip(*list(filter(lambda t: not math.isnan(t[1]), zip(p.mutant, p[metric_column]))))
+    mutants_list, scores = list(mutants_list), list(scores)
+    wt_present = mutants_list[-1] == "wt"
+    if wt_present:
+        del mutants_list[-1]
+        del scores[-1]
 
-    df = pd.DataFrame([h(s) for s in p.mutant if s != 'WT'], columns = ['wt', 'mt', 'loc'])
+    data_size = len(mutants_list)
+    mutants = wt.repeat(data_size, 1)
 
-    df = pd.concat([p.loc[:, [metric_column]], df], axis = 1)
-    data_size = len(df)
-    mutants = torch.stack([wt.squeeze(0)] * data_size)
-    idx = range(data_size), df['loc'].to_list()
+    for i, position_mutations in enumerate(mutants_list):
+        mutations = position_mutations.split(":")
+        for mutation in mutations:
+            wildtype = IUPAC_SEQ2IDX[mutation[0]]
+            mutant = IUPAC_SEQ2IDX[mutation[-1]]
 
-    mutants[idx] = torch.tensor(df['mt'].astype('int64').to_list(), device = device)
+            if sheet == "parEparD_Laub2015_all":
+                offset = 103
+            else:
+                offset = 0
+            location = positions_dict[int(mutation[1:-1]) + offset]
+
+            assert mutants[i, location] == wildtype, f"{IUPAC_IDX2SEQ[mutants[i, location].item()]}, {IUPAC_IDX2SEQ[wildtype]}, {location}, {i}"
+            mutants[i, location] = mutant
+
+    while True:
+        yield mutants, wt, scores
+
+mutants_fn = None
+
+def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True):
+    model.eval()
+
+    global mutants_fn
+    if mutants_fn is None:
+        mutants_fn = make_mutants(data_path, sheet, metric_column, device)
+
+    mutants, wt, scores = next(mutants_fn)
 
     if isinstance(model, VAE):
         acc_m_elbo = 0
         acc_wt_elbo = 0
 
         for i in range(ensemble_count):
-            # print(f"Doing model {i}...", end = "\r")
+            print(f"Doing model {i}...", end = "\r")
             model.sample_new_decoder()
             m_elbo, m_logp, m_kld = model.protein_logp(mutants)
             wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
             acc_m_elbo += m_elbo
             acc_wt_elbo += wt_elbo
-        # print("Done!" + " " * 50)
+        print("Done!" + " " * 50)
 
         ensemble_m_elbo = acc_m_elbo / ensemble_count
         ensemble_wt_elbo = acc_wt_elbo / ensemble_count
@@ -93,8 +116,6 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
 
         predictions = torch.cat(log_probs) - wt_logp
 
-    scores = df[metric_column]
-
     if savefig:
         plt.scatter(predictions.cpu(), scores)
         plt.title("Correlation")
@@ -108,12 +129,11 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
 if __name__ in ["__main__", "__console__"]:
     parser = argparse.ArgumentParser(description = "Mutation prediction and analysis", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
     # Required arguments
-    parser.add_argument("data", type = Path, help = "Protein family alignment data")
-    parser.add_argument("data_sheet", type = str, help = "Protein family data sheet in mutation_data.pickle.")
-    parser.add_argument("metric_column", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
+    parser.add_argument("--data", type = Path, default = Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
+    parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
     parser.add_argument("--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("--results_dir", type = Path, default = Path(f"results_{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory to save results to.")
-
 
     with torch.no_grad():
         args = parser.parse_args()
@@ -131,7 +151,7 @@ if __name__ in ["__main__", "__console__"]:
         size = len(wt) * NUM_TOKENS
 
         # load model
-        model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
+        model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS, use_dictionary = False).to(device)
 
         try:
             model.load_state_dict(torch.load(args.results_dir / Path("model.torch"), map_location=device))
