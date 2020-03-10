@@ -46,7 +46,6 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(model.summary())
     optimizer = optim.Adam(model.parameters())
 
-    model_save_name = args.results_dir / Path("model.torch")
     if args.load_model.exists() and args.load_model.is_file():
         print(f"Loading saved model from {args.load_model}...")
         model.load_state_dict(torch.load(args.load_model, map_location = device))
@@ -55,6 +54,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     best_val_loss = float("inf")
     patience = args.patience
     epoch = 0
+    model_save_name = args.results_dir / Path("model.torch")
     try:
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
