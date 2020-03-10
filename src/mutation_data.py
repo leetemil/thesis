@@ -1,14 +1,6 @@
 import argparse
 from pathlib import Path
 
-parser = argparse.ArgumentParser(description = "Mutation prediction and analysis", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
-# Required arguments
-parser.add_argument("protein_family", type = Path, help = "Protein family alignment data")
-parser.add_argument("data_sheet", type = str, help = "Protein family data sheet in mutation_data.pickle.")
-parser.add_argument("metric_column", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
-parser.add_argument("model_path", type = Path, help = "The path of the model")
-parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
-
 from datetime import datetime
 import pickle
 
@@ -54,6 +46,7 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
     positions_dict = {pos: i for i, pos in enumerate(positions)}
 
     def h(s, offset = offset):
+        breakpoint()
         wildtype = IUPAC_SEQ2IDX[s[0]]
         mutant = IUPAC_SEQ2IDX[s[-1]]
         location = positions_dict[int(s[1:-1])]
@@ -112,27 +105,39 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
     cor, _ = spearmanr(scores, predictions.cpu())
     return cor
 
-# if __name__ in ["__main__", "__console__"]:
-#     with torch.no_grad():
-#         args = parser.parse_args()
+if __name__ in ["__main__", "__console__"]:
+    parser = argparse.ArgumentParser(description = "Mutation prediction and analysis", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
+    # Required arguments
+    parser.add_argument("data", type = Path, help = "Protein family alignment data")
+    parser.add_argument("data_sheet", type = str, help = "Protein family data sheet in mutation_data.pickle.")
+    parser.add_argument("metric_column", type = str, help = "Metric column of sheet used for Spearman's Rho calculation")
+    parser.add_argument("--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
+    parser.add_argument("--results_dir", type = Path, default = Path(f"results_{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory to save results to.")
 
-#         print("Arguments given:")
-#         for arg, value in args.__dict__.items():
-#             print(f"  {arg}: {value}")
-#         print("")
 
-#         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#         protein_dataset, *_ = get_datasets(args.protein_family, device, 0.8)
-#         print('Data loaded')
+    with torch.no_grad():
+        args = parser.parse_args()
 
-#         wt, *_ = protein_dataset[0]
-#         size = len(wt) * NUM_TOKENS
+        print("Arguments given:")
+        for arg, value in args.__dict__.items():
+            print(f"  {arg}: {value}")
+        print("")
 
-#         # load model
-#         model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
-#         model.load_state_dict(torch.load(args.model_path, map_location=device))
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        protein_dataset, *_ = get_datasets(args.data, device, 0.8)
+        print('Data loaded')
 
-#         cor = mutation_effect_prediction(model, args.protein_family, args.data_sheet, device, args.metric_column, args.ensemble_count)
-#         # protein_accuracy()
+        wt, *_ = protein_dataset[0]
+        size = len(wt) * NUM_TOKENS
 
-#         print(f'Spearman\'s Rho: {cor:5.3f}')
+        # load model
+        model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
+
+        try:
+            model.load_state_dict(torch.load(args.results_dir / Path("model.torch"), map_location=device))
+        except FileNotFoundError:
+            pass
+
+        cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
+
+        print(f'Spearman\'s Rho: {cor:5.3f}')
