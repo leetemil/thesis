@@ -7,11 +7,9 @@ from pathlib import Path
 import torch
 from torch import optim
 
-from unirep import UniRep
-from protein_data import VariableLengthProteinDataset, get_variable_length_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
-from utils import readable_time, get_memory_usage
-from training import train_epoch, validate
-from mutation_data import mutation_effect_prediction
+from models import UniRep
+from data import VariableLengthProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
+from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -38,8 +36,8 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     train_data, val_data = torch.utils.data.random_split(all_data, [train_length, val_length])
 
-    train_loader = get_variable_length_protein_DataLoader(train_data, batch_size = args.batch_size)
-    val_loader = get_variable_length_protein_DataLoader(val_data, batch_size = args.batch_size)
+    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size)
+    val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size)
     print("Data loaded!")
 
     model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers).to(device)

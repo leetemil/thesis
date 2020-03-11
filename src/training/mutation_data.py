@@ -12,11 +12,10 @@ import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 from Bio import SeqIO
 
-from vae import VAE
-# from unirep import UniRep
-from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
+from models import VAE
+from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx
 
-PICKLE_FILE = Path('data/mutation_data.pickle')
+PICKLE_FILE = Path('data/files/mutation_data.pickle')
 
 # def protein_accuracy(trials = 100, model = model, data = protein_dataset):
 #     model.eval()

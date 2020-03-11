@@ -10,7 +10,7 @@ from torch.nn import init
 from torch.distributions.normal import Normal
 from torch.distributions import kl_divergence
 
-from variational import variational, Variational
+from .variational import variational, Variational
 
 class LayerModification(Enum):
     NONE        = 1 << 0

@@ -1,5 +1,5 @@
 # First, command-line arguments
-from arguments import get_vae_args
+from args import get_vae_args
 args = get_vae_args()
 
 import time
@@ -9,12 +9,10 @@ import torch
 from torch import optim
 from torch.utils.data import random_split
 
-from vae import VAE
-from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, get_datasets
-from training import train_epoch, validate
-from utils import readable_time, get_memory_usage
-from visualize import plot_data, plot_loss, plot_spearman
-from mutation_data import mutation_effect_prediction
+from models import VAE
+from data import get_protein_dataloader, NUM_TOKENS, get_datasets
+from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction
+from visualization import plot_data, plot_loss, plot_spearman
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing

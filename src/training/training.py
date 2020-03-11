@@ -7,7 +7,7 @@ import torch
 from torch import Tensor
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 
-from utils import make_loading_bar, readable_time, eta, get_gradient_norm
+from .utils import make_loading_bar, readable_time, eta, get_gradient_norm
 
 def log_progress(epoch, time, progress, total, end, **kwargs):
     report = f"Epoch: {epoch:5} "
@@ -44,7 +44,6 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     start_time = time.time()
 
     acc_metrics_dict = defaultdict(lambda: 0)
-    prev_time = time.time()
     for batch_idx, xb in enumerate(train_loader):
 
         batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value)

@@ -188,7 +188,7 @@ def get_protein_dataloader(dataset, batch_size = 128, shuffle = False, get_seqs 
 def variable_length_sequence_collate(sequences):
     return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True)
 
-def get_variable_length_protein_DataLoader(dataset, batch_size = 32):
+def get_variable_length_protein_dataLoader(dataset, batch_size = 32):
     return DataLoader(dataset, batch_size = batch_size, collate_fn = variable_length_sequence_collate)
 
 def retrieve_label_from_uniprot_df(ID):

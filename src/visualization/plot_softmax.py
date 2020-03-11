@@ -8,8 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 
-from vae import VAE
-from protein_data import ProteinDataset, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq, IUPAC_AMINO_IDX_PAIRS
+from models import VAE
+from data import ProteinDataset, NUM_TOKENS, IUPAC_AMINO_IDX_PAIRS
 
 ALIGNPATH = Path('data/alignments')
 BLAT_ECOL = 'BLAT_ECOLX_Palzkill2012'

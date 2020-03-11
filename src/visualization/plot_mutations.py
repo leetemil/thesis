@@ -1,15 +1,16 @@
+import argparse
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 import pickle
 import torch
 import numpy as np
-from vae import VAE
-from pathlib import Path
-from protein_data import get_datasets, get_protein_dataloader, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
-import argparse
-from datetime import datetime
+from models import VAE
+from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX
 
 parser = argparse.ArgumentParser(description = "Mutation representations", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
 

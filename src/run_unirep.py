@@ -1,4 +1,4 @@
-from arguments import get_unirep_args
+from args import get_unirep_args
 args = get_unirep_args()
 
 import time
@@ -7,11 +7,10 @@ from pathlib import Path
 import torch
 from torch import optim
 
-from unirep import UniRep
-from protein_data import IterProteinDataset, get_variable_length_protein_DataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
-from utils import readable_time, get_memory_usage
-from training import train_epoch, train_batch, validate
-from visualize import plot_data
+from models import UniRep
+from data import IterProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
+from training import train_epoch, train_batch, validate, readable_time, get_memory_usage
+from visualization import plot_data
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -37,8 +36,8 @@ if __name__ == "__main__" or __name__ == "__console__":
     val_len = len(validation_data)
     train_seqs_per_epoch = val_len * 9
 
-    train_loader = get_variable_length_protein_DataLoader(train_data, batch_size = args.batch_size)
-    val_loader = get_variable_length_protein_DataLoader(validation_data, batch_size = args.batch_size)
+    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size)
+    val_loader = get_variable_length_protein_dataLoader(validation_data, batch_size = args.batch_size)
     print("Data loaded!")
 
     model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers).to(device)

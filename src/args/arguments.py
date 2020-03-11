@@ -11,7 +11,7 @@ def basic_args(parser):
     parser.add_argument("--device", type = str, default = "cuda", choices = ["cpu", "cuda"], help = "Which device to use (CPU or CUDA for GPU).")
     parser.add_argument("--patience", type = int, default = 500, help = "Training will stop if the model does not improve on the validation set for this many epochs.")
     parser.add_argument("--log_interval", type = lambda x: x if x == "batch" else float(x), default = 0, help = "How many seconds to wait between training status logging. 0 to disable loading bar progress. \"batch\" for log at every batch.")
-    parser.add_argument("--results_dir", type = Path, default = Path(f"results_{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory to save results to.")
+    parser.add_argument("--results_dir", type = Path, default = Path(f"{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory name to save results under. Will be saved under results/results_dir.")
     parser.add_argument("--seed", type = int, help = "Seed for random number generation. If not set, a random seed will be used.")
 
 def get_vae_args():
@@ -19,7 +19,7 @@ def get_vae_args():
     basic_args(parser)
 
     parser.add_argument("--layer_sizes", type = int, default = [1500, 1500, 30, 100, 2000], nargs = "+", help = "Sizes of the hidden layers of the VAE, except the first and last, which will be inferred from the data argument. The smallest size is understood as the bottleneck size and will be the size of the output of the encoder, and the size of the input of the decoder.")
-    parser.add_argument("--data", type = Path, default = Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
     parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation. Set to 0 to disable validation (patience will then work on training loss).")
     parser.add_argument("--dropout", type = float, default = 0.0, help = "Rate of dropout to apply to the encoder and decoder layers.")
     parser.add_argument("--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
@@ -40,6 +40,7 @@ def get_vae_args():
 
     # Argument postprocessing
     args.train_ratio = 1 - args.val_ratio
+    args.results_dir = Path("results") / args.results_dir
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args
@@ -58,6 +59,7 @@ def get_unirep_args():
 
     args = parser.parse_args()
 
+    args.results_dir = Path("results") / args.results_dir
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args
@@ -67,7 +69,7 @@ def get_unirep_finetune_args():
     basic_args(parser)
 
     # Data
-    parser.add_argument("--data", type = Path, default = Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
     parser.add_argument("--load_model", type = Path, default = Path("."), help = "The model to load before training. Can be omitted.")
     parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
     parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
@@ -81,6 +83,7 @@ def get_unirep_finetune_args():
     args = parser.parse_args()
 
     args.train_ratio = 1 - args.val_ratio
+    args.results_dir = Path("results") / args.results_dir
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args

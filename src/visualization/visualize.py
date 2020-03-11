@@ -2,17 +2,17 @@ from collections import defaultdict
 from pathlib import Path
 import itertools
 
-from Bio import SeqIO
 import torch
+from Bio import SeqIO
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from vae import VAE
-from protein_data import ProteinDataset, get_protein_dataloader
+from models import VAE
+from data import get_protein_dataloader
 
 def get_pfam_label_dict():
-    file = Path("data/PF00144_full_length_sequences_labeled.fasta")
+    file = Path("data/files/PF00144_full_length_sequences_labeled.fasta")
     seqs = SeqIO.parse(file, "fasta")
 
     def getKeyLabel(seq):
@@ -29,9 +29,9 @@ def get_BLAT_label_dict(file):
 
     return dict([line[:-1].split(": ") for line in lines])
 
-BLAT_LABEL_DICT = get_BLAT_label_dict(Path("data/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m"))
+BLAT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m"))
 
-BLAT_HMMERBIT_LABEL_DICT = get_BLAT_label_dict(Path("data/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105_LABELS.a2m"))
+BLAT_HMMERBIT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105_LABELS.a2m"))
 
 def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
     pca_fig = plt.figure()
