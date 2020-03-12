@@ -1,18 +1,23 @@
 import torch
 from torch import nn
 
+from .norm_conv import NormConv
+
 class WaveNet(nn.Module):
 
-	def __init__(self, residual_channels, gate_channels, stacks, layers_per_stack, bias = True):
+	def __init__(self, num_tokens, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True):
 		super().__init__()
 
+		self.num_tokens = num_tokens
 		self.residual_channels = residual_channels
 		self.gate_channels = gate_channels
+		self.skip_out_channels = skip_out_channels
+		self.out_channels = out_channels
 		self.stacks = stacks
 		self.layers_per_stack = layers_per_stack
 		self.bias = bias
 
-		self.first_conv = nn.Conv1d(1, self.residual_channels, kernel_size = 1, bias = self.bias)
+		self.first_conv = NormConv(num_tokens, self.residual_channels, kernel_size = 1, bias = self.bias)
 
 		self.dilations = []
 		for stack in range(self.stacks):
@@ -23,25 +28,25 @@ class WaveNet(nn.Module):
 			dilations = self.dilations,
 			residual_channels = self.residual_channels,
 			gate_channels = self.gate_channels,
+			skip_out_channels = self.skip_out_channels,
 			kernel_size = 2
 		)
 
 		self.last_conv_layers = nn.Sequential(
 			nn.ReLU(),
-			nn.Conv1d(self.residual_channels, self.residual_channels, kernel_size = 1, bias = self.bias),
+			NormConv(self.skip_out_channels, self.skip_out_channels, kernel_size = 1, bias = self.bias),
 			nn.ReLU(),
-			nn.Conv1d(self.residual_channels, self.residual_channels, kernel_size = 1, bias = self.bias)
+			NormConv(self.skip_out_channels, self.out_channels, kernel_size = 1, bias = self.bias)
 		)
 
 	def forward(self, x):
 		x = self.first_conv(x)
-		skip_outputs = self.dilated_conv_stack(x)
-		x = sum(skip_outputs)
-		x = self.last_conv_layers(x)
+		skip_sum = self.dilated_conv_stack(x)
+		x = self.last_conv_layers(skip_sum)
 		return x
 
 class WaveNetLayer(nn.Module):
-	def __init__(self, residual_channels, gate_channels, kernel_size, dilation, out_channels = None, causal = True, bias = True):
+	def __init__(self, residual_channels, gate_channels, kernel_size, dilation, skip_out_channels = None, causal = True, bias = True):
 		super().__init__()
 
 		self.residual_channels = residual_channels
@@ -51,10 +56,10 @@ class WaveNetLayer(nn.Module):
 		self.causal = causal
 		self.bias = bias
 
-		if out_channels is not None:
-			self.out_channels = out_channels
+		if skip_out_channels is not None:
+			self.skip_out_channels = skip_out_channels
 		else:
-			self.out_channels = self.residual_channels
+			self.skip_out_channels = self.residual_channels
 
 		if self.causal:
 			self.padding = (kernel_size - 1) * dilation
@@ -62,9 +67,9 @@ class WaveNetLayer(nn.Module):
 			self.padding = (kernel_size - 1) // 2 * dilation
 
 		# Conv layer that the input is put through before the non-linear activations
-		self.dilated_conv = nn.Conv1d(
+		self.dilated_conv = NormConv(
 			in_channels = self.residual_channels,
-			out_channels = self.gate_channels,
+			out_channels = self.gate_channels * 2,
 			kernel_size = self.kernel_size,
 			dilation = self.dilation,
 			padding = self.padding,
@@ -72,17 +77,17 @@ class WaveNetLayer(nn.Module):
 		)
 
 		# Conv layer for the output, which goes to the next WaveNetLayer
-		self.residual_conv = nn.Conv1d(
-			in_channels = self.gate_channels // 2,
+		self.residual_conv = NormConv(
+			in_channels = self.gate_channels,
 			out_channels = self.residual_channels,
 			kernel_size = 1,
 			bias = self.bias
 		)
 
 		# Conv layer for the skip connction which goes directly to the output
-		self.skip_conv = nn.Conv1d(
-			in_channels = self.gate_channels // 2,
-			out_channels = self.out_channels,
+		self.skip_conv = NormConv(
+			in_channels = self.gate_channels,
+			out_channels = self.skip_out_channels,
 			kernel_size = 1,
 			bias = self.bias
 		)
@@ -103,7 +108,7 @@ class WaveNetLayer(nn.Module):
 		return output, skip
 
 class WaveNetStack(nn.Module):
-	def __init__(self, dilations, residual_channels, gate_channels, kernel_size, out_channels = None, causal = True, bias = True):
+	def __init__(self, dilations, residual_channels, gate_channels, kernel_size, skip_out_channels = None, causal = True, bias = True):
 		super().__init__()
 
 		self.dilations = dilations
@@ -113,10 +118,10 @@ class WaveNetStack(nn.Module):
 		self.causal = causal
 		self.bias = bias
 
-		if out_channels is not None:
-			self.out_channels = out_channels
+		if skip_out_channels is not None:
+			self.skip_out_channels = skip_out_channels
 		else:
-			self.out_channels = self.residual_channels
+			self.skip_out_channels = self.residual_channels
 
 		self.layers = nn.ModuleList()
 		for d in dilations:
@@ -124,6 +129,7 @@ class WaveNetStack(nn.Module):
 				residual_channels = self.residual_channels,
 				gate_channels = self.gate_channels,
 				kernel_size = self.kernel_size,
+				skip_out_channels = self.skip_out_channels,
 				dilation = d,
 				causal = self.causal,
 				bias = self.bias
@@ -131,9 +137,8 @@ class WaveNetStack(nn.Module):
 			self.layers.append(layer)
 
 	def forward(self, x):
-		skip_outputs = []
+		skip_sum = 0
 		for layer in self.layers:
 			x, skip = layer(x)
-			skip_outputs.append(skip)
-
-		return skip_outputs
+			skip_sum += skip
+		return skip_sum

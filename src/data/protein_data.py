@@ -11,39 +11,39 @@ from torch.utils.data import Dataset, IterableDataset, DataLoader, WeightedRando
 from Bio import SeqIO
 from bioservices import UniProt
 
-IUPAC_AMINO_IDX_PAIRS = [
-    ("<pad>", 0),
-    ("<mask>", 1),
-    ("<cls>", 2),
-    ("<sep>", 3),
-    ("<unk>", 4),
-    ("A", 5),
-    ("B", 6),
-    ("C", 7),
-    ("D", 8),
-    ("E", 9),
-    ("F", 10),
-    ("G", 11),
-    ("H", 12),
-    ("I", 13),
-    ("K", 14),
-    ("L", 15),
-    ("M", 16),
-    ("N", 17),
-    ("O", 18),
-    ("P", 19),
-    ("Q", 20),
-    ("R", 21),
-    ("S", 22),
-    ("T", 23),
-    ("U", 24),
-    ("V", 25),
-    ("W", 26),
-    ("X", 27),
-    ("Y", 28),
-    ("Z", 29)
-]
-IUPAC_IDX_AMINO_PAIRS = [(i, a) for (a, i) in IUPAC_AMINO_IDX_PAIRS]
+IUPAC_IDX_AMINO_PAIRS = list(enumerate([
+    "<pad>",
+    "<mask>",
+    "<cls>",
+    "<sep>",
+    "<unk>",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+]))
+IUPAC_AMINO_IDX_PAIRS = [(a, i) for (i, a) in IUPAC_IDX_AMINO_PAIRS]
 
 NUM_TOKENS = len(IUPAC_AMINO_IDX_PAIRS)
 
@@ -52,6 +52,11 @@ IUPAC_IDX2SEQ = OrderedDict(IUPAC_IDX_AMINO_PAIRS)
 
 # Add gap tokens as the same as mask
 IUPAC_SEQ2IDX["-"] = IUPAC_SEQ2IDX["<mask>"]
+# IUPAC_SEQ2IDX["B"] = IUPAC_SEQ2IDX["<mask>"]
+# IUPAC_SEQ2IDX["O"] = IUPAC_SEQ2IDX["<mask>"]
+# IUPAC_SEQ2IDX["U"] = IUPAC_SEQ2IDX["<mask>"]
+# IUPAC_SEQ2IDX["X"] = IUPAC_SEQ2IDX["<mask>"]
+# IUPAC_SEQ2IDX["Z"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 
 # Add small letters as the same as mask
