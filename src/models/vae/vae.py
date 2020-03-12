@@ -207,7 +207,8 @@ class VAE(nn.Module):
     def protein_logp(self, x):
         encoded_distribution = self.encode(x)
         kld = self.kld_loss(encoded_distribution)
-        z = encoded_distribution.mean
+        # z = encoded_distribution.mean
+        z = encoded_distribution.rsample()
         recon_x = self.decode(z).permute(0, 2, 1)
         logp = F.nll_loss(recon_x, x, reduction = "none").mul(-1).sum(1)
         elbo = logp + kld
