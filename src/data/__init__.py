@@ -6,6 +6,7 @@ from .protein_data import (
 	VariableLengthProteinDataset,
 	IterProteinDataset,
 	NUM_TOKENS,
+	masked_one_hot,
 	seq2idx,
 	idx2seq,
 	IUPAC_SEQ2IDX,

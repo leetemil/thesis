@@ -12,13 +12,13 @@ from Bio import SeqIO
 from bioservices import UniProt
 
 IUPAC_IDX_AMINO_PAIRS = list(enumerate([
-    "<pad>",
-    "<mask>",
-    "<cls>",
-    "<sep>",
-    "<unk>",
+    # "<pad>",
+    # "<mask>",
+    # "<cls>",
+    # "<sep>",
+    # "<unk>",
     "A",
-    "B",
+    # "B",
     "C",
     "D",
     "E",
@@ -30,18 +30,18 @@ IUPAC_IDX_AMINO_PAIRS = list(enumerate([
     "L",
     "M",
     "N",
-    "O",
+    # "O",
     "P",
     "Q",
     "R",
     "S",
     "T",
-    "U",
+    # "U",
     "V",
     "W",
-    "X",
+    # "X",
     "Y",
-    "Z",
+    # "Z",
 ]))
 IUPAC_AMINO_IDX_PAIRS = [(a, i) for (i, a) in IUPAC_IDX_AMINO_PAIRS]
 
@@ -51,24 +51,33 @@ IUPAC_SEQ2IDX = OrderedDict(IUPAC_AMINO_IDX_PAIRS)
 IUPAC_IDX2SEQ = OrderedDict(IUPAC_IDX_AMINO_PAIRS)
 
 # Add gap tokens as the same as mask
-IUPAC_SEQ2IDX["-"] = IUPAC_SEQ2IDX["<mask>"]
-# IUPAC_SEQ2IDX["B"] = IUPAC_SEQ2IDX["<mask>"]
-# IUPAC_SEQ2IDX["O"] = IUPAC_SEQ2IDX["<mask>"]
-# IUPAC_SEQ2IDX["U"] = IUPAC_SEQ2IDX["<mask>"]
-# IUPAC_SEQ2IDX["X"] = IUPAC_SEQ2IDX["<mask>"]
-# IUPAC_SEQ2IDX["Z"] = IUPAC_SEQ2IDX["<mask>"]
-# IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
+IUPAC_SEQ2IDX["-"] = -1
+IUPAC_SEQ2IDX["B"] = -1
+IUPAC_SEQ2IDX["O"] = -1
+IUPAC_SEQ2IDX["U"] = -1
+IUPAC_SEQ2IDX["X"] = -1
+IUPAC_SEQ2IDX["Z"] = -1
+# IUPAC_SEQ2IDX["."] = -1
 
 # Add small letters as the same as mask
-# for amino, idx in IUPAC_AMINO_IDX_PAIRS:
-#     if len(amino) == 1:
-#         IUPAC_SEQ2IDX[amino.lower()] = IUPAC_SEQ2IDX["<mask>"]
+# for amino, idx in list(IUPAC_SEQ2IDX.items()):
+#     IUPAC_SEQ2IDX[amino.lower()] = -1
 
 def seq2idx(seq, device = None):
     return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq if s == s.upper() and s != "."], device = device)
 
 def idx2seq(idxs):
     return "".join([IUPAC_IDX2SEQ[i] for i in idxs])
+
+def masked_one_hot(tensor, num_classes = -1):
+    tensor = tensor.clone()
+    if num_classes == -1:
+        num_classes = torch.max(tensor) + 1
+    mask = tensor < 0
+    tensor[mask] = 0
+    one_hot = F.one_hot(tensor, num_classes)
+    one_hot[mask, :] = 0
+    return one_hot
 
 class ProteinDataset(Dataset):
     def __init__(self, seqs, device = None, weight_batch_size = 1000):
@@ -87,7 +96,7 @@ class ProteinDataset(Dataset):
 
         # Calculate weights
         weights = []
-        flat_one_hot = F.one_hot(self.encoded_seqs).float().flatten(1)
+        flat_one_hot = F.one_hot(self.encoded_seqs.abs()).float().flatten(1)
         for i in range(self.encoded_seqs.size(0) // weight_batch_size + 1):
             x = flat_one_hot[i * weight_batch_size : (i + 1) * weight_batch_size]
             similarities = torch.mm(x, flat_one_hot.T)

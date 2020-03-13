@@ -10,6 +10,7 @@ from torch.nn import init
 from torch.distributions.normal import Normal
 from torch.distributions import kl_divergence
 
+from data import masked_one_hot
 from .variational import variational, Variational
 
 class LayerModification(Enum):
@@ -108,7 +109,7 @@ class VAE(nn.Module):
         self.decode_layers = nn.Sequential(*decode_layers)
 
     def encode(self, x):
-        x = F.one_hot(x, self.num_tokens).to(torch.float).flatten(1)
+        x = masked_one_hot(x, self.num_tokens).to(torch.float).flatten(1)
 
         # Encode x by sending it through all encode layers
         x = self.encode_layers(x)
@@ -209,7 +210,7 @@ class VAE(nn.Module):
         # z = encoded_distribution.mean
         z = encoded_distribution.rsample()
         recon_x = self.decode(z).permute(0, 2, 1)
-        logp = F.nll_loss(recon_x, x, reduction = "none").mul(-1).sum(1)
+        logp = F.nll_loss(recon_x, x, reduction = "none", ignore_index = -1).mul(-1).sum(1)
         elbo = logp + kld
 
         # amino acid probabilities are independent conditioned on z
@@ -226,7 +227,7 @@ class VAE(nn.Module):
         recon_x = recon_x.view(self.z_samples, -1, recon_x.size(1), self.num_tokens).permute(1, 3, 2, 0)
         x = x.unsqueeze(-1).expand(-1, -1, self.z_samples)
 
-        nll = F.nll_loss(recon_x, x, reduction = "none").mean(-1).sum(1)
+        nll = F.nll_loss(recon_x, x, reduction = "none", ignore_index = -1).mean(-1).sum(1)
 
         # amino acid probabilities are independent conditioned on z
         return nll
