@@ -3,6 +3,7 @@ from .protein_data import (
 	get_protein_dataloader,
 	get_protein_dataloader,
 	get_variable_length_protein_dataLoader,
+	VariableLengthProteinDataset,
 	IterProteinDataset,
 	NUM_TOKENS,
 	seq2idx,

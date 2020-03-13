@@ -197,7 +197,6 @@ class VAE(nn.Module):
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
-        num_train_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
 
         return (f"Variational Auto-Encoder summary:\n"
                 f"  Layer sizes: {self.layer_sizes}\n"

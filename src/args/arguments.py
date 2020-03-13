@@ -14,6 +14,11 @@ def basic_args(parser):
     parser.add_argument("--results_dir", type = Path, default = Path(f"{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory name to save results under. Will be saved under results/results_dir.")
     parser.add_argument("--seed", type = int, help = "Seed for random number generation. If not set, a random seed will be used.")
 
+def mutation_effect_prediction_args(parser):
+    parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
+    parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
+    parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
+
 def get_vae_args():
     parser = argparse.ArgumentParser(description = "Variational Auto-Encoder on aligned protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
     basic_args(parser)
@@ -24,9 +29,7 @@ def get_vae_args():
     parser.add_argument("--dropout", type = float, default = 0.0, help = "Rate of dropout to apply to the encoder and decoder layers.")
     parser.add_argument("--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
     parser.add_argument("--z_samples", type = int, default = 1, help = "How many latent variables to sample per batch point.")
-    parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
-    parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
-    parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
+    mutation_effect_prediction_args(parser)
     parser.add_argument("--dictionary", action = "store_true", dest = "dictionary", default = False, help = "Enables the dictionary of the VAE.")
     parser.add_argument("--no_dictionary", action = "store_false", dest = "dictionary", default = True, help = "Disables the dictionary of the VAE.")
     parser.add_argument("--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
@@ -72,10 +75,7 @@ def get_unirep_finetune_args():
     parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
     parser.add_argument("--load_model", type = Path, default = Path("."), help = "The model to load before training. Can be omitted.")
     parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
-    parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
-    parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
-    parser.add_argument("--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
-
+    mutation_effect_prediction_args(parser)
     parser.add_argument("--embed_size", type = int, default = 10, help = "Size of the amino acid embedding.")
     parser.add_argument("--hidden_size", type = int, default = 512, help = "Size of the hidden state of the LSTM.")
     parser.add_argument("--num_layers", type = int, default = 1, help = "Number of layers of the LSTM.")
@@ -88,8 +88,32 @@ def get_unirep_finetune_args():
     print_args(args)
     return args
 
+def get_unirep_finetune_args():
+    parser = argparse.ArgumentParser(description = "WaveNet model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    basic_args(parser)
+
+    # Data
+    parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
+    mutation_effect_prediction_args(parser)
+    parser.add_argument("--residual_channels", type = int, default = 64, help = "Number of channels in the residual layers.")
+    parser.add_argument("--gate_channels", type = int, default = 16, help = "Number of channels given to each non-linear gate of the residual layers.")
+    parser.add_argument("--skip_out_channels", type = int, default = 64, help = "Number of output channels of the skip connections.")
+    parser.add_argument("--stacks", type = int, default = 3, help = "Number of stacks of dilated convolutions.")
+    parser.add_argument("--layers", type = int, default = 6, help = "Number of layers for each stack.")
+    parser.add_argument("--bias", action = "store_true", dest = "bias", default = True, help = "Enables bias.")
+    parser.add_argument("--no_bias", action = "store_false", dest = "bias", default = False, help = "Disables bias.")
+
+    args = parser.parse_args()
+
+    args.train_ratio = 1 - args.val_ratio
+    args.results_dir = Path("results") / args.results_dir
+    args.results_dir.mkdir(exist_ok = True)
+    print_args(args)
+    return args
+
 def print_args(args):
     print("Arguments given:")
-    for arg, value in args.__dict__.items():
+    for arg, value in vars(args).items():
         print(f"  {arg}: {value}")
     print("")
