@@ -46,17 +46,17 @@ class WaveNet(nn.Module):
 		return x
 
 	def summary(self):
-        num_params = sum(p.numel() for p in self.parameters())
+		num_params = sum(p.numel() for p in self.parameters())
 
-        return (f"WaveNet summary:\n"
-                f"  Input channels: {self.input_channels}\n"
+		return (f"WaveNet summary:\n"
+				f"  Input channels: {self.input_channels}\n"
 				f"  Residual channels: {self.residual_channels}\n"
 				f"  Gate channels: {self.gate_channels}\n"
 				f"  Skip output channels: {self.skip_out_channels}\n"
 				f"  Output channels: {self.out_channels}\n"
 				f"  Stacks: {self.stacks}\n"
 				f"  Layers: {self.layers_per_stack} (max. {2**(self.layers_per_stack - 1)} dilation)\n"
-                f"  Parameters:  {num_params:,}\n"
+				f"  Parameters:  {num_params:,}\n")
 
 class WaveNetLayer(nn.Module):
 	def __init__(self, residual_channels, gate_channels, kernel_size, dilation, skip_out_channels = None, causal = True, bias = True):

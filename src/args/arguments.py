@@ -88,7 +88,7 @@ def get_unirep_finetune_args():
     print_args(args)
     return args
 
-def get_unirep_finetune_args():
+def get_wavenet_args():
     parser = argparse.ArgumentParser(description = "WaveNet model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     basic_args(parser)
 
