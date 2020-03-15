@@ -103,6 +103,7 @@ def get_wavenet_args():
     parser.add_argument("--layers", type = int, default = 6, help = "Number of layers for each stack.")
     parser.add_argument("--bias", action = "store_true", dest = "bias", default = True, help = "Enables bias.")
     parser.add_argument("--no_bias", action = "store_false", dest = "bias", default = False, help = "Disables bias.")
+    parser.add_argument("--dropout", type = float, default = 0.0, help = "Rate of dropout to apply between layers.")
 
     args = parser.parse_args()
 
