@@ -94,6 +94,6 @@ and then uses $m_i$ instead of $h_{i - 1}$ in the gates of the LSTM.
 
 \section{Sequence Alignments}
 \label{sec:sequence_alignments}
-
+As proteins are sequential in nature, RNNs can be used to integrate them into deep learning models. However, despite RNNs being suited for sequential data, it is not always the best model to use for proteins. While RNNs are able to process proteins, there are certain disadvantages in the way that RNNs do this. For example, when an RNN processes a single amino acid, it cannot take into account any remaining amino acids of the protein, because the RNN hasn't reached those amino acids yet. Also, the RNN cannot even directly take into account the previous amino acids -- it can only use the hidden state up to a certain point.
 
 \subsection{Dense models}
