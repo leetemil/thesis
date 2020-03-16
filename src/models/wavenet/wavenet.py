@@ -20,7 +20,7 @@ class WaveNet(nn.Module):
         self.dropout = dropout
         self.padding_idx = padding_idx
 
-        self.first_conv = NormConv(self.input_channels, self.residual_channels, self.dropout, kernel_size = 1, bias = self.bias)
+        self.first_conv = NormConv(self.input_channels, self.residual_channels, kernel_size = 1, bias = self.bias)
 
         self.dilations = []
         for stack in range(self.stacks):
@@ -38,9 +38,9 @@ class WaveNet(nn.Module):
 
         self.last_conv_layers = nn.Sequential(
             nn.ReLU(),
-            NormConv(self.skip_out_channels, self.skip_out_channels, self.dropout, kernel_size = 1, bias = self.bias),
+            NormConv(self.skip_out_channels, self.skip_out_channels, kernel_size = 1, bias = self.bias),
             nn.ReLU(),
-            NormConv(self.skip_out_channels, self.out_channels, self.dropout, kernel_size = 1, bias = self.bias)
+            NormConv(self.skip_out_channels, self.out_channels, kernel_size = 1, bias = self.bias)
         )
 
     def protein_logp(self, xb):
@@ -52,14 +52,13 @@ class WaveNet(nn.Module):
         pred = self.last_conv_layers(skip_sum)
 
         # Calculate loss
-        true = torch.zeros(xb.shape, dtype = torch.int64, device = xb.device) + self.padding_idx
-        true[:, :-1] = xb[:, 1:]
+        true = xb[:, 1:-1]
+        pred = pred[:, :, :-2]
 
         loss = F.cross_entropy(pred, true, ignore_index = self.padding_idx, reduction = "none")
         log_probabilities = -1 * loss.sum(dim = 1)
 
         return log_probabilities
-
 
     def forward(self, xb):
         # one-hot encode and permute to (batch size x channels x length)
@@ -70,8 +69,8 @@ class WaveNet(nn.Module):
         pred = self.last_conv_layers(skip_sum)
 
         # Calculate loss
-        true = torch.zeros(xb.shape, dtype = torch.int64, device = xb.device) + self.padding_idx
-        true[:, :-1] = xb[:, 1:]
+        true = xb[:, 1:-1]
+        pred = pred[:, :, :-2]
 
         # Compare each timestep in cross entropy loss
         loss = F.cross_entropy(pred, true, ignore_index = self.padding_idx, reduction = "mean")
@@ -110,15 +109,14 @@ class WaveNetLayer(nn.Module):
             self.skip_out_channels = self.residual_channels
 
         if self.causal:
-            self.padding = (kernel_size - 1) * dilation
+            self.padding = (self.kernel_size - 1) * self.dilation
         else:
-            self.padding = (kernel_size - 1) // 2 * dilation
+            self.padding = (self.kernel_size - 1) // 2 * self.dilation
 
         # Conv layer that the input is put through before the non-linear activations
         self.dilated_conv = NormConv(
             in_channels = self.residual_channels,
             out_channels = self.gate_channels * 2,
-            dropout = self.dropout,
             kernel_size = self.kernel_size,
             dilation = self.dilation,
             bias = self.bias
@@ -128,7 +126,6 @@ class WaveNetLayer(nn.Module):
         self.residual_conv = NormConv(
             in_channels = self.gate_channels,
             out_channels = self.residual_channels,
-            dropout = self.dropout,
             kernel_size = 1,
             bias = self.bias
         )
@@ -137,7 +134,6 @@ class WaveNetLayer(nn.Module):
         self.skip_conv = NormConv(
             in_channels = self.gate_channels,
             out_channels = self.skip_out_channels,
-            dropout = self.dropout,
             kernel_size = 1,
             bias = self.bias
         )
@@ -187,9 +183,12 @@ class WaveNetStack(nn.Module):
             )
             self.layers.append(layer)
 
+        self.dropout = nn.Dropout(self.dropout)
+
     def forward(self, x):
         skip_sum = 0
         for layer in self.layers:
             x, skip = layer(x)
+            x = self.dropout(x)
             skip_sum += skip
         return skip_sum

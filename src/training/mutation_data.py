@@ -7,6 +7,7 @@ import math
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
@@ -102,11 +103,16 @@ def mutation_effect_prediction(model, data_path, sheet, metric_column, device, e
         predictions = ensemble_m_elbo - ensemble_wt_elbo
 
     else:
-        wt_logp = model.protein_logp(wt.unsqueeze(0))
+        wt_pad = F.pad(wt, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
+        wt_pad = F.pad(wt_pad, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
+        wt_logp = model.protein_logp(wt_pad.unsqueeze(0))
 
         batch_size = 128
         batches = len(mutants) // batch_size + 1
         log_probs = []
+
+        mutants = F.pad(mutants, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
+        mutants = F.pad(mutants, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
 
         for i in range(batches):
             batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]

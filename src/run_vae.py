@@ -53,7 +53,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         warm_up = args.warm_up
     ).to(device)
     print(model.summary())
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(), weight_decay = args.L2)
 
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():

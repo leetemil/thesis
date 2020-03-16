@@ -42,7 +42,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers).to(device)
     print(model.summary())
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(), weight_decay = args.L2)
 
     if args.load_model.exists() and args.load_model.is_file():
         print(f"Loading saved model from {args.load_model}...")
