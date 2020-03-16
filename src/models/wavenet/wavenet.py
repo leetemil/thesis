@@ -55,7 +55,7 @@ class WaveNet(nn.Module):
         true = torch.zeros(xb.shape, dtype = torch.int64, device = xb.device) + self.padding_idx
         true[:, :-1] = xb[:, 1:]
 
-        loss = F.nll_loss(pred, true, ignore_index = self.padding_idx, reduction = "none")
+        loss = F.cross_entropy(pred, true, ignore_index = self.padding_idx, reduction = "none")
         log_probabilities = -1 * loss.sum(dim = 1)
 
         return log_probabilities
@@ -74,7 +74,7 @@ class WaveNet(nn.Module):
         true[:, :-1] = xb[:, 1:]
 
         # Compare each timestep in cross entropy loss
-        loss = F.nll_loss(pred, true, ignore_index = self.padding_idx, reduction = "mean")
+        loss = F.cross_entropy(pred, true, ignore_index = self.padding_idx, reduction = "mean")
         metrics_dict = {}
 
         return loss, metrics_dict
@@ -121,7 +121,6 @@ class WaveNetLayer(nn.Module):
             dropout = self.dropout,
             kernel_size = self.kernel_size,
             dilation = self.dilation,
-            padding = self.padding,
             bias = self.bias
         )
 
@@ -146,9 +145,8 @@ class WaveNetLayer(nn.Module):
     def forward(self, x):
         residual = x
 
+        x = F.pad(x, (self.padding, 0))
         x = self.dilated_conv(x)
-        if self.causal:
-            x = x[:, :, :residual.size(-1)]
 
         tanh_filters, sigmoid_filters = x.split(x.size(1) // 2, dim=1)
         x = torch.tanh(tanh_filters) * torch.sigmoid(sigmoid_filters)

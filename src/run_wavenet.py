@@ -10,6 +10,7 @@ from torch import optim
 from models import WaveNet
 from data import VariableLengthProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction
+from visualization import plot_spearman
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -36,7 +37,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     train_data, val_data = torch.utils.data.random_split(all_data, [train_length, val_length])
 
-    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size)
+    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True)
     val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size)
     print("Data loaded!")
 
@@ -64,6 +65,9 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     best_val_loss = float("inf")
     patience = args.patience
+    improved_epochs = []
+    spearman_rhos = []
+    spearman_name = args.results_dir / Path("spearman_rhos.png")
     try:
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
@@ -78,6 +82,13 @@ if __name__ == "__main__" or __name__ == "__console__":
                 print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                 best_val_loss = val_loss
                 patience = args.patience
+
+                with torch.no_grad():
+                    rho = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 0, args.results_dir, savefig = False)
+                spearman_rhos.append(rho)
+                improved_epochs.append(epoch)
+                plot_spearman(spearman_name, improved_epochs, spearman_rhos)
+
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                 patience -= 1
@@ -91,7 +102,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         with torch.no_grad():
             if model_save_name.exists():
                 model.load_state_dict(torch.load(model_save_name, map_location = device))
-            cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
+            cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, 0, args.results_dir)
         print(f'Spearman\'s Rho: {cor}')
 
     except KeyboardInterrupt:

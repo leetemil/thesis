@@ -17,7 +17,6 @@ def basic_args(parser):
 def mutation_effect_prediction_args(parser):
     parser.add_argument("--data_sheet", type = str, default = "BLAT_ECOLX_Ranganathan2015", help = "Protein family data sheet in mutation_data.pickle.")
     parser.add_argument("--metric_column", type = str, default = "2500", help = "Metric column of sheet used for Spearman's Rho calculation.")
-    parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
 
 def get_vae_args():
     parser = argparse.ArgumentParser(description = "Variational Auto-Encoder on aligned protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
@@ -30,6 +29,7 @@ def get_vae_args():
     parser.add_argument("--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
     parser.add_argument("--z_samples", type = int, default = 1, help = "How many latent variables to sample per batch point.")
     mutation_effect_prediction_args(parser)
+    parser.add_argument("--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("--dictionary", action = "store_true", dest = "dictionary", default = False, help = "Enables the dictionary of the VAE.")
     parser.add_argument("--no_dictionary", action = "store_false", dest = "dictionary", default = True, help = "Disables the dictionary of the VAE.")
     parser.add_argument("--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
