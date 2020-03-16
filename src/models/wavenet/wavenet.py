@@ -40,7 +40,8 @@ class WaveNet(nn.Module):
             nn.ReLU(),
             NormConv(self.skip_out_channels, self.skip_out_channels, kernel_size = 1, bias = self.bias),
             nn.ReLU(),
-            NormConv(self.skip_out_channels, self.out_channels, kernel_size = 1, bias = self.bias)
+            NormConv(self.skip_out_channels, self.out_channels, kernel_size = 1, bias = self.bias),
+            nn.Softmax(dim = 1)
         )
 
     def protein_logp(self, xb):
