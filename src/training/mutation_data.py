@@ -75,12 +75,11 @@ def make_mutants(data_path, sheet, metric_column, device):
 
 mutants_fn = None
 
-def mutation_effect_prediction(model, data_path, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True):
+def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True):
     model.eval()
-
     global mutants_fn
     if mutants_fn is None:
-        mutants_fn = make_mutants(data_path, sheet, metric_column, device)
+        mutants_fn = make_mutants(query_protein, sheet, metric_column, device)
 
     mutants, wt, scores = next(mutants_fn)
 
