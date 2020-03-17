@@ -3,10 +3,11 @@ from torch import nn
 from torch.nn import functional as F
 
 from .norm_conv import NormConv
+from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, padding_idx, bias = True, dropout = 0.5):
+    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5):
         super().__init__()
 
         self.input_channels = input_channels
@@ -18,7 +19,6 @@ class WaveNet(nn.Module):
         self.layers_per_stack = layers_per_stack
         self.bias = bias
         self.dropout = dropout
-        self.padding_idx = padding_idx
 
         self.first_conv = NormConv(self.input_channels, self.residual_channels, kernel_size = 1, bias = self.bias)
 
@@ -52,28 +52,30 @@ class WaveNet(nn.Module):
         pred = self.last_conv_layers(skip_sum)
 
         # Calculate loss
-        true = xb[:, 1:-1]
+        mask = xb >= IUPAC_SEQ2IDX["A"]
+        true = (xb * mask)[:, 1:-1]
         pred = pred[:, :, :-2]
 
-        loss = F.cross_entropy(pred, true, ignore_index = self.padding_idx, reduction = "none")
+        loss = F.cross_entropy(pred, true, ignore_index = 0, reduction = "none")
         log_probabilities = -1 * loss.sum(dim = 1)
 
         return log_probabilities
 
     def forward(self, xb):
         # one-hot encode and permute to (batch size x channels x length)
-        xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0,2,1)
+        xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
 
         pred = self.first_conv(xb_encoded)
         skip_sum = self.dilated_conv_stack(pred)
         pred = self.last_conv_layers(skip_sum)
 
         # Calculate loss
-        true = xb[:, 1:-1]
+        mask = xb >= IUPAC_SEQ2IDX["A"]
+        true = (xb * mask)[:, 1:-1]
         pred = pred[:, :, :-2]
 
         # Compare each timestep in cross entropy loss
-        loss = F.cross_entropy(pred, true, ignore_index = self.padding_idx, reduction = "mean")
+        loss = F.cross_entropy(pred, true, ignore_index = 0, reduction = "mean")
         metrics_dict = {}
 
         return loss, metrics_dict
