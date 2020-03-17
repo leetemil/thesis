@@ -49,7 +49,6 @@ if __name__ == "__main__" or __name__ == "__console__":
 		out_channels = NUM_TOKENS,
 		stacks = args.stacks,
 		layers_per_stack = args.layers,
-        padding_idx = IUPAC_SEQ2IDX["<pad>"],
 		bias = args.bias,
         dropout = args.dropout
 	).to(device)
