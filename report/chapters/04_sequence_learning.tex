@@ -94,6 +94,25 @@ and then uses $m_i$ instead of $h_{i - 1}$ in the gates of the LSTM.
 
 \section{Sequence Alignments}
 \label{sec:sequence_alignments}
-As proteins are sequential in nature, RNNs can be used to integrate them into deep learning models. However, despite RNNs being suited for sequential data, it is not always the best model to use for proteins. While RNNs are able to process proteins, there are certain disadvantages in the way that RNNs do this. For example, when an RNN processes a single amino acid, it cannot take into account any remaining amino acids of the protein, because the RNN hasn't reached those amino acids yet. Also, the RNN cannot even directly take into account the previous amino acids -- it can only use the hidden state up to a certain point.
+As proteins are sequential in nature, RNNs can be used to integrate them into deep learning models. However, despite RNNs being suited for sequential data, it is not always the best model to use for proteins. While RNNs are able to process proteins, there are certain disadvantages in the way that RNNs do this. For example, when an RNN processes a single amino acid, it cannot take into account any remaining amino acids of the protein, because it has not reached those amino acids yet, even though it may be worthwhile to consider both previous and future amino acids. Also, the RNN cannot directly take into account the previous amino acids -- it can only use the hidden state up to a certain point, which is not guaranteed to actually hold any useful information about the sequence so far.
 
-\subsection{Dense models}
+A model which could directly take into account the entire rest of the sequence when making a prediction could potentially perform better. It would be difficult to make such a model work with variable-length data however. Fortunately, it is possible to convert a family of proteins into a fixed-length number of sequences, by performing a \textit{sequence alignment}.
+
+Recall the introduction on protein families in section \ref{sec:protein_families}. Through evolution, proteins become related in families. Consider training a model on a single protein family. Because the proteins are related, they have certain similarities. As it turns out, we may use these similarities to our advantage when training our model. A sequence alignment attempts to align the parts of the proteins in a family which appear similar, while placing gaps to accommodate for the required ``stretching'' of the proteins.
+
+As a toy example, consider the top part of figure \ref{fig:sequence_alignment_toy_example}. The original sequence \texttt{ABCDEFGH} evolves to 3 other sequences, where one has the \texttt{B} changed to an \texttt{L}, another has the \texttt{E} removed and the last has a \texttt{K} inserted between the \texttt{F} and \texttt{G}. These changes are supposed to represent random mutations. One of the sequences then evolves further, resulting in a total of 6 different sequences.
+
+An example of a sequence alignment of this toy protein family can be seen in the bottom part of figure \ref{fig:sequence_alignment_toy_example}. As can be seen, the sequence alignment attempts to line up the parts of the sequences that match the evolutionary history -- that is, the insertion and removal of amino acids causes gaps to be inserted into the other sequences, to keep the similar parts of the proteins at the same position.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics{report/figures/sequence_alignments.pdf}
+    \caption{A toy example of a tiny protein family's evolution and an example sequence alignment.}
+    \label{fig:sequence_alignment_toy_example}
+\end{figure}
+
+Notice that the resulting sequence alignment causes all the sequences to be of the same length. Essentially, the sequence alignment provides absolute positions within the proteins, a luxury we did not have before. This is highly desirable, since it makes the choice of model much more flexible. We can now include models that only work on fixed-length data in our considerations.
+
+For example, we can now apply densely connected linear layers to the sequences, since we now know the length of our data beforehand. This will prove to be very useful when we implement variational autoencoders in section \ref{sec:variational_autoencoders_experiement}.
+
+However, sequence alignments are not perfect. There are significant disadvantages to using a sequence alignment. 
