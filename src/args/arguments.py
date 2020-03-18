@@ -100,7 +100,7 @@ def get_wavenet_args():
     parser.add_argument("-vr", "--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
     mutation_effect_prediction_args(parser)
     parser.add_argument("-rc", "--residual_channels", type = int, default = 48, help = "Number of channels in the residual layers.")
-    parser.add_argument("-gc", "--gate_channels", type = int, default = 24, help = "Number of channels given to each non-linear gate of the residual layers.")
+    parser.add_argument("-gc", "--gate_channels", type = int, default = 48, help = "Number of channels given to each non-linear gate of the residual layers.")
     parser.add_argument("-sc", "--skip_out_channels", type = int, default = 48, help = "Number of output channels of the skip connections.")
     parser.add_argument("-ss", "--stacks", type = int, default = 6, help = "Number of stacks of dilated convolutions.")
     parser.add_argument("-ls", "--layers", type = int, default = 9, help = "Number of layers for each stack.")
