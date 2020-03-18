@@ -71,15 +71,14 @@ if __name__ == "__main__" or __name__ == "__console__":
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
-            # val_loss, val_metrics = validate(epoch, model, val_loader)
 
             if args.val_ratio > 0:
                 val_loss, val_metrics = validate(epoch, model, val_loader)
                 loss_str = "Validation"
                 loss_value_str = f"{val_loss:.5f}"
                 val_str = f"{loss_str} loss: {loss_value_str} "
-
                 improved = val_loss < best_loss
+
             else:
                 loss_str = "Training"
                 loss_value_str = f"{train_loss:.5f}"
@@ -91,7 +90,6 @@ if __name__ == "__main__" or __name__ == "__console__":
                 torch.save(model.state_dict(), model_save_name)
                 print(f"{loss_str} loss improved from {best_loss:.5f} to {loss_value_str}. Saved model to: {model_save_name}")
                 best_loss = val_loss if args.val_ratio > 0 else train_loss
-                # best_val_loss = val_loss
                 patience = args.patience
 
                 with torch.no_grad():
@@ -117,5 +115,5 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f'Spearman\'s Rho: {rho}')
 
     except KeyboardInterrupt:
-        print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
+        print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_loss:.5f}.\n")
         breakpoint()
