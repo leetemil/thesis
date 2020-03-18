@@ -5,8 +5,13 @@ class NormConv(nn.Conv1d):
 
 	def __init__(self, in_channels, out_channels, *args, **kwargs):
 		super().__init__(in_channels, out_channels, *args, **kwargs)
-		nn.utils.weight_norm(self)
 
+		# Initialize weights
+		nn.init.kaiming_normal_(self.weight, nonlinearity="relu")
+		if self.bias is not None:
+			nn.init.constant_(self.bias, 0)
+
+		nn.utils.weight_norm(self)
 		self.layer_norm = nn.LayerNorm(out_channels)
 
 	def forward(self, *args, **kwargs):

@@ -48,7 +48,7 @@ class VAE(nn.Module):
             init.xavier_normal_(layer.weight)
             init.constant_(layer.bias, 0.1)
             encode_layers.append(layer)
-            encode_layers.append(nn.ReLU())
+            encode_layers.append(nn.ReLU(inplace = True))
             encode_layers.append(nn.Dropout(self.dropout))
         self.encode_layers = nn.Sequential(*encode_layers)
 
@@ -77,7 +77,7 @@ class VAE(nn.Module):
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
         for s1, s2 in layer_sizes_doubles[:-2]:
             decode_layers.append(decode_mod(nn.Linear(s1, s2)))
-            decode_layers.append(nn.ReLU())
+            decode_layers.append(nn.ReLU(inplace = True))
             decode_layers.append(nn.Dropout(self.dropout))
 
         # Second-to-last decode layer has sigmoid activation

@@ -1,3 +1,5 @@
+import math
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -37,9 +39,9 @@ class WaveNet(nn.Module):
         )
 
         self.last_conv_layers = nn.Sequential(
-            nn.ReLU(),
+            nn.ReLU(inplace = True),
             NormConv(self.skip_out_channels, self.skip_out_channels, kernel_size = 1, bias = self.bias),
-            nn.ReLU(),
+            nn.ReLU(inplace = True),
             NormConv(self.skip_out_channels, self.out_channels, kernel_size = 1, bias = self.bias)
         )
 
@@ -149,7 +151,7 @@ class WaveNetLayer(nn.Module):
         tanh_filters, sigmoid_filters = x.split(x.size(1) // 2, dim=1)
         x = torch.tanh(tanh_filters) * torch.sigmoid(sigmoid_filters)
 
-        output = self.residual_conv(x) + residual
+        output = (self.residual_conv(x) + residual) * math.sqrt(0.5) # Questionable, just what Wavenet Vocoder does
         skip = self.skip_conv(x)
 
         return output, skip
@@ -193,4 +195,5 @@ class WaveNetStack(nn.Module):
             x, skip = layer(x)
             x = self.dropout(x)
             skip_sum += skip
+        skip_sum *= math.sqrt(1.0 / len(self.layers)) # Questionable, just what WaveNet Vocoder does
         return skip_sum
