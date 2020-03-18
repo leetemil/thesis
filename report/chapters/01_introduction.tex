@@ -37,6 +37,14 @@ A central task in protein machine learning is prediction of secondary or tertiar
 
 In this work, we concern ourselves with prediction of various protein properties (including secondary structure, but not tertiary structure), given only the protein's primary structure. In doing this, we consider the protein's primary structure as merely a sequence of the common amino acids. Since there are not that many, each amino acid can be assigned a letter of the alphabet, resulting in a protein being represented as merely a string of letters (for example, ``MSKG...'' \todo{insert some letters from actual protein here}).
 
+\subsection{Protein Families}
+\label{sec:protein_families}
+In addition to the structure of a single protein, proteins also have a sort of structure between them, due to their connected origins. This causes proteins to be clustered into what we call \textit{protein families}.
+
+As organisms reproduce, their genetic material experiences random mutations -- these mutations in turn cause mutations in the organisms' proteins, which may change the proteins' function. Through the process of natural selection, the proteins which experience beneficial mutations continue reproducing, while proteins with detrimental mutations die out.
+
+Basically, just as evolution works on organisms as a whole, there is also evolution in proteins (really, one could say that the latter causes the former). Hence, just as different organisms are related in species or families, so are proteins related. This causes proteins to be structured in a phylogenetic tree, just as organisms are. We may use this information to our advantage to construct what is known as \textit{sequence alignments}, which we will discuss in section \ref{sec:sequence_alignments}.
+
 \subsection{Relation to Natural Language Processing}
 With the above format of the protein data in mind, the similarity between protein machine learning and natural language processing (NLP) becomes apparent. In NLP, the data is in the form of written text, most commonly represented as a sequence of words. We can view our protein data as a similar sequence, except that the words of proteins are amino acids, and while natural languages has hundreds of thousands of words, proteins have just 20 amino acids. Proteins can be thousands of amino acids long, and similarly, documents may be thousands (if not tens or hundreds of thousands) words long. It is clear that, despite some differences, the fields of NLP and protein machine learning are related.
 
