@@ -1,4 +1,4 @@
-from arguments import get_unirep_finetune_args
+from args import get_unirep_finetune_args
 args = get_unirep_finetune_args()
 
 import time
@@ -36,13 +36,13 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     train_data, val_data = torch.utils.data.random_split(all_data, [train_length, val_length])
 
-    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size)
+    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True)
     val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size)
     print("Data loaded!")
 
     model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers).to(device)
     print(model.summary())
-    optimizer = optim.Adam(model.parameters(), weight_decay = args.L2)
+    optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.L2)
 
     if args.load_model.exists() and args.load_model.is_file():
         print(f"Loading saved model from {args.load_model}...")
