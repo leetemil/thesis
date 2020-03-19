@@ -115,4 +115,4 @@ Notice that the resulting sequence alignment causes all the sequences to be of t
 
 For example, we can now apply densely connected linear layers to the sequences, since we now know the length of our data beforehand. This will prove to be very useful when we implement variational autoencoders in section \ref{sec:variational_autoencoders_experiement}.
 
-However, sequence alignments are not perfect. There are significant disadvantages to using a sequence alignment. 
+However, sequence alignments are not perfect. There are significant disadvantages to using sequence alignments. First of all, they are not exactly well-defined. The toy example in figure \ref{fig:sequence_alignment_toy_example} is simple and the resulting alignment is obvious, but given thousands of sequences, the problem becomes much more complicated. You may not have the evolutionary tree which resulted in the protein family
