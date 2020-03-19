@@ -12,11 +12,11 @@ class NormConv(nn.Conv1d):
 			nn.init.constant_(self.bias, 0)
 
 		nn.utils.weight_norm(self)
-		self.layer_norm = nn.LayerNorm(out_channels)
+		# self.layer_norm = nn.LayerNorm(out_channels)
 
-	def forward(self, *args, **kwargs):
-		x = super().forward(*args, **kwargs)
-		x = x.permute(0, 2, 1)
-		x = self.layer_norm(x)
-		x = x.permute(0, 2, 1)
-		return x
+	# def forward(self, *args, **kwargs):
+	# 	x = super().forward(*args, **kwargs)
+	# 	# x = x.permute(0, 2, 1)
+	# 	# x = self.layer_norm(x)
+	# 	# x = x.permute(0, 2, 1)
+	# 	return x
