@@ -32,6 +32,8 @@ We trained one model for each protein family we examined, but kept the architect
 
 For data, we use the sequence alignments made available by \cite{riesselman2018deep}. We train each model on 80\% of the aligned sequences, using the rest for validation, with 128 batch size. We continue training until we see no improvement on the validation score for 50 epochs, and keep the model that performed best on the validation set. This leads to a total training of a few hundred epochs, or under an hour of training on the NVIDIA Titan X GPUs we used.
 
+\todo{discuss the probabilistic graph model of the problem. include that z removes any dependency between absolute positions in the protein sequence, i.e. we can calculate the probability of a protein conditioned on latent variable z by taking the product of the position probabilities. make figure with a single z with arrows to all positions x1, x2, ..., xn}
+
 \subsection{Results}
 When evaluating the model, we are primarily interested in the usefulness of the representations produced by the encoder. Thus, the decoder is only used for training the encoder, or for recovering the protein sequence from the representation given by the encoder. We evaluate the representation by examining its properties, as well as using it for a predictive downstream task.
 
