@@ -27,7 +27,7 @@ def get_vae_args():
 
     parser.add_argument("-ls", "--layer_sizes", type = int, default = [1500, 1500, 30, 100, 2000], nargs = "+", help = "Sizes of the hidden layers of the VAE, except the first and last, which will be inferred from the data argument. The smallest size is understood as the bottleneck size and will be the size of the output of the encoder, and the size of the input of the decoder.")
     parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
-    parser.add_argument("-vr", "--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation. Set to 0 to disable validation (patience will then work on training loss).")
+    parser.add_argument("-vr", "--val_ratio", type = float, default = 0.0, help = "What fraction of data to use for validation. Set to 0 to disable validation (patience will then work on training loss).")
     parser.add_argument("-do", "--dropout", type = float, default = 0.0, help = "Rate of dropout to apply to the encoder and decoder layers.")
     parser.add_argument("-lm", "--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
     parser.add_argument("-zs", "--z_samples", type = int, default = 1, help = "How many latent variables to sample per batch point.")

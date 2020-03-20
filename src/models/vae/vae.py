@@ -297,7 +297,7 @@ class VAE(nn.Module):
             total = weighted_loss + param_kld
 
         elif self.layer_mod == LayerModification.NONE or not self.use_param_loss:
-            param_kld = torch.zeros(1)
+            param_kld = torch.zeros(1) + 1e-5
             total = weighted_loss
         else:
             raise NotImplementedError("Unsupported layer modification.")
