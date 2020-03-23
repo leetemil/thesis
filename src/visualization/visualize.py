@@ -3,6 +3,7 @@ from pathlib import Path
 import itertools
 
 import torch
+import numpy as np
 from Bio import SeqIO
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
