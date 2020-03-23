@@ -108,9 +108,9 @@ def get_wavenet_args():
     parser.add_argument("-no_b", "--no_bias", action = "store_false", dest = "bias", default = False, help = "Disables bias.")
     parser.add_argument("-do", "--dropout", type = float, default = 0.5, help = "Rate of dropout to apply between layers.")
     parser.add_argument("-plr", "--plot_learning_rates", action = "store_true", dest = "plot_learning_rates", default = False, help = "Plot learning rates (used with annealed learning rates).")
-    parser.add_argument("-no_plr", "--no_plot_learning_rates", action = "store_false", dest = "plot_learning_rates", default = False, help = "Do not plot learning rates.")
+    parser.add_argument("-no_plr", "--no_plot_learning_rates", action = "store_false", dest = "plot_learning_rates", default = True, help = "Do not plot learning rates.")
     parser.add_argument("-alr", "--anneal_learning_rates", action = "store_true", dest = "anneal_learning_rates", default = False, help = "Anneal learning rates.")
-    parser.add_argument("-no_alr", "--no_anneal_learning_rates", action = "store_false", dest = "anneal_learning_rates", default = False, help = "Do not anneal learning rates.")
+    parser.add_argument("-no_alr", "--no_anneal_learning_rates", action = "store_false", dest = "anneal_learning_rates", default = True, help = "Do not anneal learning rates.")
 
     args = parser.parse_args()
 
