@@ -47,6 +47,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 		num_encoder_layers = args.num_encoder_layers,
 		num_decoder_layers = args.num_decoder_layers,
 		dim_feedforward = args.dim_feedforward,
+        dropout = args.dropout
 	).to(device)
 
     print(model.summary())

@@ -46,7 +46,12 @@ class LossTransformer(nn.Module):
 
 		# Compare each timestep in cross entropy loss
 		loss = F.cross_entropy(pred, true, ignore_index = 0, reduction = "mean")
-		metrics_dict = {}
+
+		with torch.no_grad():
+			percent = F.softmax(pred, 1)
+			mean_max = percent.max(dim = 1)[0].mean().item()
+
+		metrics_dict = {"mean_max": mean_max}
 
 		return loss, metrics_dict
 
@@ -58,4 +63,5 @@ class LossTransformer(nn.Module):
 				f"  Encoder layers: {len(self.transformer.encoder.layers)}\n"
 				f"  Decoder layers: {len(self.transformer.decoder.layers)}\n"
 				f"  Feedforward size: {self.transformer.encoder.layers[0].linear1.out_features}\n"
+				f"  Dropout: {self.transformer.encoder.layers[0].dropout.p}\n"
 				f"  Parameters:  {num_params:,}\n")
