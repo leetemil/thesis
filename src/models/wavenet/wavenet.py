@@ -43,31 +43,29 @@ class WaveNet(nn.Module):
             NormConv(self.skip_out_channels, self.out_channels, kernel_size = 1, bias = self.bias)
         )
 
-    def protein_logp(self, xb):
-        # one-hot encode and permute to (batch size x channels x length)
-        xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0,2,1)
+    def get_predictions(self, xb):
+        """
+        Returns log-softmax distributions of amino acids over the input sequences.
 
-        pred = self.first_conv(xb_encoded)
-        skip_sum = self.dilated_conv_stack(pred)
-        pred = self.last_conv_layers(skip_sum)
-
-        # Calculate loss
-        mask = xb >= IUPAC_SEQ2IDX["A"]
-        true = (xb * mask)[:, 1:-1]
-        pred = pred[:, :, :-2]
-
-        loss = F.cross_entropy(pred, true, ignore_index = 0, reduction = "none")
-        log_probabilities = -1 * loss.sum(dim = 1)
-
-        return log_probabilities
-
-    def forward(self, xb):
+        Returns:
+        Tensor: shape (batch size, num tokens, seq length) 
+        """
         # one-hot encode and permute to (batch size x channels x length)
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
 
         pred = self.first_conv(xb_encoded)
         skip_sum = self.dilated_conv_stack(pred)
         pred = self.last_conv_layers(skip_sum)
+        
+        return F.log_softmax(pred, dim = 1)
+
+    def protein_logp(self, xb):
+        loss, _ = self.forward(xb, loss_reduction = "none")
+        log_probabilities = -1 * loss.sum(dim = 1)
+        return log_probabilities
+
+    def forward(self, xb, loss_reduction = "mean"):
+        pred = self.get_predictions(xb)
 
         # Calculate loss
         mask = xb >= IUPAC_SEQ2IDX["A"]
@@ -75,7 +73,7 @@ class WaveNet(nn.Module):
         pred = pred[:, :, :-2]
 
         # Compare each timestep in cross entropy loss
-        loss = F.cross_entropy(pred, true, ignore_index = 0, reduction = "mean")
+        loss = F.nll_loss(pred, true, ignore_index = 0, reduction = loss_reduction)
         metrics_dict = {}
 
         return loss, metrics_dict

@@ -85,12 +85,6 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
     # Reset gradient for next batch
     optimizer.zero_grad()
 
-    # Schedule learning rate
-    if scheduler is not None:
-        assert epoch is not None
-        assert batch is not None
-        assert num_batches is not None
-        scheduler.step(epoch + batch / num_batches)
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
@@ -108,6 +102,13 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Step in the direction of the gradient
     optimizer.step()
+    
+    # Schedule learning rate
+    if scheduler is not None:
+        assert epoch is not None
+        assert batch is not None
+        assert num_batches is not None
+        scheduler.step(epoch + batch / num_batches)
 
     return batch_size, loss, batch_metrics_dict
 

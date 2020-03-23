@@ -10,7 +10,7 @@ from torch import optim
 from models import WaveNet
 from data import VariableLengthProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction
-from visualization import plot_spearman, plot_learning_rates
+from visualization import plot_spearman, plot_learning_rates, plot_softmax
 
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
@@ -59,8 +59,9 @@ if __name__ == "__main__" or __name__ == "__console__":
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.L2)
 
     if args.anneal_learning_rates:
-        T_0 = 5 # Emil: I just picked a small number, no clue if any good
-        scheduler = CosineAnnealingWarmRestarts(optimizer, T_0)
+        T_0 = 1 # Emil: I just picked a small number, no clue if any good
+        T_mult = 2
+        scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult)
     else:
         scheduler = None
 
@@ -75,6 +76,10 @@ if __name__ == "__main__" or __name__ == "__console__":
     improved_epochs = []
     spearman_rhos = []
     spearman_name = args.results_dir / Path("spearman_rhos.png")
+
+    # pick 4 random protein sequences
+    softmax_proteins = next(iter(train_loader))[:4]
+    softmax_name = args.results_dir / Path("softmax.png")
 
     if args.anneal_learning_rates and args.plot_learning_rates:
         learning_rates = []
@@ -107,9 +112,12 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                 with torch.no_grad():
                     rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 0, args.results_dir, savefig = False)
+                    predictions = model.get_predictions(softmax_proteins).permute(0,2,1).exp().cpu().numpy()
+
                 spearman_rhos.append(rho)
                 improved_epochs.append(epoch)
                 plot_spearman(spearman_name, improved_epochs, spearman_rhos)
+                plot_softmax(softmax_name, predictions)
 
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
@@ -123,12 +131,17 @@ if __name__ == "__main__" or __name__ == "__console__":
                 plot_learning_rates(learning_rates_name, learning_rates)
 
             print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
-
         print('Computing mutation effect prediction correlation...')
+        
         with torch.no_grad():
             if model_save_name.exists():
                 model.load_state_dict(torch.load(model_save_name, map_location = device))
+
+            predictions = model.get_predictions(softmax_proteins).permute(0,2,1).exp().cpu().numpy()
+            plot_softmax(softmax_name, predictions)
+
             rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 0, args.results_dir)
+
         print(f'Spearman\'s Rho: {rho}')
 
     except KeyboardInterrupt:

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from models import VAE
-from data import get_protein_dataloader
+from data import get_protein_dataloader, IUPAC_AMINO_IDX_PAIRS
 
 def get_pfam_label_dict():
     file = Path("data/files/PF00144_full_length_sequences_labeled.fasta")
@@ -129,6 +129,18 @@ def plot_learning_rates(name, learning_rates):
     plt.xlabel('Batch')
     plt.ylabel('Learning Rate')
     plt.plot(learning_rates)
+    plt.savefig(name)
+    plt.close(fig)
+
+def plot_softmax(name, predictions):
+    fig, axes = plt.subplots(len(predictions), figsize = (25, 15))
+    for ax, prediction in zip(axes, predictions):
+        ax.imshow(prediction.T, cmap=plt.get_cmap("Blues"))
+        acids, _ = zip(*IUPAC_AMINO_IDX_PAIRS)
+        ax.set_yticks(np.arange(len(IUPAC_AMINO_IDX_PAIRS)))
+        ax.set_yticklabels(list(acids))
+        # ax.set_title(seq.id)
+    
     plt.savefig(name)
     plt.close(fig)
 
