@@ -23,7 +23,7 @@ def log_progress(epoch, time, progress, total, end, **kwargs):
             report += (f" {key}: {value}")
     print(report, end = end)
 
-def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None):
+def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, scheduler = None):
     """
         epoch: Index of the epoch to run
         model: The model to run data through. Forward should return a tuple of (loss, metrics_dict).
@@ -43,10 +43,13 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     train_count = 0
     start_time = time.time()
 
+    if scheduler is not None:
+        learning_rates = []
+
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):
 
-        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value)
+        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, scheduler, epoch, batch_idx, num_batches)
 
         progressed_data += batch_size
 
@@ -63,17 +66,31 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
             last_log_time = time.time()
             log_progress(epoch, time.time() - start_time, progressed_data, data_len, "\r", Loss = train_loss / train_count, **metrics_dict)
 
+        if scheduler is not None:
+            learning_rates += scheduler.get_last_lr()
+
     average_loss = train_loss / train_count
     if log_interval != 0:
         log_progress(epoch, time.time() - start_time, data_len, data_len, "\n", Loss = train_loss / train_count, **metrics_dict)
+
+    if scheduler is not None:
+        metrics_dict['learning_rates'] = learning_rates
+
     return average_loss, metrics_dict
 
-def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None):
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None):
     model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
     # Reset gradient for next batch
     optimizer.zero_grad()
+
+    # Schedule learning rate
+    if scheduler is not None:
+        assert epoch is not None
+        assert batch is not None
+        assert num_batches is not None
+        scheduler.step(epoch + batch / num_batches)
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
@@ -120,4 +137,5 @@ def validate(epoch, model, validation_loader):
 
         metrics_dict = {k: acc_metrics_dict[k] / acc_metrics_dict[k + "_count"] for k in acc_metrics_dict.keys() if not k.endswith("_count")}
         average_loss = validation_loss / validation_count
+
     return average_loss, metrics_dict

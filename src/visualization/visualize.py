@@ -69,7 +69,6 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
                         scatter_dict["Others"].append(point)
 
     plt.title(f"Encoded points")
-
     all_points_list = list(itertools.chain(*scatter_dict.values()))
     all_points = torch.stack(all_points_list) if len(all_points_list) > 0 else torch.zeros(0, 0)
     if all_points.size(1) > 2:
@@ -108,7 +107,7 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
                 plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = label)
             elif pca_dim == 3:
                 axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = label)
-
+    
     if name is not None:
         pca_fig.savefig(name.with_suffix(figure_type))
 
@@ -121,6 +120,15 @@ def plot_spearman(name, epochs, rhos):
     fig = plt.figure()
     plt.title('Spearman\'s $\\rho$')
     plt.plot(epochs, rhos, '+--')
+    plt.savefig(name)
+    plt.close(fig)
+
+def plot_learning_rates(name, learning_rates):
+    fig = plt.figure()
+    plt.title('Annealed Learning Rates')
+    plt.xlabel('Batch')
+    plt.ylabel('Learning Rate')
+    plt.plot(learning_rates)
     plt.savefig(name)
     plt.close(fig)
 

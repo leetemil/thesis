@@ -10,7 +10,9 @@ from torch import optim
 from models import WaveNet
 from data import VariableLengthProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction
-from visualization import plot_spearman
+from visualization import plot_spearman, plot_learning_rates
+
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -56,6 +58,12 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(model.summary())
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.L2)
 
+    if args.anneal_learning_rates:
+        T_0 = 5 # Emil: I just picked a small number, no clue if any good
+        scheduler = CosineAnnealingWarmRestarts(optimizer, T_0)
+    else:
+        scheduler = None
+
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
@@ -67,10 +75,15 @@ if __name__ == "__main__" or __name__ == "__console__":
     improved_epochs = []
     spearman_rhos = []
     spearman_name = args.results_dir / Path("spearman_rhos.png")
+
+    if args.anneal_learning_rates and args.plot_learning_rates:
+        learning_rates = []
+        learning_rates_name = args.results_dir / Path("learning_rates.png")
+
     try:
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
+            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
 
             if args.val_ratio > 0:
                 val_loss, val_metrics = validate(epoch, model, val_loader)
@@ -104,6 +117,10 @@ if __name__ == "__main__" or __name__ == "__console__":
                 if patience == 0:
                     print(f"Model has not improved for {args.patience} epochs. Stopping training. Best {loss_str.lower()} loss achieved was: {best_loss:.5f}.")
                     break
+            
+            if args.plot_learning_rates and args.anneal_learning_rates:
+                learning_rates += train_metrics['learning_rates']
+                plot_learning_rates(learning_rates_name, learning_rates)
 
             print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
 
