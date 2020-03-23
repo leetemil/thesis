@@ -1,3 +1,16 @@
+# Hyperparameter grid
+# learning rate: 3
+# Variational/Deterministic: 2
+# Dropout: 2
+
+# Layer size experiments
+# 1500 1500 6 100 2000
+# 1000 500 6 50 1000
+# 2000 1000 500 30 100 500 2000
+# 1500 1500 30 100 100 150 200 200 250 500 2000 4000
+
+# 2: Dictionary/no_dictionary
+
 # First, command-line arguments
 from args import get_vae_args
 args = get_vae_args()

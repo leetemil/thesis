@@ -124,6 +124,28 @@ def get_wavenet_args():
 
     return args
 
+def get_transformer_args():
+    parser = argparse.ArgumentParser(description = "Transformer model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    basic_args(parser)
+
+    # Data
+    parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("-vr", "--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
+    mutation_effect_prediction_args(parser)
+    parser.add_argument("-nh", "--nhead", type = int, default = 3, help = "Number of heads in the multi-head attention models. Must be a multiple of 30.")
+    parser.add_argument("-ne", "--num_encoder_layers", type = int, default = 2, help = "Number of sub-encoder-layers in the encoder.")
+    parser.add_argument("-nd", "--num_decoder_layers", type = int, default = 2, help = "Number of sub-decoder-layers in the decoder.")
+    parser.add_argument("-ff", "--dim_feedforward", type = int, default = 512, help = "Size of the feedforward network model.")
+    parser.add_argument("-do", "--dropout", type = float, default = 0.1, help = "Rate of dropout to apply between layers.")
+
+    args = parser.parse_args()
+
+    args.train_ratio = 1 - args.val_ratio
+    args.results_dir = Path("results") / args.results_dir
+    args.results_dir.mkdir(exist_ok = True)
+    print_args(args)
+    return args
+
 def print_args(args):
     print("Arguments given:")
     for arg, value in vars(args).items():
