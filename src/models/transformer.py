@@ -10,42 +10,61 @@ class LossTransformer(nn.Module):
 		super().__init__()
 		self.transformer = Transformer(*args, **kwargs)
 
-	def protein_logp(self, xb, *args, **kwargs):
-		tgt = torch.zeros_like(xb)
-		tgt[:, :-1] = xb[:, 1:]
+	def protein_logp(self, xb):
+		xb_src = xb[:, 1:]
 
-		src = F.one_hot(xb, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
+		tgt = torch.zeros_like(xb_src)
+		tgt[:, 0] = IUPAC_SEQ2IDX["<cls>"]
+		tgt[:, 1:] = xb_src[:, :-1]
+		tgt[tgt == IUPAC_SEQ2IDX["<sep>"]] = 0
+
+		src = F.one_hot(xb_src, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
 		tgt = F.one_hot(tgt, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
 
-		pred = self.transformer.forward(src, tgt, *args, **kwargs)
+		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
+		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
+		memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
 
-		mask = xb >= IUPAC_SEQ2IDX["A"]
-		true = (xb * mask)[:, 1:-1]
+		pred = self.transformer(src, tgt, src_mask, tgt_mask, memory_mask)
+		pred = self.transformer(src, tgt, src_mask, tgt_mask, memory_mask)
 		pred = pred.permute(1, 2, 0)
-		pred = pred[:, :, :-2]
 
 		# Compare each timestep in cross entropy loss
-		loss = F.cross_entropy(pred, true, ignore_index = 0, reduction = "none")
+		loss = F.cross_entropy(pred, xb_src, ignore_index = 0, reduction = "none")
 		log_probabilities = -1 * loss.sum(dim = 1)
 
 		return log_probabilities
 
-	def forward(self, xb, *args, **kwargs):
-		tgt = torch.zeros_like(xb)
-		tgt[:, :-1] = xb[:, 1:]
+	def generate_subsequent_mask(self, *sizes, device = None):
+		sizes = list(sizes)
+		if len(sizes) == 1:
+			sizes = sizes * 2
 
-		src = F.one_hot(xb, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
+		sizes.reverse()
+		mask = (torch.triu(torch.ones(*sizes, device = device)) == 1).transpose(0, 1)
+		mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+		return mask
+
+	def forward(self, xb):
+		xb_src = xb[:, 1:]
+
+		tgt = torch.zeros_like(xb_src)
+		tgt[:, 0] = IUPAC_SEQ2IDX["<cls>"]
+		tgt[:, 1:] = xb_src[:, :-1]
+		tgt[tgt == IUPAC_SEQ2IDX["<sep>"]] = 0
+
+		src = F.one_hot(xb_src, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
 		tgt = F.one_hot(tgt, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
 
-		pred = self.transformer.forward(src, tgt, *args, **kwargs)
+		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
+		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
+		memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
 
-		mask = xb >= IUPAC_SEQ2IDX["A"]
-		true = (xb * mask)[:, 1:-1]
+		pred = self.transformer(src, tgt, src_mask, tgt_mask, memory_mask)
 		pred = pred.permute(1, 2, 0)
-		pred = pred[:, :, :-2]
 
 		# Compare each timestep in cross entropy loss
-		loss = F.cross_entropy(pred, true, ignore_index = 0, reduction = "mean")
+		loss = F.cross_entropy(pred, xb_src, ignore_index = 0, reduction = "mean")
 
 		with torch.no_grad():
 			percent = F.softmax(pred, 1)
