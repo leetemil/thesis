@@ -137,6 +137,8 @@ def get_transformer_args():
     parser.add_argument("-nd", "--num_decoder_layers", type = int, default = 2, help = "Number of sub-decoder-layers in the decoder.")
     parser.add_argument("-ff", "--dim_feedforward", type = int, default = 512, help = "Size of the feedforward network model.")
     parser.add_argument("-do", "--dropout", type = float, default = 0.1, help = "Rate of dropout to apply between layers.")
+    parser.add_argument("-rg", "--remove_gaps", action = "store_true", dest = "remove_gaps", default = True, help = "Remove gaps from the alignment.")
+    parser.add_argument("-no_rg", "--no_remove_gaps", action = "store_false", dest = "remove_gaps", default = False, help = "Do not remove gaps from the alignment.")
 
     args = parser.parse_args()
 

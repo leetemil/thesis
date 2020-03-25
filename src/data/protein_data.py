@@ -104,7 +104,7 @@ class ProteinDataset(Dataset):
         return self.encoded_seqs[i], self.weights[i], self.neff, self.seqs[i]
 
 class VariableLengthProteinDataset(Dataset):
-    def __init__(self, seqs, device = None, max_len = 10**6):
+    def __init__(self, seqs, device = None, remove_gaps = True, max_len = 10**6):
         super().__init__()
         self.device = device
         self.max_len = max_len
@@ -112,7 +112,7 @@ class VariableLengthProteinDataset(Dataset):
         seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
         CLS = "<cls>"
         SEP = "<sep>"
-        unpadded_seqs = [[CLS] + list(filter(lambda c: c not in ".-" and c == c.upper(), str(s.seq))) + [SEP] for s in seqs if len(s) <= self.max_len]
+        unpadded_seqs = [[CLS] + list(filter(lambda c: not remove_gaps or (c not in ".-" and c == c.upper()), str(s.seq))) + [SEP] for s in seqs if len(s) <= self.max_len]
         self.encoded_seqs = [seq2idx(seq, device) for seq in unpadded_seqs]
 
     def __len__(self):

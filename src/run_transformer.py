@@ -31,7 +31,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device_name}")
 
     # Load data
-    all_data = VariableLengthProteinDataset(args.data, device = device, max_len = 1024)
+    all_data = VariableLengthProteinDataset(args.data, device = device, remove_gaps = args.remove_gaps)
     train_length = int(len(all_data) * args.train_ratio)
     val_length = len(all_data) - train_length
 

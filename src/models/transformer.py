@@ -11,7 +11,7 @@ class LossTransformer(nn.Module):
 	def __init__(self, dropout = 0.1, *args, **kwargs):
 		super().__init__()
 		self.transformer = Transformer(dropout = dropout, *args, **kwargs)
-		self.pos_encoder = PositionalEncoding(30, dropout, 2000)
+		self.pos_encoder = PositionalEncoding(30, dropout, 300)
 
 	def prediction(self, xb_src):
 		tgt = torch.zeros_like(xb_src)
