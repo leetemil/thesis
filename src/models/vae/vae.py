@@ -215,7 +215,7 @@ class VAE(nn.Module):
         # amino acid probabilities are independent conditioned on z
         return elbo, logp, kld
 
-    def sample_new_decoder(self):
+    def sample_new_weights(self):
         for layer in self.decode_layers:
             for hook in layer._forward_pre_hooks.values():
                 if isinstance(hook, Variational):

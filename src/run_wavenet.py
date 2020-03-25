@@ -52,7 +52,8 @@ if __name__ == "__main__" or __name__ == "__console__":
 		stacks = args.stacks,
 		layers_per_stack = args.layers,
 		bias = args.bias,
-        dropout = args.dropout
+        dropout = args.dropout,
+        bayesian = args.bayesian
 	).to(device)
 
     print(model.summary())
@@ -72,6 +73,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f"Model loaded.")
 
     best_loss = float("inf")
+    ensemble_count = args.ensemble_count if args.bayesian else 0
     patience = args.patience
     improved_epochs = []
     spearman_rhos = []
@@ -111,7 +113,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                 patience = args.patience
 
                 with torch.no_grad():
-                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 0, args.results_dir, savefig = False)
+                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, ensemble_count, args.results_dir, savefig = False)
                     predictions = model.get_predictions(softmax_proteins).permute(0,2,1).exp().cpu().numpy()
 
                 spearman_rhos.append(rho)

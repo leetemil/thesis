@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 from Bio import SeqIO
 
-from models import VAE
-from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx
+from models import VAE, WaveNet
+from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 
 PICKLE_FILE = Path('data/files/mutation_data.pickle')
 
@@ -89,9 +89,9 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
 
         for i in range(ensemble_count):
             print(f"Doing model {i}...", end = "\r")
-            model.sample_new_decoder()
-            m_elbo, m_logp, m_kld = model.protein_logp(mutants)
-            wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
+            model.sample_new_weights()
+            m_elbo, *_ = model.protein_logp(mutants)
+            wt_elbo, *_ = model.protein_logp(wt.unsqueeze(0))
 
             acc_m_elbo += m_elbo
             acc_wt_elbo += wt_elbo
@@ -106,19 +106,33 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
         wt_pad = F.pad(wt_pad, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
         wt_logp = model.protein_logp(wt_pad.unsqueeze(0))
 
-        batch_size = 128
+        batch_size = 256
         batches = len(mutants) // batch_size + 1
-        log_probs = []
+
+        model_logps = []
 
         mutants = F.pad(mutants, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
         mutants = F.pad(mutants, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
+        
+        ensemble_count = ensemble_count if model.bayesian else 1
 
-        for i in range(batches):
-            batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
-            m_logp = model.protein_logp(batch_mutants)
-            log_probs.append(m_logp)
+        for m in range(ensemble_count):
+            if ensemble_count > 1:
+                print(f"Doing model {m}...", end = "\r")
 
-        predictions = torch.cat(log_probs) - wt_logp
+            log_probs = []
+            for i in range(batches):
+                batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
+                m_logp = model.protein_logp(batch_mutants)
+                log_probs.append(m_logp)
+            
+            model_logps.append(torch.cat(log_probs))
+
+        if ensemble_count > 1:
+            print("Done!" + " " * 50)
+
+        ensemble = sum(model_logps) / ensemble_count
+        predictions = ensemble - wt_logp
 
     if savefig:
         plt.scatter(predictions.cpu(), scores)

@@ -3,11 +3,18 @@ from torch import nn
 from torch.nn import functional as F
 
 from .norm_conv import NormConv
+from ..vae.variational import variational, Variational
 from data import IUPAC_SEQ2IDX
+
+def conv_layer(in_channels, out_channels, bayesian, *args, **kwargs):
+    if bayesian:
+        return variational(nn.Conv1d(in_channels, out_channels, *args, **kwargs))
+    else:
+        return NormConv(in_channels, out_channels, *args, **kwargs)
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5):
+    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5, bayesian = True):
         super().__init__()
 
         self.input_channels = input_channels
@@ -19,8 +26,11 @@ class WaveNet(nn.Module):
         self.layers_per_stack = layers_per_stack
         self.bias = bias
         self.dropout = dropout
+        self.bayesian = bayesian
 
-        self.first_conv = NormConv(self.input_channels, self.residual_channels, kernel_size = 1, bias = self.bias)
+        # self.first_conv = NormConv(self.input_channels, self.residual_channels, kernel_size = 1, bias = self.bias)
+        self.first_conv = conv_layer(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias) # bayesian version
+
 
         self.dilations = []
         for stack in range(self.stacks):
@@ -33,14 +43,15 @@ class WaveNet(nn.Module):
             gate_channels = self.gate_channels,
             dropout = self.dropout,
             skip_out_channels = self.skip_out_channels,
-            kernel_size = 2
+            kernel_size = 2,
+            bayesian = self.bayesian # bayesian version
         )
 
         self.last_conv_layers = nn.Sequential(
             nn.ReLU(inplace = True),
-            NormConv(self.skip_out_channels, self.skip_out_channels, kernel_size = 1, bias = self.bias),
+            conv_layer(self.skip_out_channels, self.skip_out_channels, self.bayesian, kernel_size = 1, bias = self.bias),
             nn.ReLU(inplace = True),
-            NormConv(self.skip_out_channels, self.out_channels, kernel_size = 1, bias = self.bias)
+            conv_layer(self.skip_out_channels, self.skip_out_channels, self.bayesian, kernel_size = 1, bias = self.bias),
         )
 
     def get_predictions(self, xb):
@@ -78,6 +89,21 @@ class WaveNet(nn.Module):
 
         return loss, metrics_dict
 
+    def sample_new_weights(self):
+        # rsample first layer
+        for hook in self.first_conv._forward_pre_hooks.values():
+            if isinstance(hook, Variational):
+                hook.rsample_new(self.first_conv)
+
+        # rsample layers in stack
+        self.dilated_conv_stack.sample_new_weights()
+
+        # rsample last conv layers
+        for layer in self.last_conv_layers:
+            for hook in layer._forward_pre_hooks.values():
+                if isinstance(hook, Variational):
+                    hook.rsample_new(layer)
+
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
 
@@ -89,10 +115,11 @@ class WaveNet(nn.Module):
                 f"  Output channels: {self.out_channels}\n"
                 f"  Stacks: {self.stacks}\n"
                 f"  Layers: {self.layers_per_stack} (max. {2**(self.layers_per_stack - 1)} dilation)\n"
-                f"  Parameters:  {num_params:,}\n")
+                f"  Parameters:  {num_params:,}\n"
+                f"  Bayesian: {self.bayesian}\n")
 
 class WaveNetLayer(nn.Module):
-    def __init__(self, residual_channels, gate_channels, dropout, kernel_size, dilation, skip_out_channels = None, causal = True, bias = True):
+    def __init__(self, residual_channels, gate_channels, dropout, kernel_size, dilation, skip_out_channels = None, causal = True, bias = True, bayesian = True):
         super().__init__()
 
         self.residual_channels = residual_channels
@@ -102,6 +129,7 @@ class WaveNetLayer(nn.Module):
         self.dilation = dilation
         self.causal = causal
         self.bias = bias
+        self.bayesian = bayesian
 
         if skip_out_channels is not None:
             self.skip_out_channels = skip_out_channels
@@ -114,26 +142,28 @@ class WaveNetLayer(nn.Module):
             self.padding = (self.kernel_size - 1) // 2 * self.dilation
 
         # Conv layer that the input is put through before the non-linear activations
-        self.dilated_conv = NormConv(
+        self.dilated_conv = conv_layer(
             in_channels = self.residual_channels,
             out_channels = self.gate_channels * 2,
+            bayesian = self.bayesian, # bayesian version
             kernel_size = self.kernel_size,
             dilation = self.dilation,
             bias = self.bias
         )
-
         # Conv layer for the output, which goes to the next WaveNetLayer
-        self.residual_conv = NormConv(
+        self.residual_conv = conv_layer(
             in_channels = self.gate_channels,
             out_channels = self.residual_channels,
+            bayesian = self.bayesian,
             kernel_size = 1,
             bias = self.bias
         )
 
         # Conv layer for the skip connction which goes directly to the output
-        self.skip_conv = NormConv(
+        self.skip_conv = conv_layer(
             in_channels = self.gate_channels,
             out_channels = self.skip_out_channels,
+            bayesian = self.bayesian,
             kernel_size = 1,
             bias = self.bias
         )
@@ -153,7 +183,7 @@ class WaveNetLayer(nn.Module):
         return output, skip
 
 class WaveNetStack(nn.Module):
-    def __init__(self, dilations, residual_channels, gate_channels, dropout, kernel_size, skip_out_channels = None, causal = True, bias = True):
+    def __init__(self, dilations, residual_channels, gate_channels, dropout, kernel_size, skip_out_channels = None, causal = True, bias = True, bayesian = True):
         super().__init__()
 
         self.dilations = dilations
@@ -163,6 +193,7 @@ class WaveNetStack(nn.Module):
         self.kernel_size = kernel_size
         self.causal = causal
         self.bias = bias
+        self.bayesian = bayesian
 
         if skip_out_channels is not None:
             self.skip_out_channels = skip_out_channels
@@ -179,10 +210,11 @@ class WaveNetStack(nn.Module):
                 skip_out_channels = self.skip_out_channels,
                 dilation = d,
                 causal = self.causal,
-                bias = self.bias
+                bias = self.bias,
+                bayesian = self.bayesian # bayesian version
             )
             self.layers.append(layer)
-
+            
         self.dropout = nn.Dropout(self.dropout)
 
     def forward(self, x):
@@ -192,3 +224,9 @@ class WaveNetStack(nn.Module):
             x = self.dropout(x)
             skip_sum += skip
         return skip_sum
+    
+    def sample_new_weights(self):
+        for layer in self.layers:
+            for hook in layer._forward_pre_hooks.values():
+                if isinstance(hook, Variational):
+                    hook.rsample_new(layer)

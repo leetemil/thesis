@@ -26,7 +26,6 @@ class LossTransformer(nn.Module):
 		memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
 
 		pred = self.transformer(src, tgt, src_mask, tgt_mask, memory_mask)
-		pred = self.transformer(src, tgt, src_mask, tgt_mask, memory_mask)
 		pred = pred.permute(1, 2, 0)
 
 		# Compare each timestep in cross entropy loss
