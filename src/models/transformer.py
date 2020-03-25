@@ -13,9 +13,7 @@ class LossTransformer(nn.Module):
 		self.transformer = Transformer(dropout = dropout, *args, **kwargs)
 		self.pos_encoder = PositionalEncoding(30, dropout, 2000)
 
-	def protein_logp(self, xb):
-		xb_src = xb[:, 1:]
-
+	def prediction(self, xb_src):
 		tgt = torch.zeros_like(xb_src)
 		tgt[:, 0] = IUPAC_SEQ2IDX["<cls>"]
 		tgt[:, 1:] = xb_src[:, :-1]
@@ -29,11 +27,14 @@ class LossTransformer(nn.Module):
 
 		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
 		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
-		memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
 
-		pred = self.transformer(src, tgt, src_mask, tgt_mask, memory_mask)
-		pred = self.transformer(src, tgt, src_mask, tgt_mask, memory_mask)
+		pred = self.transformer(src, tgt, src_mask, tgt_mask)
 		pred = pred.permute(1, 2, 0)
+		return pred
+
+	def protein_logp(self, xb):
+		xb_src = xb[:, 1:]
+		pred = self.prediction(xb_src)
 
 		# Compare each timestep in cross entropy loss
 		loss = F.cross_entropy(pred, xb_src, ignore_index = 0, reduction = "none")
@@ -53,23 +54,7 @@ class LossTransformer(nn.Module):
 
 	def forward(self, xb):
 		xb_src = xb[:, 1:]
-
-		tgt = torch.zeros_like(xb_src)
-		tgt[:, 0] = IUPAC_SEQ2IDX["<cls>"]
-		tgt[:, 1:] = xb_src[:, :-1]
-		tgt[tgt == IUPAC_SEQ2IDX["<sep>"]] = 0
-
-		src = F.one_hot(xb_src, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
-		tgt = F.one_hot(tgt, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
-
-
-
-		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
-		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
-		# memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
-
-		pred = self.transformer(src, tgt, src_mask, tgt_mask)
-		pred = pred.permute(1, 2, 0)
+		pred = self.prediction(xb_src)
 
 		# Compare each timestep in cross entropy loss
 		loss = F.cross_entropy(pred, xb_src, ignore_index = 0, reduction = "mean")
