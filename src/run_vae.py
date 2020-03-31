@@ -63,6 +63,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         layer_mod = args.layer_mod,
         use_param_loss = args.param_loss,
         use_dictionary = args.dictionary,
+        label_smoothing = args.label_smoothing,
         warm_up = args.warm_up
     ).to(device)
     print(model.summary())

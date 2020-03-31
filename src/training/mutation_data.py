@@ -95,7 +95,7 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
 
             acc_m_elbo += m_elbo
             acc_wt_elbo += wt_elbo
-        print("Done!" + " " * 50)
+        print("Done!" + " " * 50, end = "\r")
 
         ensemble_m_elbo = acc_m_elbo / ensemble_count
         ensemble_wt_elbo = acc_wt_elbo / ensemble_count
