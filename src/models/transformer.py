@@ -25,10 +25,10 @@ class LossTransformer(nn.Module):
 		src = self.pos_encoder(src)
 		tgt = self.pos_encoder(tgt)
 
-		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
+		# src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
 		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
 
-		pred = self.transformer(src, tgt, src_mask, tgt_mask)
+		pred = self.transformer(src, tgt, tgt_mask = tgt_mask)
 		pred = pred.permute(1, 2, 0)
 		return pred
 
