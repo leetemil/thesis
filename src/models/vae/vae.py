@@ -30,7 +30,7 @@ class VAE(nn.Module):
         self.sequence_length = self.layer_sizes[0] // self.num_tokens
         self.z_samples = z_samples
         self.dropout = dropout
-        self.layer_mod = LayerModification.__members__[layer_mod.upper()]
+        self.layer_mod = LayerModification.__members__[layer_mod.upper()] if type(layer_mod) == str else layer_mod
         self.num_patterns = num_patterns
         self.inner_CW_dim = inner_CW_dim
         self.use_param_loss = use_param_loss
@@ -314,3 +314,24 @@ class VAE(nn.Module):
             raise NotImplementedError("Unsupported layer modification.")
 
         return total, recon_loss.mean().item(), kld_loss.mean().item(), param_kld.item()
+
+    def save(self, f):
+        args_dict = {
+            "layer_sizes": self.layer_sizes,
+            "num_tokens": self.num_tokens,
+            "z_samples": self.z_samples,
+            "dropout": self.dropout,
+            "layer_mod": self.layer_mod,
+            "num_patterns": self.num_patterns,
+            "inner_CW_dim": self.inner_CW_dim,
+            "use_param_loss": self.use_param_loss,
+            "use_dictionary": self.use_dictionary,
+            "label_smoothing": self.label_smoothing,
+            "warm_up": self.warm_up,
+        }
+
+        torch.save({
+            "name": "VAE",
+            "state_dict": self.state_dict(),
+            "args_dict": args_dict,
+        }, f)

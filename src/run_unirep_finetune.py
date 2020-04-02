@@ -46,7 +46,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     if args.load_model.exists() and args.load_model.is_file():
         print(f"Loading saved model from {args.load_model}...")
-        model.load_state_dict(torch.load(args.load_model, map_location = device))
+        model = torch.load(args.load_model, map_location = device)
         print(f"Model loaded.")
 
     best_val_loss = float("inf")
@@ -65,7 +65,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             if improved:
                 # If model improved, save the model
-                torch.save(model.state_dict(), model_save_name)
+                model.save(model_save_name)
                 print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                 best_val_loss = val_loss
                 patience = args.patience
@@ -81,7 +81,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
             if model_save_name.exists():
-                model.load_state_dict(torch.load(model_save_name, map_location = device))
+                model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
             cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
         print(f'Spearman\'s Rho: {cor}')
 

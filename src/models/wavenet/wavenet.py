@@ -48,7 +48,7 @@ class WaveNet(nn.Module):
         Returns log-softmax distributions of amino acids over the input sequences.
 
         Returns:
-        Tensor: shape (batch size, num tokens, seq length) 
+        Tensor: shape (batch size, num tokens, seq length)
         """
         # one-hot encode and permute to (batch size x channels x length)
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
@@ -56,7 +56,7 @@ class WaveNet(nn.Module):
         pred = self.first_conv(xb_encoded)
         skip_sum = self.dilated_conv_stack(pred)
         pred = self.last_conv_layers(skip_sum)
-        
+
         return F.log_softmax(pred, dim = 1)
 
     def protein_logp(self, xb):
@@ -90,6 +90,25 @@ class WaveNet(nn.Module):
                 f"  Stacks: {self.stacks}\n"
                 f"  Layers: {self.layers_per_stack} (max. {2**(self.layers_per_stack - 1)} dilation)\n"
                 f"  Parameters:  {num_params:,}\n")
+
+    def save(self, f):
+        args_dict = {
+            "input_channels": self.input_channels,
+            "residual_channels": self.residual_channels,
+            "gate_channels": self.gate_channels,
+            "skip_out_channels": self.skip_out_channels,
+            "out_channels": self.out_channels,
+            "stacks": self.stacks,
+            "layers_per_stack": self.layers_per_stack,
+            "bias": self.bias,
+            "dropout": self.dropout,
+        }
+
+        torch.save({
+            "name": "WaveNet",
+            "state_dict": self.state_dict(),
+            "args_dict": args_dict,
+        }, f)
 
 class WaveNetLayer(nn.Module):
     def __init__(self, residual_channels, gate_channels, dropout, kernel_size, dilation, skip_out_channels = None, causal = True, bias = True):

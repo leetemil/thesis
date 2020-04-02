@@ -45,7 +45,7 @@ size = len(wt) * NUM_TOKENS
 wt = wt.unsqueeze(0)
 
 model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS).to(device)
-model.load_state_dict(torch.load("model.torch", map_location=device))
+model.load_state_dict(torch.load("model.torch", map_location=device)["state_dict"])
 
 def protein_accuracy(trials = 100, model = model, data = protein_dataset):
     model.eval()
