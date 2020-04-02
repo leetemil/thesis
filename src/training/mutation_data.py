@@ -38,7 +38,7 @@ def make_mutants(data_path, sheet, metric_column, device):
 
     # load dataset
     wt_seq = next(SeqIO.parse(data_path, "fasta"))
-    wt_indices = np.array([i for i, c in enumerate(str(wt_seq.seq)) if c == c.upper() and c != "."])
+    wt_indices = np.array([i for i, c in enumerate(str(wt_seq.seq))])# if c != "." and c == c.upper()])
     wt = seq2idx(wt_seq, device)
 
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
@@ -90,6 +90,7 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
         for i in range(ensemble_count):
             print(f"Doing model {i}...", end = "\r")
             model.sample_new_decoder()
+            # breakpoint()
             m_elbo, m_logp, m_kld = model.protein_logp(mutants)
             wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
