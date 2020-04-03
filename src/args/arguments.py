@@ -1,7 +1,6 @@
 import argparse
 from pathlib import Path
 from datetime import datetime
-from typing import Union
 
 def basic_args(parser):
     parser.add_argument("-e", "--epochs", type = int, default = 10000, help = "Maximum number of epochs to train (patience may cause fewer epochs to be run).")
@@ -138,12 +137,29 @@ def get_transformer_args():
     parser.add_argument("-nd", "--num_decoder_layers", type = int, default = 2, help = "Number of sub-decoder-layers in the decoder.")
     parser.add_argument("-ff", "--dim_feedforward", type = int, default = 512, help = "Size of the feedforward network model.")
     parser.add_argument("-do", "--dropout", type = float, default = 0.1, help = "Rate of dropout to apply between layers.")
+    parser.add_argument("-ml", "--max_len", type = int, default = 2000, help = "Maximum length of the proteins given to the transformer.")
     parser.add_argument("-rg", "--remove_gaps", action = "store_true", dest = "remove_gaps", default = True, help = "Remove gaps from the alignment.")
     parser.add_argument("-no_rg", "--no_remove_gaps", action = "store_false", dest = "remove_gaps", default = False, help = "Do not remove gaps from the alignment.")
 
     args = parser.parse_args()
 
     args.train_ratio = 1 - args.val_ratio
+    args.results_dir = Path("results") / args.results_dir
+    args.results_dir.mkdir(exist_ok = True)
+    print_args(args)
+    return args
+
+def get_evaluate_ensemble_args():
+    parser = argparse.ArgumentParser(description = "Evaluate an ensemble of models.", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("model_directories", type = Path, nargs = "+", help = "Directories to search for models. Considers any file with a .torch extension as a model file.")
+    parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("-d", "--device", type = str, default = "cuda", choices = ["cpu", "cuda"], help = "Which device to use (CPU or CUDA for GPU).")
+    parser.add_argument("-r", "--results_dir", type = Path, default = Path(f"{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory name to save results under. Will be saved under results/results_dir.")
+    parser.add_argument("-ec", "--ensemble_count", type = int, default = 500, help = "How many samples of the VAE model to use for evaluation as an ensemble.")
+    mutation_effect_prediction_args(parser)
+
+    args = parser.parse_args()
+
     args.results_dir = Path("results") / args.results_dir
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)

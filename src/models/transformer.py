@@ -6,12 +6,21 @@ from torch.nn import functional as F
 from torch.nn import Transformer, TransformerEncoder, TransformerEncoderLayer
 
 from data import IUPAC_SEQ2IDX
+from data import NUM_TOKENS
 
 class LossTransformer(nn.Module):
-	def __init__(self, dropout = 0.1, *args, **kwargs):
+	def __init__(self, d_model = NUM_TOKENS, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
 		super().__init__()
-		self.transformer = Transformer(dropout = dropout, *args, **kwargs)
-		self.pos_encoder = PositionalEncoding(30, dropout, 300)
+		self.d_model = d_model
+		self.nhead = nhead
+		self.num_encoder_layers = num_encoder_layers
+		self.num_decoder_layers = num_decoder_layers
+		self.dim_feedforward = dim_feedforward
+		self.dropout = dropout
+		self.max_len = max_len
+
+		self.transformer = Transformer(d_model = self.d_model, nhead = self.nhead, num_encoder_layers = self.num_encoder_layers, num_decoder_layers = self.num_decoder_layers, dim_feedforward = self.dim_feedforward, dropout = self.dropout)
+		self.pos_encoder = PositionalEncoding(NUM_TOKENS, self.dropout, self.max_len)
 
 	def prediction(self, xb_src):
 		tgt = torch.zeros_like(xb_src)
@@ -25,10 +34,10 @@ class LossTransformer(nn.Module):
 		src = self.pos_encoder(src)
 		tgt = self.pos_encoder(tgt)
 
-		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
+		# src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
 		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
 
-		pred = self.transformer(src, tgt, src_mask, tgt_mask)
+		pred = self.transformer(src, tgt, tgt_mask = tgt_mask)
 		pred = pred.permute(1, 2, 0)
 		return pred
 
@@ -78,6 +87,23 @@ class LossTransformer(nn.Module):
 				f"  Dropout: {self.transformer.encoder.layers[0].dropout.p}\n"
 				f"  Parameters:  {num_params:,}\n")
 
+	def save(self, f):
+		args_dict = {
+			"d_model": self.d_model,
+			"nhead": self.nhead,
+			"num_encoder_layers": self.num_encoder_layers,
+			"num_decoder_layers": self.num_decoder_layers,
+			"dim_feedforward": self.dim_feedforward,
+			"dropout": self.dropout,
+			"max_len": self.max_len,
+		}
+
+		torch.save({
+			"name": "Transformer",
+			"state_dict": self.state_dict(),
+			"args_dict": args_dict,
+		}, f)
+
 class TransformerModel(nn.Module):
 
 	def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
@@ -122,19 +148,19 @@ class TransformerModel(nn.Module):
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
-        super().__init__()
+	def __init__(self, d_model, dropout=0.1, max_len=5000):
+		super().__init__()
 
-        self.dropout = nn.Dropout(p = dropout)
+		self.dropout = nn.Dropout(p = dropout)
 
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
+		pe = torch.zeros(max_len, d_model)
+		position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+		div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+		pe[:, 0::2] = torch.sin(position * div_term)
+		pe[:, 1::2] = torch.cos(position * div_term)
+		pe = pe.unsqueeze(0).transpose(0, 1)
+		self.register_buffer('pe', pe)
 
-    def forward(self, x):
-        x = x + self.pe[:x.size(0), :]
-        return self.dropout(x)
+	def forward(self, x):
+		x = x + self.pe[:x.size(0), :]
+		return self.dropout(x)

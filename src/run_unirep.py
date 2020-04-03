@@ -47,7 +47,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
-        model.load_state_dict(torch.load(model_save_name, map_location = device))
+        model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
     best_val_loss = float("inf")
@@ -80,7 +80,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                     if improved:
                         # If model improved, save the model
-                        torch.save(model.state_dict(), model_save_name)
+                        model.save(model_save_name)
                         print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                         best_val_loss = val_loss
                         patience = args.patience

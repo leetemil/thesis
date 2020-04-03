@@ -73,24 +73,15 @@ def make_mutants(data_path, sheet, metric_column, device):
     while True:
         yield mutants, wt, scores
 
-mutants_fn = None
-
-def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True):
-    model.eval()
-    global mutants_fn
-    if mutants_fn is None:
-        mutants_fn = make_mutants(query_protein, sheet, metric_column, device)
-
-    mutants, wt, scores = next(mutants_fn)
-
+def get_elbos(model, wt, mutants, vae_ensemble_count):
     if isinstance(model, VAE):
         acc_m_elbo = 0
         acc_wt_elbo = 0
 
-        for i in range(ensemble_count):
+        for i in range(vae_ensemble_count):
             print(f"Doing model {i}...", end = "\r")
             model.sample_new_decoder()
-            # breakpoint()
+
             m_elbo, m_logp, m_kld = model.protein_logp(mutants)
             wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
 
@@ -98,10 +89,8 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
             acc_wt_elbo += wt_elbo
         print("Done!" + " " * 50, end = "\r")
 
-        ensemble_m_elbo = acc_m_elbo / ensemble_count
-        ensemble_wt_elbo = acc_wt_elbo / ensemble_count
-        predictions = ensemble_m_elbo - ensemble_wt_elbo
-
+        mutants_logp = acc_m_elbo / vae_ensemble_count
+        wt_logp = acc_wt_elbo / vae_ensemble_count
     else:
         wt_pad = F.pad(wt, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
         wt_pad = F.pad(wt_pad, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
@@ -119,7 +108,27 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
             m_logp = model.protein_logp(batch_mutants)
             log_probs.append(m_logp)
 
-        predictions = torch.cat(log_probs) - wt_logp
+        mutants_logp = torch.cat(log_probs)
+
+    return mutants_logp, wt_logp
+
+mutants_fn = None
+
+def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True, return_scores = False, return_logps = False):
+    model.eval()
+    global mutants_fn
+    if mutants_fn is None:
+        mutants_fn = make_mutants(query_protein, sheet, metric_column, device)
+
+    mutants, wt, scores = next(mutants_fn)
+    if return_scores:
+        return scores
+
+    mutants_logp, wt_logp = get_elbos(model, wt, mutants, ensemble_count)
+    if return_logps:
+        return mutants_logp, wt_logp
+
+    predictions = mutants_logp - wt_logp
 
     if savefig:
         plt.scatter(predictions.cpu(), scores)
@@ -159,7 +168,7 @@ if __name__ in ["__main__", "__console__"]:
         model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS, use_dictionary = False).to(device)
 
         try:
-            model.load_state_dict(torch.load(args.results_dir / Path("model.torch"), map_location=device))
+            model.load_state_dict(torch.load(args.results_dir / Path("model.torch"), map_location=device)["state_dict"])
         except FileNotFoundError:
             pass
 

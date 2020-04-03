@@ -92,3 +92,18 @@ class UniRep(nn.Module):
                 f"  Hidden size: {self.hidden_size}\n"
                 f"  Layers:      {self.num_layers}\n"
                 f"  Parameters:  {num_params:,}\n")
+
+    def save(self, f):
+        args_dict = {
+            "num_tokens": num_tokens,
+            "padding_idx": padding_idx,
+            "embed_size": embed_size,
+            "hidden_size": hidden_size,
+            "num_layers": num_layers,
+        }
+
+        torch.save({
+            "name": "UniRep",
+            "state_dict": self.state_dict(),
+            "args_dict": args_dict,
+        }, f)
