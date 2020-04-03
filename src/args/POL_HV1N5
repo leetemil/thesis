@@ -1,0 +1,8 @@
+--data
+./data/files/alignments/POL_HV1N5-CA_1_b0.5.a2m
+--data_sheet
+POL_HV1N5-CA_Ndungu2014
+--metric_column
+Rcmutant_RC_NL43
+--query_protein
+./data/files/alignments/POL_HV1N5-CA_1_b0.5.a2m

@@ -4,3 +4,5 @@
 parEparD_Laub2015_all
 --metric_column
 fitness
+--query_protein
+./data/alignments/parEparD_3.a2m

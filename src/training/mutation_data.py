@@ -129,7 +129,7 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
         plt.savefig(results_dir / Path("Correlation_scatter.png"))
 
     cor, _ = spearmanr(scores, predictions.cpu())
-    return cor
+    return abs(cor) # we only care about absolute value
 
 if __name__ in ["__main__", "__console__"]:
     parser = argparse.ArgumentParser(description = "Mutation prediction and analysis", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
