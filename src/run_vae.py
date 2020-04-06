@@ -11,16 +11,14 @@
 
 # 2: Dictionary/no_dictionary
 
+import time
+from pathlib import Path
+import torch
+from torch import optim
+
 # First, command-line arguments
 from args import get_vae_args
 args = get_vae_args()
-
-import time
-from pathlib import Path
-
-import torch
-from torch import optim
-from torch.utils.data import random_split
 
 from models import VAE
 from data import get_protein_dataloader, NUM_TOKENS, get_datasets
