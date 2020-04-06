@@ -14,7 +14,7 @@ echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
 for filepath in ./args/dataset_args/*
 do
     protein_family="$(basename $filepath)"
-    echo "Runnin python-script on ${protein_family}"
+    echo "Running python-script on ${protein_family}"
     echo "Program output follows:"
     echo ""
 
