@@ -7,7 +7,7 @@ from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5):
+    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5, backwards = False):
         super().__init__()
 
         self.input_channels = input_channels
@@ -19,6 +19,7 @@ class WaveNet(nn.Module):
         self.layers_per_stack = layers_per_stack
         self.bias = bias
         self.dropout = dropout
+        self.backwards = backwards
 
         self.first_conv = NormConv(self.input_channels, self.residual_channels, kernel_size = 1, bias = self.bias)
 
@@ -50,6 +51,13 @@ class WaveNet(nn.Module):
         Returns:
         Tensor: shape (batch size, num tokens, seq length)
         """
+        if self.backwards:
+            padded_length = xb.size(1)
+            lengths = (xb != 0).sum(dim = 1)
+
+            for seq, length in zip(xb, lengths):
+                seq[1:length - 1] = reversed(seq[1:length - 1])
+
         # one-hot encode and permute to (batch size x channels x length)
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
 
@@ -102,6 +110,7 @@ class WaveNet(nn.Module):
             "layers_per_stack": self.layers_per_stack,
             "bias": self.bias,
             "dropout": self.dropout,
+            "backwards": self.backwards,
         }
 
         torch.save({

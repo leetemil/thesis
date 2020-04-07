@@ -52,7 +52,8 @@ if __name__ == "__main__" or __name__ == "__console__":
 		stacks = args.stacks,
 		layers_per_stack = args.layers,
 		bias = args.bias,
-        dropout = args.dropout
+        dropout = args.dropout,
+        backwards = args.backwards,
 	).to(device)
 
     print(model.summary())
