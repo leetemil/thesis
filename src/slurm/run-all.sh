@@ -14,14 +14,17 @@ echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
 for filepath in ./args/dataset_args/*
 do
     protein_family="$(basename $filepath)"
-    echo "Runnin python-script on ${protein_family}"
-    echo "Program output follows:"
+    echo ""
+    echo ""
+    echo "################################################################################"
+    echo "    Runnin python-script on ${protein_family}. Program output follows"
+    echo "################################################################################"
     echo ""
 
     # set up result folder and output file (otherwise tee complains)
-    mkdir "./results/${protein_family}"
+    mkdir -p "./results/${protein_family}"
     touch "./results/${protein_family}/${protein_family}.out"
 
     # run the model unbuffered
-    python3 -u run_vae.py "@${filepath}" -r "${protein_family}" | tee "./results/${protein_family}/${protein_family}.out"
+    python3 -u run_vae.py "@${filepath}" -r "${protein_family}" --patience 30 | tee "./results/${protein_family}/${protein_family}.out"
 done

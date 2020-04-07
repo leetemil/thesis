@@ -42,12 +42,13 @@ def make_mutants(data_path, sheet, metric_column, device):
     wt = seq2idx(wt_seq, device)
 
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
+
     positions = wt_indices + offset
     positions_dict = {pos: i for i, pos in enumerate(positions)}
 
     mutants_list, scores = zip(*list(filter(lambda t: not math.isnan(t[1]), zip(p.mutant, p[metric_column]))))
     mutants_list, scores = list(mutants_list), list(scores)
-    wt_present = mutants_list[-1] == "wt"
+    wt_present = mutants_list[-1].lower() == "wt"
     if wt_present:
         del mutants_list[-1]
         del scores[-1]
@@ -61,10 +62,12 @@ def make_mutants(data_path, sheet, metric_column, device):
             wildtype = IUPAC_SEQ2IDX[mutation[0]]
             mutant = IUPAC_SEQ2IDX[mutation[-1]]
 
+            # handle special offset case
             if sheet == "parEparD_Laub2015_all":
                 offset = 103
             else:
                 offset = 0
+
             location = positions_dict[int(mutation[1:-1]) + offset]
 
             assert mutants[i, location] == wildtype, f"{IUPAC_IDX2SEQ[mutants[i, location].item()]}, {IUPAC_IDX2SEQ[wildtype]}, {location}, {i}"
