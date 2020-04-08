@@ -51,13 +51,6 @@ class WaveNet(nn.Module):
         Returns:
         Tensor: shape (batch size, num tokens, seq length)
         """
-        if self.backwards:
-            padded_length = xb.size(1)
-            lengths = (xb != 0).sum(dim = 1)
-
-            for seq, length in zip(xb, lengths):
-                seq[1:length - 1] = reversed(seq[1:length - 1])
-
         # one-hot encode and permute to (batch size x channels x length)
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
 
@@ -68,11 +61,16 @@ class WaveNet(nn.Module):
         return F.log_softmax(pred, dim = 1)
 
     def protein_logp(self, xb):
-        loss, _ = self.forward(xb, loss_reduction = "none")
+        loss, _ = self(xb, loss_reduction = "none")
         log_probabilities = -1 * loss.sum(dim = 1)
         return log_probabilities
 
     def forward(self, xb, loss_reduction = "mean"):
+        if self.backwards:
+            lengths = (xb != 0).sum(dim = 1)
+            for seq, length in zip(xb, lengths):
+                seq[1:length - 1] = reversed(seq[1:length - 1])
+
         pred = self.get_predictions(xb)
 
         # Calculate loss
