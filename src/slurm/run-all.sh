@@ -17,7 +17,7 @@ do
     echo ""
     echo ""
     echo "################################################################################"
-    echo "    Runnin python-script on ${protein_family}. Program output follows"
+    echo "    Running Python script on ${protein_family}. Program output follows"
     echo "################################################################################"
     echo ""
 
