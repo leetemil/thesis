@@ -56,8 +56,8 @@ def get_unirep_args():
     basic_args(parser)
 
     # Data
-    parser.add_argument("-td", "train_data", type = Path, help = "Fasta input file for training.")
-    parser.add_argument("-vd", "validation_data", type = Path, help = "Fasta input file for validation.")
+    parser.add_argument("-td", "--train_data", type = Path, help = "Fasta input file for training.")
+    parser.add_argument("-vd", "--validation_data", type = Path, help = "Fasta input file for validation.")
 
     parser.add_argument("-es", "--embed_size", type = int, default = 10, help = "Size of the amino acid embedding.")
     parser.add_argument("-hs", "--hidden_size", type = int, default = 512, help = "Size of the hidden state of the LSTM.")
