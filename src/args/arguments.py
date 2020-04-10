@@ -62,6 +62,7 @@ def get_unirep_args():
     parser.add_argument("-es", "--embed_size", type = int, default = 10, help = "Size of the amino acid embedding.")
     parser.add_argument("-hs", "--hidden_size", type = int, default = 512, help = "Size of the hidden state of the LSTM.")
     parser.add_argument("-nl", "--num_layers", type = int, default = 1, help = "Number of layers of the LSTM.")
+    parser.add_argument("-alr", "--anneal_learning_rates", action = "store_true", dest = "anneal_learning_rates", default = False, help = "Anneal learning rates.")
 
     args = parser.parse_args()
 

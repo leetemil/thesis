@@ -6,6 +6,7 @@ from pathlib import Path
 
 import torch
 from torch import optim
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from models import UniRep
 from data import IterProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
@@ -44,6 +45,13 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(model.summary())
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.L2)
 
+    if args.anneal_learning_rates:
+        T_0 = 1
+        T_mult = 2
+        scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult)
+    else:
+        scheduler = None
+
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
@@ -59,8 +67,9 @@ if __name__ == "__main__" or __name__ == "__console__":
     epoch = 0
     try:
         while True:
+            total_batches = 39_069_211 // args.batch_size # used for annealing; maybe import number of data samples?
             for batch_idx, xb in enumerate(train_loader):
-                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value)
+                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
                 seqs_processed += batch_size
                 acc_train_loss += batch_train_loss
                 train_loss_count += 1
