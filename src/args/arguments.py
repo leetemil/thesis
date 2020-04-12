@@ -123,10 +123,14 @@ def get_wavenet_args():
     if args.plot_learning_rates and not args.anneal_learning_rates:
         raise ValueError("Plot learning rates was specified, but learning rates are not annealed. Use \"--anneal_learning_rates\" or \"-alr\" to activate annealing.")
 
+
     args.train_ratio = 1 - args.val_ratio
     args.results_dir = Path("results") / args.results_dir
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
+
+    if args.bayes:
+        print("Bayesian WaveNet applied. This setting (currently) disables layer norm.")
 
     return args
 
