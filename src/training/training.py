@@ -102,7 +102,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Step in the direction of the gradient
     optimizer.step()
-    
+
     # Schedule learning rate
     if scheduler is not None:
         assert epoch is not None

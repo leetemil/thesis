@@ -80,8 +80,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                     seqs_processed = 0
                     acc_train_loss = 0
                     train_loss_count = 0
-                    val_loss = validate(epoch, model, val_loader)
-
+                    val_loss, _ = validate(epoch, model, val_loader)
                     print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - prev_time)} Memory: {get_memory_usage(device):.2f}GiB")
                     prev_time = time.time()
 

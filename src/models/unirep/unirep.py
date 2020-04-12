@@ -101,11 +101,12 @@ class UniRep(nn.Module):
 
     def save(self, f):
         args_dict = {
-            "num_tokens": num_tokens,
-            "padding_idx": padding_idx,
-            "embed_size": embed_size,
-            "hidden_size": hidden_size,
-            "num_layers": num_layers,
+            "num_tokens": self.num_tokens,
+            "padding_idx": self.padding_idx,
+            "embed_size": self.embed_size,
+            "hidden_size": self.hidden_size,
+            "num_layers": self.num_layers,
+            "is_multiplicative": self.is_multiplicative,
         }
 
         torch.save({
