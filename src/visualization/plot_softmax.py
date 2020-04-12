@@ -22,7 +22,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 protein_dataset = ProteinDataset(BLAT_SEQ_FILE, device)
 
 model = VAE([7890, 1500, 1500, 30, 100, 2000, 7890], NUM_TOKENS).to(device)
-model.load_state_dict(torch.load("model.torch", map_location=device))
+model.load_state_dict(torch.load("model.torch", map_location=device)["state_dict"])
 
 # Softmax for the first 4 proteins
 fig, axes = plt.subplots(4)

@@ -38,16 +38,17 @@ def make_mutants(data_path, sheet, metric_column, device):
 
     # load dataset
     wt_seq = next(SeqIO.parse(data_path, "fasta"))
-    wt_indices = np.array([i for i, c in enumerate(str(wt_seq.seq)) if c == c.upper() and c != "."])
+    wt_indices = np.array([i for i, c in enumerate(str(wt_seq.seq))])# if c != "." and c == c.upper()])
     wt = seq2idx(wt_seq, device)
 
     offset = int(wt_seq.id.split("/")[1].split("-")[0])
+
     positions = wt_indices + offset
     positions_dict = {pos: i for i, pos in enumerate(positions)}
 
     mutants_list, scores = zip(*list(filter(lambda t: not math.isnan(t[1]), zip(p.mutant, p[metric_column]))))
     mutants_list, scores = list(mutants_list), list(scores)
-    wt_present = mutants_list[-1] == "wt"
+    wt_present = mutants_list[-1].lower() == "wt"
     if wt_present:
         del mutants_list[-1]
         del scores[-1]
@@ -61,10 +62,12 @@ def make_mutants(data_path, sheet, metric_column, device):
             wildtype = IUPAC_SEQ2IDX[mutation[0]]
             mutant = IUPAC_SEQ2IDX[mutation[-1]]
 
+            # handle special offset case
             if sheet == "parEparD_Laub2015_all":
                 offset = 103
             else:
                 offset = 0
+
             location = positions_dict[int(mutation[1:-1]) + offset]
 
             assert mutants[i, location] == wildtype, f"{IUPAC_IDX2SEQ[mutants[i, location].item()]}, {IUPAC_IDX2SEQ[wildtype]}, {location}, {i}"
@@ -73,16 +76,7 @@ def make_mutants(data_path, sheet, metric_column, device):
     while True:
         yield mutants, wt, scores
 
-mutants_fn = None
-
-def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True):
-    model.eval()
-    global mutants_fn
-    if mutants_fn is None:
-        mutants_fn = make_mutants(query_protein, sheet, metric_column, device)
-
-    mutants, wt, scores = next(mutants_fn)
-
+def get_elbos(model, wt, mutants, ensemble_count):
     if isinstance(model, VAE):
         acc_m_elbo = 0
         acc_wt_elbo = 0
@@ -95,26 +89,25 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
 
             acc_m_elbo += m_elbo
             acc_wt_elbo += wt_elbo
-        print("Done!" + " " * 50)
+        print("Done!" + " " * 50, end = "\r")
 
-        ensemble_m_elbo = acc_m_elbo / ensemble_count
-        ensemble_wt_elbo = acc_wt_elbo / ensemble_count
-        predictions = ensemble_m_elbo - ensemble_wt_elbo
+        mutants_logp = acc_m_elbo / ensemble_count
+        wt_logp = acc_wt_elbo / ensemble_count
 
     else:
         wt_pad = F.pad(wt, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
         wt_pad = F.pad(wt_pad, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
         wt_logp = model.protein_logp(wt_pad.unsqueeze(0))
 
+        mutants = F.pad(mutants, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
+        mutants = F.pad(mutants, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
+
         batch_size = 256
         batches = len(mutants) // batch_size + 1
 
         model_logps = []
 
-        mutants = F.pad(mutants, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
-        mutants = F.pad(mutants, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
-        
-        ensemble_count = ensemble_count if model.bayesian else 1
+        ensemble_count = ensemble_count if isinstance(model, WaveNet) and model.bayesian else 1
 
         for m in range(ensemble_count):
             if ensemble_count > 1:
@@ -125,14 +118,33 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
                 batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
                 m_logp = model.protein_logp(batch_mutants)
                 log_probs.append(m_logp)
-            
+
             model_logps.append(torch.cat(log_probs))
 
         if ensemble_count > 1:
             print("Done!" + " " * 50)
 
-        ensemble = sum(model_logps) / ensemble_count
-        predictions = ensemble - wt_logp
+        mutants_logp = sum(model_logps) / ensemble_count
+
+    return mutants_logp, wt_logp
+
+mutants_fn = None
+
+def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_column, device, ensemble_count = 500, results_dir = Path("."), savefig = True, return_scores = False, return_logps = False):
+    model.eval()
+    global mutants_fn
+    if mutants_fn is None:
+        mutants_fn = make_mutants(query_protein, sheet, metric_column, device)
+
+    mutants, wt, scores = next(mutants_fn)
+    if return_scores:
+        return scores
+
+    mutants_logp, wt_logp = get_elbos(model, wt, mutants, ensemble_count)
+    if return_logps:
+        return mutants_logp, wt_logp
+
+    predictions = mutants_logp - wt_logp
 
     if savefig:
         plt.scatter(predictions.cpu(), scores)
@@ -142,7 +154,7 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
         plt.savefig(results_dir / Path("Correlation_scatter.png"))
 
     cor, _ = spearmanr(scores, predictions.cpu())
-    return cor
+    return abs(cor) # we only care about absolute value
 
 if __name__ in ["__main__", "__console__"]:
     parser = argparse.ArgumentParser(description = "Mutation prediction and analysis", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars='@')
@@ -172,7 +184,7 @@ if __name__ in ["__main__", "__console__"]:
         model = VAE([size, 1500, 1500, 30, 100, 2000, size], NUM_TOKENS, use_dictionary = False).to(device)
 
         try:
-            model.load_state_dict(torch.load(args.results_dir / Path("model.torch"), map_location=device))
+            model.load_state_dict(torch.load(args.results_dir / Path("model.torch"), map_location=device)["state_dict"])
         except FileNotFoundError:
             pass
 

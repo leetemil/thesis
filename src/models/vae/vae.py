@@ -11,6 +11,7 @@ from torch.distributions.normal import Normal
 from torch.distributions import kl_divergence
 
 from .variational import variational, Variational
+from ..utils import smooth_one_hot
 
 class LayerModification(Enum):
     NONE        = 1 << 0
@@ -19,7 +20,7 @@ class LayerModification(Enum):
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = False, warm_up = 0):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = False, label_smoothing = 0.0, warm_up = 0):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -29,11 +30,12 @@ class VAE(nn.Module):
         self.sequence_length = self.layer_sizes[0] // self.num_tokens
         self.z_samples = z_samples
         self.dropout = dropout
-        self.layer_mod = LayerModification.__members__[layer_mod.upper()]
+        self.layer_mod = LayerModification.__members__[layer_mod.upper()] if type(layer_mod) == str else layer_mod
         self.num_patterns = num_patterns
         self.inner_CW_dim = inner_CW_dim
         self.use_param_loss = use_param_loss
         self.use_dictionary = use_dictionary
+        self.label_smoothing = label_smoothing
         self.warm_up = warm_up
         self.warm_up_scale = 0
 
@@ -221,15 +223,24 @@ class VAE(nn.Module):
                 if isinstance(hook, Variational):
                     hook.rsample_new(layer)
 
-    def nll_loss(self, recon_x, x):
+    def recon_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
-        recon_x = recon_x.view(self.z_samples, -1, recon_x.size(1), self.num_tokens).permute(1, 3, 2, 0)
+        recon_x = recon_x.view(self.z_samples, -1, recon_x.size(1), self.num_tokens).permute(1, 2, 0, 3)
         x = x.unsqueeze(-1).expand(-1, -1, self.z_samples)
 
-        nll = F.nll_loss(recon_x, x, reduction = "none").mean(-1).sum(1)
+        smooth_target = smooth_one_hot(x, self.num_tokens, self.label_smoothing)
+        loss = -(smooth_target * recon_x).sum(-1)
+        loss = loss.mean(-1).sum(-1)
+        return loss
 
-        # amino acid probabilities are independent conditioned on z
-        return nll
+        # How well do input x and output recon_x agree?
+        # recon_x = recon_x.view(self.z_samples, -1, recon_x.size(1), self.num_tokens).permute(1, 3, 2, 0)
+        # x = x.unsqueeze(-1).expand(-1, -1, self.z_samples)
+
+        # nll = F.nll_loss(recon_x, x, reduction = "none").mean(-1).sum(1)
+
+        # # amino acid probabilities are independent conditioned on z
+        # return nll
 
     def kld_loss(self, encoded_distribution):
         prior = Normal(torch.zeros_like(encoded_distribution.mean), torch.ones_like(encoded_distribution.variance))
@@ -287,10 +298,10 @@ class VAE(nn.Module):
         return global_kld
 
     def vae_loss(self, recon_x, x, encoded_distribution, weights, neff, warm_up_scale):
-        nll_loss = self.nll_loss(recon_x, x) * weights
+        recon_loss = self.recon_loss(recon_x, x) * weights
         kld_loss = self.kld_loss(encoded_distribution) * weights
 
-        weighted_loss = torch.mean(nll_loss + kld_loss)
+        weighted_loss = torch.mean(recon_loss + kld_loss)
 
         if self.layer_mod == LayerModification.VARIATIONAL and self.use_param_loss:
             param_kld = self.warm_up_scale * self.global_parameter_kld() / neff
@@ -302,4 +313,25 @@ class VAE(nn.Module):
         else:
             raise NotImplementedError("Unsupported layer modification.")
 
-        return total, nll_loss.mean().item(), kld_loss.mean().item(), param_kld.item()
+        return total, recon_loss.mean().item(), kld_loss.mean().item(), param_kld.item()
+
+    def save(self, f):
+        args_dict = {
+            "layer_sizes": self.layer_sizes,
+            "num_tokens": self.num_tokens,
+            "z_samples": self.z_samples,
+            "dropout": self.dropout,
+            "layer_mod": self.layer_mod,
+            "num_patterns": self.num_patterns,
+            "inner_CW_dim": self.inner_CW_dim,
+            "use_param_loss": self.use_param_loss,
+            "use_dictionary": self.use_dictionary,
+            "label_smoothing": self.label_smoothing,
+            "warm_up": self.warm_up,
+        }
+
+        torch.save({
+            "name": "VAE",
+            "state_dict": self.state_dict(),
+            "args_dict": args_dict,
+        }, f)

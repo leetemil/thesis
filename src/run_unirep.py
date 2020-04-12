@@ -6,6 +6,7 @@ from pathlib import Path
 
 import torch
 from torch import optim
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from models import UniRep
 from data import IterProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
@@ -44,10 +45,17 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(model.summary())
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.L2)
 
+    if args.anneal_learning_rates:
+        T_0 = 1
+        T_mult = 2
+        scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult)
+    else:
+        scheduler = None
+
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
-        model.load_state_dict(torch.load(model_save_name, map_location = device))
+        model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
     best_val_loss = float("inf")
@@ -59,8 +67,9 @@ if __name__ == "__main__" or __name__ == "__console__":
     epoch = 0
     try:
         while True:
+            total_batches = 39_069_211 // args.batch_size # used for annealing; maybe import number of data samples?
             for batch_idx, xb in enumerate(train_loader):
-                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value)
+                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
                 seqs_processed += batch_size
                 acc_train_loss += batch_train_loss
                 train_loss_count += 1
@@ -71,8 +80,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                     seqs_processed = 0
                     acc_train_loss = 0
                     train_loss_count = 0
-                    val_loss = validate(epoch, model, val_loader)
-
+                    val_loss, _ = validate(epoch, model, val_loader)
                     print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - prev_time)} Memory: {get_memory_usage(device):.2f}GiB")
                     prev_time = time.time()
 
@@ -80,7 +88,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                     if improved:
                         # If model improved, save the model
-                        torch.save(model.state_dict(), model_save_name)
+                        model.save(model_save_name)
                         print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                         best_val_loss = val_loss
                         patience = args.patience

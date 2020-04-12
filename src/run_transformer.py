@@ -31,7 +31,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device_name}")
 
     # Load data
-    all_data = VariableLengthProteinDataset(args.data, device = device, max_len = 1024)
+    all_data = VariableLengthProteinDataset(args.data, device = device, remove_gaps = args.remove_gaps, max_len = args.max_len)
     train_length = int(len(all_data) * args.train_ratio)
     val_length = len(all_data) - train_length
 
@@ -42,12 +42,13 @@ if __name__ == "__main__" or __name__ == "__console__":
     print("Data loaded!")
 
     model = LossTransformer(
-		d_model = 30,
+		d_model = NUM_TOKENS,
 		nhead = args.nhead,
 		num_encoder_layers = args.num_encoder_layers,
 		num_decoder_layers = args.num_decoder_layers,
 		dim_feedforward = args.dim_feedforward,
-        dropout = args.dropout
+        dropout = args.dropout,
+        max_len = args.max_len,
 	).to(device)
 
     print(model.summary())
@@ -56,7 +57,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
-        model.load_state_dict(torch.load(model_save_name, map_location = device))
+        model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
     best_loss = float("inf")
@@ -84,7 +85,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             if improved:
                 # If model improved, save the model
-                torch.save(model.state_dict(), model_save_name)
+                model.save(model_save_name)
                 print(f"{loss_str} loss improved from {best_loss:.5f} to {loss_value_str}. Saved model to: {model_save_name}")
                 best_loss = val_loss if args.val_ratio > 0 else train_loss
                 patience = args.patience
@@ -107,7 +108,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
             if model_save_name.exists():
-                model.load_state_dict(torch.load(model_save_name, map_location = device))
+                model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
             rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 0, args.results_dir)
         print(f'Spearman\'s Rho: {rho}')
 

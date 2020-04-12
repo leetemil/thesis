@@ -3,8 +3,10 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+from .mlstm import mLSTM
+
 class UniRep(nn.Module):
-    def __init__(self, num_tokens, padding_idx, embed_size, hidden_size, num_layers = 1):
+    def __init__(self, num_tokens, padding_idx, embed_size, hidden_size, num_layers = 1, is_multiplicative = False):
         super().__init__()
 
         # Define parameters
@@ -13,11 +15,15 @@ class UniRep(nn.Module):
         self.embed_size = embed_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.is_multiplicative = is_multiplicative
 
         # Define layers
         self.embed = nn.Embedding(self.num_tokens, self.embed_size, padding_idx = self.padding_idx)
 
-        self.rnn = nn.LSTM(self.embed_size, self.hidden_size, num_layers = self.num_layers, batch_first = True)
+        if self.is_multiplicative:
+            self.rnn = mLSTM(self.embed_size, self.hidden_size, num_layers = self.num_layers)
+        else:
+            self.rnn = nn.LSTM(self.embed_size, self.hidden_size, num_layers = self.num_layers, batch_first = True)
 
         self.lin = nn.Linear(self.hidden_size, self.num_tokens)
 
@@ -92,3 +98,19 @@ class UniRep(nn.Module):
                 f"  Hidden size: {self.hidden_size}\n"
                 f"  Layers:      {self.num_layers}\n"
                 f"  Parameters:  {num_params:,}\n")
+
+    def save(self, f):
+        args_dict = {
+            "num_tokens": self.num_tokens,
+            "padding_idx": self.padding_idx,
+            "embed_size": self.embed_size,
+            "hidden_size": self.hidden_size,
+            "num_layers": self.num_layers,
+            "is_multiplicative": self.is_multiplicative,
+        }
+
+        torch.save({
+            "name": "UniRep",
+            "state_dict": self.state_dict(),
+            "args_dict": args_dict,
+        }, f)

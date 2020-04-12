@@ -108,7 +108,7 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
                 plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = label)
             elif pca_dim == 3:
                 axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = label)
-    
+
     if name is not None:
         pca_fig.savefig(name.with_suffix(figure_type))
 
@@ -141,7 +141,7 @@ def plot_softmax(name, predictions):
         ax.set_yticks(np.arange(len(IUPAC_AMINO_IDX_PAIRS)))
         ax.set_yticklabels(list(acids))
         # ax.set_title(seq.id)
-    
+
     plt.savefig(name)
     plt.close(fig)
 
@@ -195,6 +195,6 @@ if __name__ == "__main__":
     device = torch.device("cuda")
 
     model = VAE([2594, 128, 2]).to(device)
-    model.load_state_dict(torch.load("model.torch"))
+    model.load_state_dict(torch.load("model.torch")["state_dict"])
 
     plot_data(None, model, "data/PF00144_full.txt", device)

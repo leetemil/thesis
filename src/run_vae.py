@@ -11,16 +11,14 @@
 
 # 2: Dictionary/no_dictionary
 
+import time
+from pathlib import Path
+import torch
+from torch import optim
+
 # First, command-line arguments
 from args import get_vae_args
 args = get_vae_args()
-
-import time
-from pathlib import Path
-
-import torch
-from torch import optim
-from torch.utils.data import random_split
 
 from models import VAE
 from data import get_protein_dataloader, NUM_TOKENS, get_datasets
@@ -46,7 +44,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device_name}")
 
     # Load data
-    all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio)
+    all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio, use_saved = True)
 
     # Construct dataloaders for batches
     train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size, shuffle = True)
@@ -63,6 +61,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         layer_mod = args.layer_mod,
         use_param_loss = args.param_loss,
         use_dictionary = args.dictionary,
+        label_smoothing = args.label_smoothing,
         warm_up = args.warm_up
     ).to(device)
     print(model.summary())
@@ -71,7 +70,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
-        model.load_state_dict(torch.load(model_save_name, map_location = device))
+        model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
     # Train, validate, save
@@ -127,7 +126,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             if improved:
                 # If model improved, save the model
-                torch.save(model.state_dict(), model_save_name)
+                model.save(model_save_name)
                 print(f"{loss_str} loss improved from {best_loss:.5f} to {loss_value_str}. Saved model to: {model_save_name}")
                 best_loss = val_loss if args.val_ratio > 0 else train_loss
                 patience = args.patience
@@ -165,7 +164,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
             if model_save_name.exists():
-                model.load_state_dict(torch.load(model_save_name, map_location = device))
+                model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
                 print("Model loaded.")
             rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 4 * args.ensemble_count, args.results_dir)
         print(f'Spearman\'s Rho: {rho}')

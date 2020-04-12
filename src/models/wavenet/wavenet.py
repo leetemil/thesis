@@ -14,7 +14,7 @@ def conv_layer(in_channels, out_channels, bayesian, *args, **kwargs):
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5, bayesian = True):
+    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5, backwards = False, bayesian = True):
         super().__init__()
 
         self.input_channels = input_channels
@@ -27,8 +27,8 @@ class WaveNet(nn.Module):
         self.bias = bias
         self.dropout = dropout
         self.bayesian = bayesian
+        self.backwards = backwards
 
-        # self.first_conv = NormConv(self.input_channels, self.residual_channels, kernel_size = 1, bias = self.bias)
         self.first_conv = conv_layer(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias) # bayesian version
 
 
@@ -59,7 +59,7 @@ class WaveNet(nn.Module):
         Returns log-softmax distributions of amino acids over the input sequences.
 
         Returns:
-        Tensor: shape (batch size, num tokens, seq length) 
+        Tensor: shape (batch size, num tokens, seq length)
         """
         # one-hot encode and permute to (batch size x channels x length)
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
@@ -67,15 +67,20 @@ class WaveNet(nn.Module):
         pred = self.first_conv(xb_encoded)
         skip_sum = self.dilated_conv_stack(pred)
         pred = self.last_conv_layers(skip_sum)
-        
+
         return F.log_softmax(pred, dim = 1)
 
     def protein_logp(self, xb):
-        loss, _ = self.forward(xb, loss_reduction = "none")
+        loss, _ = self(xb, loss_reduction = "none")
         log_probabilities = -1 * loss.sum(dim = 1)
         return log_probabilities
 
     def forward(self, xb, loss_reduction = "mean"):
+        if self.backwards:
+            lengths = (xb != 0).sum(dim = 1)
+            for seq, length in zip(xb, lengths):
+                seq[1:length - 1] = reversed(seq[1:length - 1])
+
         pred = self.get_predictions(xb)
 
         # Calculate loss
@@ -117,6 +122,26 @@ class WaveNet(nn.Module):
                 f"  Layers: {self.layers_per_stack} (max. {2**(self.layers_per_stack - 1)} dilation)\n"
                 f"  Parameters:  {num_params:,}\n"
                 f"  Bayesian: {self.bayesian}\n")
+
+    def save(self, f):
+        args_dict = {
+            "input_channels": self.input_channels,
+            "residual_channels": self.residual_channels,
+            "gate_channels": self.gate_channels,
+            "skip_out_channels": self.skip_out_channels,
+            "out_channels": self.out_channels,
+            "stacks": self.stacks,
+            "layers_per_stack": self.layers_per_stack,
+            "bias": self.bias,
+            "dropout": self.dropout,
+            "backwards": self.backwards,
+        }
+
+        torch.save({
+            "name": "WaveNet",
+            "state_dict": self.state_dict(),
+            "args_dict": args_dict,
+        }, f)
 
 class WaveNetLayer(nn.Module):
     def __init__(self, residual_channels, gate_channels, dropout, kernel_size, dilation, skip_out_channels = None, causal = True, bias = True, bayesian = True):
@@ -214,7 +239,7 @@ class WaveNetStack(nn.Module):
                 bayesian = self.bayesian # bayesian version
             )
             self.layers.append(layer)
-            
+
         self.dropout = nn.Dropout(self.dropout)
 
     def forward(self, x):
@@ -224,7 +249,7 @@ class WaveNetStack(nn.Module):
             x = self.dropout(x)
             skip_sum += skip
         return skip_sum
-    
+
     def sample_new_weights(self):
         for layer in self.layers:
             for hook in layer._forward_pre_hooks.values():
