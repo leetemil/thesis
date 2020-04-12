@@ -133,7 +133,11 @@ if __name__ == "__main__" or __name__ == "__console__":
                 learning_rates += train_metrics['learning_rates']
                 plot_learning_rates(learning_rates_name, learning_rates)
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n" if improved else "\n\n")
+
+            if improved:
+                print(f"Spearman\'s Rho: {rho:.3f}", end = "\n\n")
+
         print('Computing mutation effect prediction correlation...')
 
         with torch.no_grad():
@@ -143,9 +147,9 @@ if __name__ == "__main__" or __name__ == "__console__":
             predictions = model.get_predictions(softmax_proteins).permute(0,2,1).exp().cpu().numpy()
             plot_softmax(softmax_name, predictions)
 
-            rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 0, args.results_dir)
+            rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, ensemble_count, args.results_dir)
 
-        print(f'Spearman\'s Rho: {rho}')
+        print(f'Spearman\'s Rho: {rho:.3f}')
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_loss:.5f}.\n")

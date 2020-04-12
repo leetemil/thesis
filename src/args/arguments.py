@@ -129,8 +129,8 @@ def get_wavenet_args():
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
 
-    if args.bayes:
-        print("Bayesian WaveNet applied. This setting (currently) disables layer norm.")
+    if args.bayesian:
+        print("Disclaimer: Bayesian WaveNet applied. This setting (currently) disables layer norm.\n")
 
     return args
 
