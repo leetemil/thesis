@@ -18,7 +18,7 @@ def log_progress(epoch, time, progress, total, end, **kwargs):
         if type(value) == int:
             report += (f" {key}: {value:5}")
         elif type(value) == float:
-            report += (f" {key}: {value:7.5f}")
+            report += (f" {key}: {value:7.3f}")
         else:
             report += (f" {key}: {value}")
     print(report, end = end)

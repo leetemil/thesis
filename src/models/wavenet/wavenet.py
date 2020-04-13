@@ -4,13 +4,8 @@ from torch.nn import functional as F
 
 from .norm_conv import NormConv
 from ..vae.variational import variational, Variational
+from ..utils import layer_kld
 from data import IUPAC_SEQ2IDX
-
-def conv_layer(in_channels, out_channels, bayesian, *args, **kwargs):
-    if bayesian:
-        return variational(nn.Conv1d(in_channels, out_channels, *args, **kwargs))
-    else:
-        return NormConv(in_channels, out_channels, *args, **kwargs)
 
 class WaveNet(nn.Module):
 
@@ -29,10 +24,10 @@ class WaveNet(nn.Module):
         self.bayesian = bayesian
         self.backwards = backwards
 
-        self.first_conv = conv_layer(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias) # bayesian version
-
+        self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
 
         self.dilations = []
+
         for stack in range(self.stacks):
             for layer in range(self.layers_per_stack):
                 self.dilations.append(2**layer)
@@ -49,9 +44,9 @@ class WaveNet(nn.Module):
 
         self.last_conv_layers = nn.Sequential(
             nn.ReLU(inplace = True),
-            conv_layer(self.skip_out_channels, self.skip_out_channels, self.bayesian, kernel_size = 1, bias = self.bias),
+            NormConv(self.skip_out_channels, self.skip_out_channels, self.bayesian, kernel_size = 1, bias = self.bias),
             nn.ReLU(inplace = True),
-            conv_layer(self.skip_out_channels, self.skip_out_channels, self.bayesian, kernel_size = 1, bias = self.bias),
+            NormConv(self.skip_out_channels, self.skip_out_channels, self.bayesian, kernel_size = 1, bias = self.bias),
         )
 
     def get_predictions(self, xb):
@@ -75,6 +70,21 @@ class WaveNet(nn.Module):
         log_probabilities = -1 * loss.sum(dim = 1)
         return log_probabilities
 
+    def parameter_kld(self):
+        kld = layer_kld(self.first_conv) if isinstance(self.first_conv, NormConv) else 0
+
+        # get loss from last convolution layers
+        for layer in self.last_conv_layers:
+            if isinstance(layer, NormConv):
+                kld += layer_kld(layer)
+
+        # get loss from stack layers
+        for layer in self.dilated_conv_stack.layers:
+            if isinstance(layer, NormConv):
+                kld += layer_kld(layer)
+
+        return kld
+
     def forward(self, xb, loss_reduction = "mean"):
         if self.backwards:
             lengths = (xb != 0).sum(dim = 1)
@@ -89,10 +99,20 @@ class WaveNet(nn.Module):
         pred = pred[:, :, :-2]
 
         # Compare each timestep in cross entropy loss
-        loss = F.nll_loss(pred, true, ignore_index = 0, reduction = loss_reduction)
+        nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = loss_reduction)
+
+        # Metrics
         metrics_dict = {}
 
-        return loss, metrics_dict
+        if self.bayesian:
+            kld_loss = self.parameter_kld()
+            metrics_dict["kld_loss"] = kld_loss.item()
+
+        if loss_reduction == "mean":
+            metrics_dict["nll_loss"] = nll_loss.item()
+
+        total_loss = nll_loss + kld_loss if self.bayesian else nll_loss
+        return total_loss, metrics_dict
 
     def sample_new_weights(self):
         # rsample first layer
@@ -167,7 +187,7 @@ class WaveNetLayer(nn.Module):
             self.padding = (self.kernel_size - 1) // 2 * self.dilation
 
         # Conv layer that the input is put through before the non-linear activations
-        self.dilated_conv = conv_layer(
+        self.dilated_conv = NormConv(
             in_channels = self.residual_channels,
             out_channels = self.gate_channels * 2,
             bayesian = self.bayesian, # bayesian version
@@ -176,7 +196,7 @@ class WaveNetLayer(nn.Module):
             bias = self.bias
         )
         # Conv layer for the output, which goes to the next WaveNetLayer
-        self.residual_conv = conv_layer(
+        self.residual_conv = NormConv(
             in_channels = self.gate_channels,
             out_channels = self.residual_channels,
             bayesian = self.bayesian,
@@ -185,7 +205,7 @@ class WaveNetLayer(nn.Module):
         )
 
         # Conv layer for the skip connction which goes directly to the output
-        self.skip_conv = conv_layer(
+        self.skip_conv = NormConv(
             in_channels = self.gate_channels,
             out_channels = self.skip_out_channels,
             bayesian = self.bayesian,
