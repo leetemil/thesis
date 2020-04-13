@@ -85,7 +85,7 @@ class WaveNet(nn.Module):
 
         return kld
 
-    def forward(self, xb, loss_reduction = "mean"):
+    def forward(self, xb, total_samples = 1, loss_reduction = "mean"):
         if self.backwards:
             lengths = (xb != 0).sum(dim = 1)
             for seq, length in zip(xb, lengths):
@@ -104,14 +104,17 @@ class WaveNet(nn.Module):
         # Metrics
         metrics_dict = {}
 
-        if self.bayesian:
-            kld_loss = self.parameter_kld()
-            metrics_dict["kld_loss"] = kld_loss.item()
-
         if loss_reduction == "mean":
             metrics_dict["nll_loss"] = nll_loss.item()
 
-        total_loss = nll_loss + kld_loss if self.bayesian else nll_loss
+        # If we use bayesian parameters and we're not doing predictions, calculate kld loss
+        if self.bayesian and loss_reduction == "mean":
+            kld_loss = self.parameter_kld() * (1 / total_samples) # distribute global loss onto the batch
+            metrics_dict["kld_loss"] = kld_loss.item()
+            total_loss = nll_loss + kld_loss
+        else:
+            total_loss = nll_loss
+
         return total_loss, metrics_dict
 
     def sample_new_weights(self):

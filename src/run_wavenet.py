@@ -91,7 +91,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     try:
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
+            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler, train_length)
 
             if args.val_ratio > 0:
                 val_loss, val_metrics = validate(epoch, model, val_loader)

@@ -18,12 +18,12 @@ def log_progress(epoch, time, progress, total, end, **kwargs):
         if type(value) == int:
             report += (f" {key}: {value:5}")
         elif type(value) == float:
-            report += (f" {key}: {value:7.3f}")
+            report += (f" {key}: {value:7.5f}")
         else:
             report += (f" {key}: {value}")
     print(report, end = end)
 
-def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, scheduler = None):
+def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, scheduler = None, total_samples = 1):
     """
         epoch: Index of the epoch to run
         model: The model to run data through. Forward should return a tuple of (loss, metrics_dict).
@@ -49,7 +49,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):
 
-        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, scheduler, epoch, batch_idx, num_batches)
+        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, scheduler, epoch, batch_idx, num_batches, total_samples)
 
         progressed_data += batch_size
 
@@ -78,7 +78,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
 
     return average_loss, metrics_dict
 
-def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None):
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None, total_samples = 1):
     model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
@@ -88,9 +88,9 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
-        loss, batch_metrics_dict = model(xb)
+        loss, batch_metrics_dict = model(xb, total_samples)
     else:
-        loss, batch_metrics_dict = model(*xb)
+        loss, batch_metrics_dict = model(*xb, total_samples)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
     loss.backward()
