@@ -101,7 +101,6 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
         clip_grad_value_(model.parameters(), clip_grad_value)
 
     # Step in the direction of the gradient
-    breakpoint()
     optimizer.step()
 
     # Schedule learning rate
