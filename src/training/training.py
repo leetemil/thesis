@@ -23,7 +23,7 @@ def log_progress(epoch, time, progress, total, end, **kwargs):
             report += (f" {key}: {value}")
     print(report, end = end)
 
-def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, scheduler = None, total_samples = 1):
+def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, scheduler = None):
     """
         epoch: Index of the epoch to run
         model: The model to run data through. Forward should return a tuple of (loss, metrics_dict).
@@ -49,7 +49,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
     acc_metrics_dict = defaultdict(lambda: 0)
     for batch_idx, xb in enumerate(train_loader):
 
-        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, scheduler, epoch, batch_idx, num_batches, total_samples)
+        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, scheduler, epoch, batch_idx, num_batches)
 
         progressed_data += batch_size
 
@@ -78,7 +78,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
 
     return average_loss, metrics_dict
 
-def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None, total_samples = 1):
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None):
     model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
@@ -88,9 +88,9 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
-        loss, batch_metrics_dict = model(xb, total_samples)
+        loss, batch_metrics_dict = model(xb)
     else:
-        loss, batch_metrics_dict = model(*xb, total_samples)
+        loss, batch_metrics_dict = model(*xb)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
     loss.backward()
@@ -101,6 +101,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
         clip_grad_value_(model.parameters(), clip_grad_value)
 
     # Step in the direction of the gradient
+    breakpoint()
     optimizer.step()
 
     # Schedule learning rate

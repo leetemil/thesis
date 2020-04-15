@@ -9,7 +9,7 @@ from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, bias = True, dropout = 0.5, backwards = False, bayesian = True):
+    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, total_samples, bias = True, dropout = 0.5, bayesian = True, backwards = False):
         super().__init__()
 
         self.input_channels = input_channels
@@ -22,6 +22,7 @@ class WaveNet(nn.Module):
         self.bias = bias
         self.dropout = dropout
         self.bayesian = bayesian
+        self.total_samples = total_samples
         self.backwards = backwards
 
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
@@ -85,7 +86,7 @@ class WaveNet(nn.Module):
 
         return kld
 
-    def forward(self, xb, total_samples = 1, loss_reduction = "mean"):
+    def forward(self, xb, loss_reduction = "mean"):
         if self.backwards:
             lengths = (xb != 0).sum(dim = 1)
             for seq, length in zip(xb, lengths):
@@ -109,7 +110,7 @@ class WaveNet(nn.Module):
 
         # If we use bayesian parameters and we're not doing predictions, calculate kld loss
         if self.bayesian and loss_reduction == "mean":
-            kld_loss = self.parameter_kld() * (1 / total_samples) # distribute global loss onto the batch
+            kld_loss = self.parameter_kld() * (1 / self.total_samples) # distribute global loss onto the batch
             metrics_dict["kld_loss"] = kld_loss.item()
             total_loss = nll_loss + kld_loss
         else:

@@ -58,6 +58,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 		out_channels = NUM_TOKENS,
 		stacks = args.stacks,
 		layers_per_stack = args.layers,
+        total_samples = train_length,
 		bias = args.bias,
         dropout = args.dropout,
         bayesian = args.bayesian,
@@ -98,7 +99,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     try:
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler, train_length)
+            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
 
             if args.val_ratio > 0:
                 val_loss, val_metrics = validate(epoch, model, val_loader)
