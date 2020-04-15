@@ -20,9 +20,6 @@ if __name__ == "__main__" or __name__ == "__console__":
     if args.seed is not None:
         torch.manual_seed(args.seed)
         print(f"Random seed set to {args.seed}")
-        seed = args.seed
-    else:
-        seed = torch.seed()
 
     # Device
     if args.device == "cuda" and not torch.cuda.is_available():
@@ -43,8 +40,11 @@ if __name__ == "__main__" or __name__ == "__console__":
     if args.validation_split_seed is not None:
         torch.manual_seed(args.validation_split_seed)
     train_data, val_data = torch.utils.data.random_split(all_data, [train_length, val_length])
-    if args.validation_split_seed is not None:
-        torch.manual_seed(seed)
+
+    if args.seed is not None:
+        torch.manual_seed(args.seed)
+    else:
+        torch.seed()
 
     train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True)
     val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size)
