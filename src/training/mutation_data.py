@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 from Bio import SeqIO
 
-from models import VAE
-from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx
+from models import VAE, WaveNet
+from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 
 PICKLE_FILE = Path('data/files/mutation_data.pickle')
 
@@ -76,42 +76,55 @@ def make_mutants(data_path, sheet, metric_column, device):
     while True:
         yield mutants, wt, scores
 
-def get_elbos(model, wt, mutants, vae_ensemble_count):
+def get_elbos(model, wt, mutants, ensemble_count):
     if isinstance(model, VAE):
         acc_m_elbo = 0
         acc_wt_elbo = 0
 
-        for i in range(vae_ensemble_count):
+        for i in range(ensemble_count):
             print(f"Doing model {i}...", end = "\r")
-            model.sample_new_decoder()
-
-            m_elbo, m_logp, m_kld = model.protein_logp(mutants)
-            wt_elbo, wt_logp, wt_kld = model.protein_logp(wt.unsqueeze(0))
+            model.sample_new_weights()
+            m_elbo, *_ = model.protein_logp(mutants)
+            wt_elbo, *_ = model.protein_logp(wt.unsqueeze(0))
 
             acc_m_elbo += m_elbo
             acc_wt_elbo += wt_elbo
         print("Done!" + " " * 50, end = "\r")
 
-        mutants_logp = acc_m_elbo / vae_ensemble_count
-        wt_logp = acc_wt_elbo / vae_ensemble_count
+        mutants_logp = acc_m_elbo / ensemble_count
+        wt_logp = acc_wt_elbo / ensemble_count
+
     else:
         wt_pad = F.pad(wt, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
         wt_pad = F.pad(wt_pad, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
         wt_logp = model.protein_logp(wt_pad.unsqueeze(0))
 
-        batch_size = 128
-        batches = len(mutants) // batch_size + 1
-        log_probs = []
-
         mutants = F.pad(mutants, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
         mutants = F.pad(mutants, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
 
-        for i in range(batches):
-            batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
-            m_logp = model.protein_logp(batch_mutants)
-            log_probs.append(m_logp)
+        batch_size = 256
+        batches = len(mutants) // batch_size + 1
 
-        mutants_logp = torch.cat(log_probs)
+        model_logps = []
+
+        ensemble_count = ensemble_count if isinstance(model, WaveNet) and model.bayesian else 1
+
+        for m in range(ensemble_count):
+            if ensemble_count > 1:
+                print(f"Doing model {m}...", end = "\r")
+
+            log_probs = []
+            for i in range(batches):
+                batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
+                m_logp = model.protein_logp(batch_mutants)
+                log_probs.append(m_logp)
+
+            model_logps.append(torch.cat(log_probs))
+
+        if ensemble_count > 1:
+            print("Done!" + " " * 50)
+
+        mutants_logp = sum(model_logps) / ensemble_count
 
     return mutants_logp, wt_logp
 
