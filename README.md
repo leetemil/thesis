@@ -1,6 +1,13 @@
 # MASTER'S THESIS
 Master's Thesis Git Repository.
 
+## Debbie Marks Questions
+- skip connections
+- model diagram
+- tanh, sigma split activations, what up?
+- spearman rho calculation? is it the same as deep sequence?
+- data: how did you exactly get these? How can we reproduce the process. How is it different from deep sequence, i.e. can this difference explain the change in performance?
+
 ## 2020-01-28 Wouter Questions
 - Variational Auto Encoders: what exactly is forced to be unit Gaussian?
 - Metrics and benchmarks
