@@ -99,6 +99,7 @@ def get_wavenet_args():
     # Data
     parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
     parser.add_argument("-vr", "--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
+    parser.add_argument("-vs", "--validation_split_seed", type = int, default = None, help = "Seed to use for validation set splitting.")
     mutation_effect_prediction_args(parser)
     parser.add_argument("-rc", "--residual_channels", type = int, default = 48, help = "Number of channels in the residual layers.")
     parser.add_argument("-gc", "--gate_channels", type = int, default = 48, help = "Number of channels given to each non-linear gate of the residual layers.")
