@@ -57,14 +57,15 @@ if __name__ == "__main__" or __name__ == "__console__":
         stacks = args.stacks,
         layers_per_stack = args.layers,
         total_samples = train_length,
-        bias = args.bias,
+        l2_lambda = args.L2,
+		bias = args.bias,
         dropout = args.dropout,
         bayesian = args.bayesian,
         backwards = args.backwards
 	).to(device)
 
     print(model.summary())
-    optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.L2)
+    optimizer = optim.Adam(model.parameters(), lr = args.learning_rate)#, weight_decay = args.L2)
 
     if args.anneal_learning_rates:
         T_0 = 1 # Emil: I just picked a small number, no clue if any good
