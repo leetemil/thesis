@@ -7,6 +7,7 @@ Master's Thesis Git Repository.
 - tanh, sigma split activations, what up?
 - spearman rho calculation? is it the same as deep sequence?
 - data: how did you exactly get these? How can we reproduce the process. How is it different from deep sequence, i.e. can this difference explain the change in performance?
+- it seems that activation is set to "relu", but the ```_nonlinear``` function only implements elu. Effectively, this seems to cause no activation.
 
 ## 2020-01-28 Wouter Questions
 - Variational Auto Encoders: what exactly is forced to be unit Gaussian?
