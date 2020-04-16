@@ -9,7 +9,7 @@ from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, total_samples, bias = True, dropout = 0.5, bayesian = True, backwards = False):
+    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, bayesian = True, backwards = False):
         super().__init__()
 
         self.input_channels = input_channels
@@ -23,6 +23,7 @@ class WaveNet(nn.Module):
         self.dropout = dropout
         self.bayesian = bayesian
         self.total_samples = total_samples
+        self.l2_lambda = l2_lambda
         self.backwards = backwards
 
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
@@ -115,6 +116,17 @@ class WaveNet(nn.Module):
             total_loss = nll_loss + kld_loss
         else:
             total_loss = nll_loss
+
+        # Regularize model parameters and distribute onto batch
+        if self.l2_lambda > 0:
+            l2_loss = 0
+            for param in self.parameters():
+                if param.requires_grad:
+                    l2_loss += param.pow(2).sum()
+
+            l2_loss *= self.l2_lambda / self.total_samples # per sample l2 loss
+            metrics_dict['l2_loss'] = l2_loss.item()
+            total_loss += l2_loss
 
         return total_loss, metrics_dict
 

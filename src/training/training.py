@@ -85,7 +85,6 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
     # Reset gradient for next batch
     optimizer.zero_grad()
 
-
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
         loss, batch_metrics_dict = model(xb)
