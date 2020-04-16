@@ -53,7 +53,6 @@ if __name__ == "__main__" or __name__ == "__console__":
     model = WaveNet(
         input_channels = NUM_TOKENS,
         residual_channels = args.residual_channels,
-        gate_channels = args.gate_channels,
         out_channels = NUM_TOKENS,
         stacks = args.stacks,
         layers_per_stack = args.layers,
