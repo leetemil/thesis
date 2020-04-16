@@ -51,15 +51,14 @@ if __name__ == "__main__" or __name__ == "__console__":
     print("Data loaded!")
 
     model = WaveNet(
-		input_channels = NUM_TOKENS,
-		residual_channels = args.residual_channels,
-		gate_channels = args.gate_channels,
-		skip_out_channels = args.skip_out_channels,
-		out_channels = NUM_TOKENS,
-		stacks = args.stacks,
-		layers_per_stack = args.layers,
+        input_channels = NUM_TOKENS,
+        residual_channels = args.residual_channels,
+        gate_channels = args.gate_channels,
+        out_channels = NUM_TOKENS,
+        stacks = args.stacks,
+        layers_per_stack = args.layers,
         total_samples = train_length,
-		bias = args.bias,
+        bias = args.bias,
         dropout = args.dropout,
         bayesian = args.bayesian,
         backwards = args.backwards
