@@ -68,7 +68,7 @@ class WaveNet(nn.Module):
 
     def protein_logp(self, xb):
         loss, _ = self(xb, loss_reduction = "none")
-        log_probabilities = -1 * loss.sum(dim = 1)
+        log_probabilities = -1 * loss
         return log_probabilities
 
     def parameter_kld(self):
@@ -94,6 +94,9 @@ class WaveNet(nn.Module):
 
         pred = self.get_predictions(xb)
 
+        # Metrics
+        metrics_dict = {}
+
         # Calculate loss
         mask = xb >= IUPAC_SEQ2IDX["A"]
         true = (xb * mask)[:, 1:-1]
@@ -110,12 +113,7 @@ class WaveNet(nn.Module):
         else:
             nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = "none")
 
-
-        # Metrics
-        metrics_dict = {}
-
-        if loss_reduction == "mean":
-            metrics_dict["nll_loss"] = nll_loss.item()
+        metrics_dict["nll_loss"] = nll_loss.item()
 
         # If we use bayesian parameters and we're not doing predictions, calculate kld loss
         if self.bayesian and loss_reduction == "mean":
