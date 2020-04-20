@@ -91,7 +91,9 @@ class WaveNet(nn.Module):
             lengths = (xb != 0).sum(dim = 1)
             for seq, length in zip(xb, lengths):
                 seq[1:length - 1] = reversed(seq[1:length - 1])
-            weights = reversed(weights)
+
+            if weights is not None:
+                weights = reversed(weights)
 
         pred = self.get_predictions(xb)
 
