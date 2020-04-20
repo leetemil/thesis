@@ -69,7 +69,7 @@ class WaveNet(nn.Module):
 
     def protein_logp(self, xb):
         loss, _ = self(xb, loss_reduction = "none")
-        log_probabilities = -1 * loss.sum(dim = 1)
+        log_probabilities = -1 * loss
         return log_probabilities
 
     def parameter_kld(self):
@@ -101,16 +101,17 @@ class WaveNet(nn.Module):
         pred = pred[:, :, :-2]
 
         # Compare each timestep in cross entropy loss
-        nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = loss_reduction)
+        nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = "none").sum(dim = 1)
+
+        if loss_reduction == "mean":
+            nll_loss = nll_loss.mean()
 
         # Metrics
         metrics_dict = {}
 
-        if loss_reduction == "mean":
-            metrics_dict["nll_loss"] = nll_loss.item()
-
         # If we use bayesian parameters and we're not doing predictions, calculate kld loss
         if self.bayesian and loss_reduction == "mean":
+            metrics_dict["nll_loss"] = nll_loss.item()
             kld_loss = self.parameter_kld() * (1 / self.total_samples) # distribute global loss onto the batch
             metrics_dict["kld_loss"] = kld_loss.item()
             total_loss = nll_loss + kld_loss
