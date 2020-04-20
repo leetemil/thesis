@@ -9,11 +9,13 @@ from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, bayesian = True, backwards = False):
+    def __init__(self, input_channels, residual_channels, gate_channels, skip_out_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, bayesian = True, backwards = False):
         super().__init__()
 
         self.input_channels = input_channels
         self.residual_channels = residual_channels
+        self.gate_channels = gate_channels
+        self.skip_out_channels = skip_out_channels
         self.out_channels = out_channels
         self.stacks = stacks
         self.layers_per_stack = layers_per_stack
@@ -35,7 +37,8 @@ class WaveNet(nn.Module):
             blocks.append(
                 WaveNetStack(
                     dilations = dilations,
-                    channels = self.residual_channels,
+                    residual_channels = self.residual_channels,
+                    gate_channels = self.gate_channels,
                     dropout = self.dropout,
                     kernel_size = 2,
                     bayesian = self.bayesian,
@@ -43,6 +46,8 @@ class WaveNet(nn.Module):
             )
 
         self.dilated_conv_stack = nn.Sequential(*blocks)
+
+        self.dropout = nn.Dropout(self.dropout)
 
         self.last_conv_layers = nn.Sequential(
             nn.ReLU(inplace = True),
@@ -54,7 +59,6 @@ class WaveNet(nn.Module):
     def get_predictions(self, xb):
         """
         Returns log-softmax distributions of amino acids over the input sequences.
-
         Returns:
         Tensor: shape (batch size, num tokens, seq length)
         """
@@ -62,13 +66,14 @@ class WaveNet(nn.Module):
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
         pred = self.first_conv(xb_encoded)
         pred = self.dilated_conv_stack(pred)
+        pred = self.dropout(pred)
         pred = self.last_conv_layers(pred)
 
         return F.log_softmax(pred, dim = 1)
 
     def protein_logp(self, xb):
         loss, _ = self(xb, loss_reduction = "none")
-        log_probabilities = -1 * loss
+        log_probabilities = -1 * loss.sum(dim = 1)
         return log_probabilities
 
     def parameter_kld(self):
@@ -80,9 +85,8 @@ class WaveNet(nn.Module):
                 kld += layer_kld(layer)
 
         # get loss from stack layers
-        for layer in self.dilated_conv_stack.layers:
-            if isinstance(layer, NormConv):
-                kld += layer_kld(layer)
+        for stack in self.dilated_conv_stack:
+            kld += stack.parameter_kld()
 
         return kld
 
@@ -110,10 +114,9 @@ class WaveNet(nn.Module):
                 nll_loss *= weights
 
             nll_loss = nll_loss.mean()
+            metrics_dict["nll_loss"] = nll_loss.item()
         else:
             nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = "none")
-
-        metrics_dict["nll_loss"] = nll_loss.item()
 
         # If we use bayesian parameters and we're not doing predictions, calculate kld loss
         if self.bayesian and loss_reduction == "mean":
@@ -192,16 +195,22 @@ class WaveNet(nn.Module):
         }, f)
 
 class WaveNetLayer(nn.Module):
-    def __init__(self, channels, dropout, kernel_size, dilation, causal = True, bias = True, bayesian = True):
+    def __init__(self, residual_channels, gate_channels, dropout, kernel_size, dilation, skip_out_channels = None, causal = True, bias = True, bayesian = True):
         super().__init__()
 
-        self.channels = channels
+        self.residual_channels = residual_channels
+        self.gate_channels = gate_channels
         self.dropout = dropout
         self.kernel_size = kernel_size
         self.dilation = dilation
         self.causal = causal
         self.bias = bias
         self.bayesian = bayesian
+
+        if skip_out_channels is not None:
+            self.skip_out_channels = skip_out_channels
+        else:
+            self.skip_out_channels = self.residual_channels
 
         if self.causal:
             self.padding = (self.kernel_size - 1) * self.dilation
@@ -210,64 +219,100 @@ class WaveNetLayer(nn.Module):
 
         # Conv layer that the input is put through before the non-linear activations
         self.dilated_conv = NormConv(
-            in_channels = self.channels,
-            out_channels = self.channels,
-            bayesian = self.bayesian,
+            in_channels = self.residual_channels,
+            out_channels = self.gate_channels * 2,
+            bayesian = self.bayesian, # bayesian version
             kernel_size = self.kernel_size,
             dilation = self.dilation,
             bias = self.bias
         )
-
         # Conv layer for the output, which goes to the next WaveNetLayer
         self.residual_conv = NormConv(
-            in_channels = self.channels,
-            out_channels = self.channels,
+            in_channels = self.gate_channels,
+            out_channels = self.residual_channels,
             bayesian = self.bayesian,
             kernel_size = 1,
             bias = self.bias
         )
 
+        # Conv layer for the skip connction which goes directly to the output
+        self.skip_conv = NormConv(
+            in_channels = self.gate_channels,
+            out_channels = self.skip_out_channels,
+            bayesian = self.bayesian,
+            kernel_size = 1,
+            bias = self.bias
+        )
+
+    def parameter_kld(self):
+        kld = layer_kld(self.dilated_conv)
+        kld += layer_kld(self.residual_conv)
+        kld += layer_kld(self.skip_conv)
+        return kld
+
     def forward(self, x):
         residual = x
+
         x = F.pad(x, (self.padding, 0))
         x = self.dilated_conv(x)
-        x = self.residual_conv(x) + residual
 
-        return x
+        tanh_filters, sigmoid_filters = x.split(x.size(1) // 2, dim=1)
+        x = torch.tanh(tanh_filters) * torch.sigmoid(sigmoid_filters)
+
+        output = self.residual_conv(x) + residual
+        skip = self.skip_conv(x)
+
+        return output, skip
 
 class WaveNetStack(nn.Module):
-    def __init__(self, dilations, channels, dropout, kernel_size, causal = True, bias = True, bayesian = True):
+    def __init__(self, dilations, residual_channels, gate_channels, dropout, kernel_size, skip_out_channels = None, causal = True, bias = True, bayesian = True):
         super().__init__()
 
         self.dilations = dilations
-        self.channels = channels
+        self.residual_channels = residual_channels
+        self.gate_channels = gate_channels
         self.dropout = dropout
         self.kernel_size = kernel_size
         self.causal = causal
         self.bias = bias
         self.bayesian = bayesian
 
-        layers = []
+        if skip_out_channels is not None:
+            self.skip_out_channels = skip_out_channels
+        else:
+            self.skip_out_channels = self.residual_channels
+
+        self.layers = nn.ModuleList()
         for d in dilations:
             layer = WaveNetLayer(
-                channels = self.channels,
+                residual_channels = self.residual_channels,
+                gate_channels = self.gate_channels,
                 dropout = self.dropout,
                 kernel_size = self.kernel_size,
+                skip_out_channels = self.skip_out_channels,
                 dilation = d,
                 causal = self.causal,
                 bias = self.bias,
-                bayesian = self.bayesian
+                bayesian = self.bayesian # bayesian version
             )
-            layers.append(layer)
-            layers.append(nn.ReLU())
+            self.layers.append(layer)
 
-        self.layers = nn.Sequential(
-            *layers,
-            nn.Dropout(self.dropout)
-        )
+        self.dropout = nn.Dropout(self.dropout)
 
     def forward(self, x):
-        return self.layers(x)
+        skip_sum = 0
+        for layer in self.layers:
+            x, skip = layer(x)
+            # x = self.dropout(x)
+            skip_sum += skip
+        return skip_sum
+
+    def parameter_kld(self):
+        kld = 0
+        for layer in self.layers:
+            kld += layer.parameter_kld()
+
+        return kld
 
     def sample_new_weights(self):
         for layer in self.layers:

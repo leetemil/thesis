@@ -145,7 +145,6 @@ def mutation_effect_prediction(model, data_path, query_protein, sheet, metric_co
         return mutants_logp, wt_logp
 
     predictions = mutants_logp - wt_logp
-
     if savefig:
         plt.scatter(predictions.cpu(), scores)
         plt.title("Correlation")
