@@ -92,9 +92,6 @@ class WaveNet(nn.Module):
             for seq, length in zip(xb, lengths):
                 seq[1:length - 1] = reversed(seq[1:length - 1])
 
-            if weights is not None:
-                weights = reversed(weights)
-
         pred = self.get_predictions(xb)
 
         # Calculate loss
