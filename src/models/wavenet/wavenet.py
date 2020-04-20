@@ -60,7 +60,6 @@ class WaveNet(nn.Module):
         """
         # one-hot encode and permute to (batch size x channels x length)
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
-
         pred = self.first_conv(xb_encoded)
         pred = self.dilated_conv_stack(pred)
         pred = self.last_conv_layers(pred)
@@ -87,11 +86,12 @@ class WaveNet(nn.Module):
 
         return kld
 
-    def forward(self, xb, loss_reduction = "mean"):
+    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
         if self.backwards:
             lengths = (xb != 0).sum(dim = 1)
             for seq, length in zip(xb, lengths):
                 seq[1:length - 1] = reversed(seq[1:length - 1])
+            weights = reversed(weights)
 
         pred = self.get_predictions(xb)
 
@@ -101,7 +101,16 @@ class WaveNet(nn.Module):
         pred = pred[:, :, :-2]
 
         # Compare each timestep in cross entropy loss
-        nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = loss_reduction)
+        if loss_reduction == "mean":
+            nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = "none").sum(1)
+
+            if weights is not None:
+                nll_loss *= weights
+
+            nll_loss = nll_loss.mean()
+        else:
+            nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = "none")
+
 
         # Metrics
         metrics_dict = {}
@@ -111,7 +120,11 @@ class WaveNet(nn.Module):
 
         # If we use bayesian parameters and we're not doing predictions, calculate kld loss
         if self.bayesian and loss_reduction == "mean":
-            kld_loss = self.parameter_kld() * (1 / self.total_samples) # distribute global loss onto the batch
+            if neff is not None:
+                kld_loss = self.parameter_kld() * (1 / neff) # distribute global loss onto the batch
+            else:
+                kld_loss = self.parameter_kld() * (1 / self.total_samples)
+
             metrics_dict["kld_loss"] = kld_loss.item()
             total_loss = nll_loss + kld_loss
         else:
@@ -124,7 +137,11 @@ class WaveNet(nn.Module):
                 if param.requires_grad:
                     l2_loss += param.pow(2).sum()
 
-            l2_loss *= self.l2_lambda / self.total_samples # per sample l2 loss
+            if neff is not None:
+                l2_loss *= self.l2_lambda / neff # per sample l2 loss
+            else:
+                l2_loss *= self.l2_lambda / self.total_samples # per sample l2 loss
+
             metrics_dict['l2_loss'] = l2_loss.item()
             total_loss += l2_loss
 

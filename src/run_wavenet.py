@@ -33,7 +33,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device_name}")
 
     # Load data
-    all_data = VariableLengthProteinDataset(args.data, device = device, max_len = 1024)
+    all_data = VariableLengthProteinDataset(args.data, device = device, max_len = 1024, use_weights = args.use_weights)
     train_length = int(len(all_data) * args.train_ratio)
     val_length = len(all_data) - train_length
 
@@ -46,8 +46,9 @@ if __name__ == "__main__" or __name__ == "__console__":
     else:
         torch.manual_seed(torch.initial_seed())
 
-    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True)
-    val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size)
+    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True, use_weights = args.use_weights)
+    val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size, use_weights = args.use_weights)
+
     print("Data loaded!")
 
     model = WaveNet(
@@ -88,7 +89,11 @@ if __name__ == "__main__" or __name__ == "__console__":
     spearman_name = args.results_dir / Path("spearman_rhos.png")
 
     # pick 4 random protein sequences
-    softmax_proteins = next(iter(train_loader))[:4]
+    if args.use_weights:
+        softmax_proteins, *_ = next(iter(train_loader))
+        softmax_proteins = softmax_proteins[:4]
+    else:
+        softmax_proteins = next(iter(train_loader))[:4]
     softmax_name = args.results_dir / Path("softmax.png")
 
     if args.anneal_learning_rates and args.plot_learning_rates:
