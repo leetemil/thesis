@@ -96,7 +96,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                 spearman_rhos.append(rho)
                 improved_epochs.append(epoch)
                 plot_spearman(spearman_name, improved_epochs, spearman_rhos)
-                rho_str = f"Spearman's rho: {rho} "
+                rho_str = f"Spearman's rho: {rho:.3f} "
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                 patience -= 1
