@@ -47,7 +47,7 @@ class WaveNet(nn.Module):
 
         self.dilated_conv_stack = nn.Sequential(*blocks)
 
-        self.dropout = nn.Dropout(self.dropout)
+        self.dropout_layer = nn.Dropout(self.dropout)
 
         self.last_conv_layers = nn.Sequential(
             nn.ReLU(inplace = True),
@@ -66,7 +66,7 @@ class WaveNet(nn.Module):
         xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
         pred = self.first_conv(xb_encoded)
         pred = self.dilated_conv_stack(pred)
-        pred = self.dropout(pred)
+        pred = self.dropout_layer(pred)
         pred = self.last_conv_layers(pred)
 
         return F.log_softmax(pred, dim = 1)
@@ -178,6 +178,8 @@ class WaveNet(nn.Module):
         args_dict = {
             "input_channels": self.input_channels,
             "residual_channels": self.residual_channels,
+            "gate_channels": self.gate_channels,
+            "skip_out_channels": self.skip_out_channels,
             "out_channels": self.out_channels,
             "stacks": self.stacks,
             "layers_per_stack": self.layers_per_stack,
