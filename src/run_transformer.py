@@ -95,6 +95,9 @@ if __name__ == "__main__" or __name__ == "__console__":
                 spearman_rhos.append(rho)
                 improved_epochs.append(epoch)
                 plot_spearman(spearman_name, improved_epochs, spearman_rhos)
+                rho_str = f"Spearman's rho: {rho} "
+            else:
+                rho_str = ""
 
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
@@ -103,14 +106,14 @@ if __name__ == "__main__" or __name__ == "__console__":
                     print(f"Model has not improved for {args.patience} epochs. Stopping training. Best {loss_str.lower()} loss achieved was: {best_loss:.5f}.")
                     break
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}{rho_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
 
-        print('Computing mutation effect prediction correlation...')
+        print("Computing mutation effect prediction correlation...")
         with torch.no_grad():
             if model_save_name.exists():
                 model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
             rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 0, args.results_dir)
-        print(f'Spearman\'s Rho: {rho}')
+        print(f"Spearman's Rho: {rho}")
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_loss:.5f}.\n")
