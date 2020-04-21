@@ -83,6 +83,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                 val_str = ""
                 improved = train_loss < best_loss
 
+            rho_str = ""
             if improved:
                 # If model improved, save the model
                 model.save(model_save_name)
@@ -96,9 +97,6 @@ if __name__ == "__main__" or __name__ == "__console__":
                 improved_epochs.append(epoch)
                 plot_spearman(spearman_name, improved_epochs, spearman_rhos)
                 rho_str = f"Spearman's rho: {rho} "
-            else:
-                rho_str = ""
-
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                 patience -= 1
