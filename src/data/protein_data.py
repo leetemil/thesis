@@ -70,6 +70,11 @@ def seq2idx(seq, device = None):
 def idx2seq(idxs):
     return "".join([IUPAC_IDX2SEQ[i] for i in idxs])
 
+def save_weights_file(datafile, save_file):
+    seqs = list(SeqIO.parse(datafile, "fasta"))
+    dataset = ProteinDataset(seqs)
+    dataset.write_to_file(save_file)
+
 class ProteinDataset(Dataset):
     def __init__(self, seqs, device = None, weight_batch_size = 1000):
         super().__init__()
@@ -96,6 +101,11 @@ class ProteinDataset(Dataset):
             weights.append(w)
         self.weights = torch.cat(weights)
         self.neff = self.weights.sum()
+
+    def write_to_file(self, filepath):
+        for s, w in zip(self.seqs, self.weights):
+            s.id = s.id + ':' + str(float(w))
+        SeqIO.write(self.seqs, filepath, 'fasta')
 
     def __len__(self):
         return len(self.encoded_seqs)
