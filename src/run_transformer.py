@@ -42,13 +42,14 @@ if __name__ == "__main__" or __name__ == "__console__":
     print("Data loaded!")
 
     model = LossTransformer(
-		d_model = NUM_TOKENS,
+		num_tokens = NUM_TOKENS,
+		d_model = args.d_model,
 		nhead = args.nhead,
 		num_encoder_layers = args.num_encoder_layers,
 		num_decoder_layers = args.num_decoder_layers,
 		dim_feedforward = args.dim_feedforward,
         dropout = args.dropout,
-        max_len = args.max_len,
+        max_len = all_data[0].size(0),
 	).to(device)
 
     print(model.summary())

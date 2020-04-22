@@ -9,8 +9,9 @@ from data import IUPAC_SEQ2IDX
 from data import NUM_TOKENS
 
 class LossTransformer(nn.Module):
-	def __init__(self, d_model = NUM_TOKENS, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
+	def __init__(self, num_tokens, d_model = 30, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
 		super().__init__()
+		self.num_tokens = num_tokens
 		self.d_model = d_model
 		self.nhead = nhead
 		self.num_encoder_layers = num_encoder_layers
@@ -19,8 +20,9 @@ class LossTransformer(nn.Module):
 		self.dropout = dropout
 		self.max_len = max_len
 
+		self.embedding = nn.Embedding(self.num_tokens, self.d_model)
+		self.pos_encoder = PositionalEncoding(self.d_model, self.dropout, self.max_len)
 		self.transformer = Transformer(d_model = self.d_model, nhead = self.nhead, num_encoder_layers = self.num_encoder_layers, num_decoder_layers = self.num_decoder_layers, dim_feedforward = self.dim_feedforward, dropout = self.dropout)
-		self.pos_encoder = PositionalEncoding(NUM_TOKENS, self.dropout, self.max_len)
 
 	def prediction(self, xb_src):
 		tgt = torch.zeros_like(xb_src)
@@ -28,17 +30,17 @@ class LossTransformer(nn.Module):
 		tgt[:, 1:] = xb_src[:, :-1]
 		tgt[tgt == IUPAC_SEQ2IDX["<sep>"]] = 0
 
-		src = F.one_hot(xb_src, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
-		tgt = F.one_hot(tgt, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
+		src = self.embedding(xb_src).permute(1, 0, 2)
+		tgt = F.one_hot(tgt, self.num_tokens).to(torch.float).permute(1, 0, 2)
 
 		src = self.pos_encoder(src)
-		tgt = self.pos_encoder(tgt)
+		# tgt = self.pos_encoder(tgt)
 
 		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
 		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
-		# memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
+		memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
 
-		pred = self.transformer(src, tgt, src_mask = src_mask, tgt_mask = tgt_mask)
+		pred = self.transformer(src, tgt, src_mask = src_mask, tgt_mask = tgt_mask, memory_mask = memory_mask)
 		pred = pred.permute(1, 2, 0)
 		return pred
 
