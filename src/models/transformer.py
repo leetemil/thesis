@@ -31,16 +31,16 @@ class LossTransformer(nn.Module):
 		tgt[tgt == IUPAC_SEQ2IDX["<sep>"]] = 0
 
 		src = self.embedding(xb_src).permute(1, 0, 2)
+		# src = F.one_hot(xb_src, self.d_model).to(torch.float).permute(1, 0, 2)
 		tgt = F.one_hot(tgt, self.num_tokens).to(torch.float).permute(1, 0, 2)
 
 		src = self.pos_encoder(src)
-		# tgt = self.pos_encoder(tgt)
+		tgt = self.pos_encoder(tgt)
 
 		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
 		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
-		memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
 
-		pred = self.transformer(src, tgt, src_mask = src_mask, tgt_mask = tgt_mask, memory_mask = memory_mask)
+		pred = self.transformer(src, tgt, src_mask = src_mask, tgt_mask = tgt_mask)
 		pred = pred.permute(1, 2, 0)
 		return pred
 
@@ -107,47 +107,47 @@ class LossTransformer(nn.Module):
 			"args_dict": args_dict,
 		}, f)
 
-# class TransformerModel(nn.Module):
+class TransformerModel(nn.Module):
 
-# 	def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
-# 		super().__init__()
+	def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
+		super().__init__()
 
-# 		self.model_type = 'Transformer'
-# 		self.ninp = ninp
-# 		self.src_mask = None
+		self.model_type = 'Transformer'
+		self.ninp = ninp
+		self.src_mask = None
 
-# 		self.pos_encoder = PositionalEncoding(ninp, dropout)
+		self.pos_encoder = PositionalEncoding(ninp, dropout)
 
-# 		encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-# 		self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+		encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
+		self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
 
-# 		self.encoder = nn.Embedding(ntoken, ninp)
-# 		self.decoder = nn.Linear(ninp, ntoken)
+		self.encoder = nn.Embedding(ntoken, ninp)
+		self.decoder = nn.Linear(ninp, ntoken)
 
-# 		self.init_weights()
+		self.init_weights()
 
-# 	def _generate_square_subsequent_mask(self, sz):
-# 		mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-# 		mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-# 		return mask
+	def _generate_square_subsequent_mask(self, sz):
+		mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+		mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+		return mask
 
-# 	def init_weights(self):
-# 		initrange = 0.1
-# 		self.encoder.weight.data.uniform_(-initrange, initrange)
-# 		self.decoder.bias.data.zero_()
-# 		self.decoder.weight.data.uniform_(-initrange, initrange)
+	def init_weights(self):
+		initrange = 0.1
+		self.encoder.weight.data.uniform_(-initrange, initrange)
+		self.decoder.bias.data.zero_()
+		self.decoder.weight.data.uniform_(-initrange, initrange)
 
-# 	def forward(self, src):
-# 		if self.src_mask is None or self.src_mask.size(0) != len(src):
-# 			device = src.device
-# 			mask = self._generate_square_subsequent_mask(len(src)).to(device)
-# 			self.src_mask = mask
+	def forward(self, src):
+		if self.src_mask is None or self.src_mask.size(0) != len(src):
+			device = src.device
+			mask = self._generate_square_subsequent_mask(len(src)).to(device)
+			self.src_mask = mask
 
-# 		src = self.encoder(src) * math.sqrt(self.ninp)
-# 		src = self.pos_encoder(src)
-# 		output = self.transformer_encoder(src, self.src_mask)
-# 		output = self.decoder(output)
-# 		return output
+		src = self.encoder(src) * math.sqrt(self.ninp)
+		src = self.pos_encoder(src)
+		output = self.transformer_encoder(src, self.src_mask)
+		output = self.decoder(output)
+		return output
 
 # TODO: Refer to PyTorch
 class PositionalEncoding(nn.Module):

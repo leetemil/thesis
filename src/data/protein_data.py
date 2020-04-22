@@ -57,7 +57,7 @@ IUPAC_SEQ2IDX["-"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["U"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["X"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["Z"] = IUPAC_SEQ2IDX["<mask>"]
-IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
+# IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 
 # Add small letters as the same as mask
 # for amino, idx in IUPAC_AMINO_IDX_PAIRS:
@@ -65,7 +65,8 @@ IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 #         IUPAC_SEQ2IDX[amino.lower()] = IUPAC_SEQ2IDX["<mask>"]
 
 def seq2idx(seq, device = None):
-    return torch.tensor([IUPAC_SEQ2IDX[s.upper() if len(s) < 2 else s] for s in seq], device = device)
+    return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq if len(s) > 1 or (s == s.upper() and s != ".")], device = device)
+    # return torch.tensor([IUPAC_SEQ2IDX[s.upper() if len(s) < 2 else s] for s in seq], device = device)
     # return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq if len(s) > 1 or (s == s.upper() and s != ".")], device = device)
 
 def idx2seq(idxs):
@@ -113,7 +114,7 @@ class VariableLengthProteinDataset(Dataset):
         seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
         CLS = "<cls>"
         SEP = "<sep>"
-        unpadded_seqs = [[CLS] + list(filter(lambda c: not remove_gaps or (c not in ".-"), str(s.seq))) + [SEP] for s in seqs if len(s) <= self.max_len]
+        unpadded_seqs = [[CLS] + list(filter(lambda c: not remove_gaps or (c not in ".-" and c == c.upper()), str(s.seq))) + [SEP] for s in seqs if len(s) <= self.max_len]
         self.encoded_seqs = [seq2idx(seq, device) for seq in unpadded_seqs]
 
     def __len__(self):
