@@ -9,7 +9,7 @@ from data import IUPAC_SEQ2IDX
 from data import NUM_TOKENS
 
 class LossTransformer(nn.Module):
-	def __init__(self, num_tokens, d_model = 30, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
+	def __init__(self, num_tokens = 30, d_model = 30, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
 		super().__init__()
 		self.num_tokens = num_tokens
 		self.d_model = d_model
@@ -92,6 +92,7 @@ class LossTransformer(nn.Module):
 
 	def save(self, f):
 		args_dict = {
+			"num_tokens": self.num_tokens,
 			"d_model": self.d_model,
 			"nhead": self.nhead,
 			"num_encoder_layers": self.num_encoder_layers,
