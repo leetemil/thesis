@@ -26,13 +26,14 @@ class WaveNet(nn.Module):
         self.activation = F.elu
 
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
+        self.last_conv_layer = NormConv(self.residual_channels, self.out_channels, self.bayesian, kernel_size = 1, bias = self.bias)
 
         dilations = []
         for i in range(self.layers_per_stack):
             dilations.append(2**i)
 
         blocks = []
-        for stack in range(self.stacks):
+        for _ in range(self.stacks):
             blocks.append(
                 WaveNetStack(
                     dilations = dilations,
@@ -46,7 +47,6 @@ class WaveNet(nn.Module):
 
         self.dilated_conv_stack = nn.Sequential(*blocks)
 
-        self.last_conv_layer = NormConv(self.residual_channels, self.out_channels, self.bayesian, kernel_size = 1, bias = self.bias)
 
     def get_predictions(self, xb):
         """
@@ -240,19 +240,17 @@ class WaveNetLayer(nn.Module):
             bias = self.bias
         )
 
+    def _layer_norm(self, x, layer):
+        return layer(x.permute(0, 2, 1)).permute(0, 2, 1)
 
     def forward(self, x):
-        x = x.permute(0, 2, 1)
-        x = self.layer_norm_in(x)
-        x = x.permute(0, 2, 1)
+        x = self._layer_norm(x, self.layer_norm_in)
         x = F.pad(x, (self.padding, 0))
         x = self.before_layer(x)
         x = self.middle_layer(x)
         x = self.after_layer(x)
         x = self.dropout_layer(x)
-        x = x.permute(0, 2, 1)
-        x = self.layer_norm_out(x)
-        x = x.permute(0, 2, 1)
+        x = self._layer_norm(x, self.layer_norm_out)
         return x
 
 class WaveNetStack(nn.Module):
@@ -284,8 +282,7 @@ class WaveNetStack(nn.Module):
 
     def forward(self, x):
         for layer in self.layers:
-            out = layer(x)
-            x += out
+            x += layer(x)
         return x
 
     def sample_new_weights(self):
