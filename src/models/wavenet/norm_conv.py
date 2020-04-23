@@ -23,12 +23,10 @@ class NormConv(nn.Module):
                 nn.utils.weight_norm(self.layer, dim = None)
 
     def forward(self, *args, **kwargs):
-        x = self.layer(*args, **kwargs)
-        x = x.permute(0, 2, 1)
+        x = self.layer(*args, **kwargs).permute(0, 2, 1)
         x = self.gamma * x + self.beta
 
         if self.activation is not None:
             x = self.activation(x)
 
-        x = x.permute(0, 2, 1)
-        return x
+        return x.permute(0, 2, 1)
