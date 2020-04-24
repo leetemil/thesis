@@ -52,12 +52,12 @@ IUPAC_IDX2SEQ = OrderedDict(IUPAC_IDX_AMINO_PAIRS)
 
 # Add gap tokens as the same as mask
 IUPAC_SEQ2IDX["-"] = IUPAC_SEQ2IDX["<mask>"]
+IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["B"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["O"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["U"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["X"] = IUPAC_SEQ2IDX["<mask>"]
 # IUPAC_SEQ2IDX["Z"] = IUPAC_SEQ2IDX["<mask>"]
-IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 
 # Add small letters as the same as mask
 # for amino, idx in IUPAC_AMINO_IDX_PAIRS:
@@ -66,10 +66,14 @@ IUPAC_SEQ2IDX["."] = IUPAC_SEQ2IDX["<mask>"]
 
 def seq2idx(seq, device = None):
     return torch.tensor([IUPAC_SEQ2IDX[s.upper() if len(s) < 2 else s] for s in seq], device = device)
-    # return torch.tensor([IUPAC_SEQ2IDX[s] for s in seq if len(s) > 1 or (s == s.upper() and s != ".")], device = device)
 
 def idx2seq(idxs):
     return "".join([IUPAC_IDX2SEQ[i] for i in idxs])
+
+def save_weights_file(datafile, save_file):
+    seqs = list(SeqIO.parse(datafile, "fasta"))
+    dataset = ProteinDataset(seqs)
+    dataset.write_to_file(save_file)
 
 class ProteinDataset(Dataset):
     def __init__(self, seqs, device = None, weight_batch_size = 1000):
@@ -98,6 +102,11 @@ class ProteinDataset(Dataset):
         self.weights = torch.cat(weights)
         self.neff = self.weights.sum()
 
+    def write_to_file(self, filepath):
+        for s, w in zip(self.seqs, self.weights):
+            s.id = s.id + ':' + str(float(w))
+        SeqIO.write(self.seqs, filepath, 'fasta')
+
     def __len__(self):
         return len(self.encoded_seqs)
 
@@ -105,7 +114,7 @@ class ProteinDataset(Dataset):
         return self.encoded_seqs[i], self.weights[i], self.neff, self.seqs[i]
 
 class VariableLengthProteinDataset(Dataset):
-    def __init__(self, seqs, device = None, remove_gaps = True, max_len = 10**6):
+    def __init__(self, seqs, device = None, remove_gaps = True, max_len = 10**6, use_weights = False):
         super().__init__()
         self.device = device
         self.max_len = max_len
@@ -113,8 +122,24 @@ class VariableLengthProteinDataset(Dataset):
         seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
         CLS = "<cls>"
         SEP = "<sep>"
+
+
         unpadded_seqs = [[CLS] + list(filter(lambda c: not remove_gaps or (c not in ".-" and c == c.upper()), str(s.seq))) + [SEP] for s in seqs if len(s) <= self.max_len]
-        self.encoded_seqs = [seq2idx(seq, device) for seq in unpadded_seqs]
+
+        if use_weights:
+            neff = 0
+            weights = []
+
+            for seq in seqs:
+                weight = float(seq.id.split(':')[1])
+                weights.append(weight)
+                neff += weight
+
+            self.neff = neff
+            self.encoded_seqs = [(seq2idx(seq, device), weight) for (seq, weight) in zip(unpadded_seqs, weights)]
+
+        else:
+            self.encoded_seqs = [seq2idx(seq, device) for seq in unpadded_seqs]
 
     def __len__(self):
         return len(self.encoded_seqs)
@@ -192,10 +217,19 @@ def discard_seqs_collate(tensors):
 def get_protein_dataloader(dataset, batch_size = 128, shuffle = False, get_seqs = False):
     return DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)
 
-def variable_length_sequence_collate(sequences):
+def variable_length_sequence_collate(sequences, use_weights = False, neff = None):
+    if use_weights:
+        seqs, weights = zip(*sequences)
+        weights = torch.tensor(weights, device = seqs[0].device)
+        return torch.nn.utils.rnn.pad_sequence(seqs, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True), weights, neff
+
     return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True)
 
-def get_variable_length_protein_dataLoader(dataset, batch_size = 128, shuffle = False):
+def get_variable_length_protein_dataLoader(dataset, batch_size = 128, shuffle = False, use_weights = False):
+    if use_weights:
+        neff = sum(w for _, w in dataset)
+        return DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, collate_fn = lambda xb: variable_length_sequence_collate(xb, use_weights, neff))
+
     return DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, collate_fn = variable_length_sequence_collate)
 
 def retrieve_label_from_uniprot_df(ID):

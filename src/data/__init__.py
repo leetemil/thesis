@@ -11,5 +11,6 @@ from .protein_data import (
 	IUPAC_SEQ2IDX,
 	IUPAC_IDX2SEQ,
 	IUPAC_AMINO_IDX_PAIRS,
-	IUPAC_IDX_AMINO_PAIRS
+	IUPAC_IDX_AMINO_PAIRS,
+	save_weights_file
 )
