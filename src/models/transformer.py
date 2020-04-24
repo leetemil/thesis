@@ -9,8 +9,9 @@ from data import IUPAC_SEQ2IDX
 from data import NUM_TOKENS
 
 class LossTransformer(nn.Module):
-	def __init__(self, d_model = NUM_TOKENS, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
+	def __init__(self, num_tokens = 30, d_model = 30, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
 		super().__init__()
+		self.num_tokens = num_tokens
 		self.d_model = d_model
 		self.nhead = nhead
 		self.num_encoder_layers = num_encoder_layers
@@ -19,8 +20,9 @@ class LossTransformer(nn.Module):
 		self.dropout = dropout
 		self.max_len = max_len
 
+		self.embedding = nn.Embedding(self.num_tokens, self.d_model)
+		self.pos_encoder = PositionalEncoding(self.d_model, self.dropout, self.max_len)
 		self.transformer = Transformer(d_model = self.d_model, nhead = self.nhead, num_encoder_layers = self.num_encoder_layers, num_decoder_layers = self.num_decoder_layers, dim_feedforward = self.dim_feedforward, dropout = self.dropout)
-		self.pos_encoder = PositionalEncoding(NUM_TOKENS, self.dropout, self.max_len)
 
 	def prediction(self, xb_src):
 		tgt = torch.zeros_like(xb_src)
@@ -28,15 +30,15 @@ class LossTransformer(nn.Module):
 		tgt[:, 1:] = xb_src[:, :-1]
 		tgt[tgt == IUPAC_SEQ2IDX["<sep>"]] = 0
 
-		src = F.one_hot(xb_src, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
-		tgt = F.one_hot(tgt, self.transformer.d_model).to(torch.float).permute(1, 0, 2)
+		src = self.embedding(xb_src).permute(1, 0, 2)
+		# src = F.one_hot(xb_src, self.d_model).to(torch.float).permute(1, 0, 2)
+		tgt = F.one_hot(tgt, self.num_tokens).to(torch.float).permute(1, 0, 2)
 
 		src = self.pos_encoder(src)
 		tgt = self.pos_encoder(tgt)
 
 		src_mask = self.generate_subsequent_mask(src.size(0), device = src.device)
 		tgt_mask = self.generate_subsequent_mask(tgt.size(0), device = src.device)
-		# memory_mask = self.generate_subsequent_mask(tgt.size(0), src.size(0), device = src.device)
 
 		pred = self.transformer(src, tgt, src_mask = src_mask, tgt_mask = tgt_mask)
 		pred = pred.permute(1, 2, 0)
@@ -90,6 +92,7 @@ class LossTransformer(nn.Module):
 
 	def save(self, f):
 		args_dict = {
+			"num_tokens": self.num_tokens,
 			"d_model": self.d_model,
 			"nhead": self.nhead,
 			"num_encoder_layers": self.num_encoder_layers,
@@ -105,47 +108,47 @@ class LossTransformer(nn.Module):
 			"args_dict": args_dict,
 		}, f)
 
-# class TransformerModel(nn.Module):
+class TransformerModel(nn.Module):
 
-# 	def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
-# 		super().__init__()
+	def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
+		super().__init__()
 
-# 		self.model_type = 'Transformer'
-# 		self.ninp = ninp
-# 		self.src_mask = None
+		self.model_type = 'Transformer'
+		self.ninp = ninp
+		self.src_mask = None
 
-# 		self.pos_encoder = PositionalEncoding(ninp, dropout)
+		self.pos_encoder = PositionalEncoding(ninp, dropout)
 
-# 		encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-# 		self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+		encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
+		self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
 
-# 		self.encoder = nn.Embedding(ntoken, ninp)
-# 		self.decoder = nn.Linear(ninp, ntoken)
+		self.encoder = nn.Embedding(ntoken, ninp)
+		self.decoder = nn.Linear(ninp, ntoken)
 
-# 		self.init_weights()
+		self.init_weights()
 
-# 	def _generate_square_subsequent_mask(self, sz):
-# 		mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-# 		mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-# 		return mask
+	def _generate_square_subsequent_mask(self, sz):
+		mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+		mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+		return mask
 
-# 	def init_weights(self):
-# 		initrange = 0.1
-# 		self.encoder.weight.data.uniform_(-initrange, initrange)
-# 		self.decoder.bias.data.zero_()
-# 		self.decoder.weight.data.uniform_(-initrange, initrange)
+	def init_weights(self):
+		initrange = 0.1
+		self.encoder.weight.data.uniform_(-initrange, initrange)
+		self.decoder.bias.data.zero_()
+		self.decoder.weight.data.uniform_(-initrange, initrange)
 
-# 	def forward(self, src):
-# 		if self.src_mask is None or self.src_mask.size(0) != len(src):
-# 			device = src.device
-# 			mask = self._generate_square_subsequent_mask(len(src)).to(device)
-# 			self.src_mask = mask
+	def forward(self, src):
+		if self.src_mask is None or self.src_mask.size(0) != len(src):
+			device = src.device
+			mask = self._generate_square_subsequent_mask(len(src)).to(device)
+			self.src_mask = mask
 
-# 		src = self.encoder(src) * math.sqrt(self.ninp)
-# 		src = self.pos_encoder(src)
-# 		output = self.transformer_encoder(src, self.src_mask)
-# 		output = self.decoder(output)
-# 		return output
+		src = self.encoder(src) * math.sqrt(self.ninp)
+		src = self.pos_encoder(src)
+		output = self.transformer_encoder(src, self.src_mask)
+		output = self.decoder(output)
+		return output
 
 # TODO: Refer to PyTorch
 class PositionalEncoding(nn.Module):
