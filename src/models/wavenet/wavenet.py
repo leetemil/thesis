@@ -65,7 +65,7 @@ class WaveNet(nn.Module):
 
     def protein_logp(self, xb):
         loss, _ = self(xb, loss_reduction = "none")
-        log_probabilities = -1 * loss
+        log_probabilities = -1 * loss.sum(dim = 1)
         return log_probabilities
 
     def parameter_kld(self):
