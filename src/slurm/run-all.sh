@@ -13,7 +13,7 @@ echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
 
 model="$1"
 
-for filepath in ./args/dataset_args/*
+for filepath in ./args/dataset_args2/*
 do
     protein_family="$(basename $filepath)"
     echo ""
@@ -28,5 +28,5 @@ do
     touch "./results/${model}/${protein_family}/${protein_family}.out"
 
     # run the model unbuffered
-    python3 -u "${model}" "@${filepath}" -r "${model}/${protein_family}" --patience 10 | tee "./results/${model}/${protein_family}/${protein_family}.out"
+    python3 -u "${model}" "@${filepath}" -r "${model}/${protein_family}" --patience 10 --seed 123 | tee "./results/${model}/${protein_family}/${protein_family}.out"
 done

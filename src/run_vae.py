@@ -135,7 +135,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 with torch.no_grad():
-                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir, savefig = False)
+                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 10, args.results_dir, savefig = False)
 
                     spearman_rhos.append(rho)
                     rho_str = f" Spearman's Rho: {rho:.3f}"
@@ -168,7 +168,7 @@ if __name__ == "__main__" or __name__ == "__console__":
             if model_save_name.exists():
                 model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
                 print("Model loaded.")
-            rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 4 * args.ensemble_count, args.results_dir)
+            rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
         print(f'Spearman\'s Rho: {rho}')
 
     except KeyboardInterrupt:

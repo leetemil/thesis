@@ -32,7 +32,7 @@ def get_vae_args():
     parser.add_argument("-lm", "--layer_mod", type = str, default = "variational", choices = ["none", "variational"], help = "Layer modification on the decoder's linear layers.")
     parser.add_argument("-zs", "--z_samples", type = int, default = 1, help = "How many latent variables to sample per batch point.")
     mutation_effect_prediction_args(parser)
-    parser.add_argument("-ec", "--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
+    parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("-dict", "--dictionary", action = "store_true", dest = "dictionary", default = False, help = "Enables the dictionary of the VAE.")
     parser.add_argument("-no_dict", "--no_dictionary", action = "store_false", dest = "dictionary", default = True, help = "Disables the dictionary of the VAE.")
     parser.add_argument("-pl", "--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
@@ -98,10 +98,10 @@ def get_wavenet_args():
 
     # Data
     parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
-    parser.add_argument("-vr", "--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
+    parser.add_argument("-vr", "--val_ratio", type = float, default = 0.0, help = "What fraction of data to use for validation.")
     parser.add_argument("-vs", "--validation_split_seed", type = int, default = None, help = "Seed to use for validation set splitting.")
     mutation_effect_prediction_args(parser)
-    parser.add_argument("-ec", "--ensemble_count", type = int, default = 500, help = "How many samples of the model to use for evaluation as an ensemble.")
+    parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("-rc", "--residual_channels", type = int, default = 48, help = "Number of channels in the residual layers.")
     parser.add_argument("-ss", "--stacks", type = int, default = 6, help = "Number of stacks of dilated convolutions.")
     parser.add_argument("-ly", "--layers", type = int, default = 9, help = "Number of layers for each stack.")
@@ -123,7 +123,6 @@ def get_wavenet_args():
 
     if args.plot_learning_rates and not args.anneal_learning_rates:
         raise ValueError("Plot learning rates was specified, but learning rates are not annealed. Use \"--anneal_learning_rates\" or \"-alr\" to activate annealing.")
-
 
     args.train_ratio = 1 - args.val_ratio
     args.results_dir = Path("results") / args.results_dir

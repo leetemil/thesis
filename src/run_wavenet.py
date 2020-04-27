@@ -126,8 +126,8 @@ if __name__ == "__main__" or __name__ == "__console__":
                 patience = args.patience
 
                 with torch.no_grad():
-                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, ensemble_count, args.results_dir, savefig = False)
-                    predictions = model.get_predictions(softmax_proteins).permute(0,2,1).exp().cpu().numpy()
+                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 10, args.results_dir, savefig = False)
+                    predictions = model.get_predictions(softmax_proteins).permute(0, 2, 1).exp().cpu().numpy()
 
                 spearman_rhos.append(rho)
                 improved_epochs.append(epoch)
