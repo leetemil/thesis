@@ -82,7 +82,6 @@ def get_elbos(model, wt, mutants, ensemble_count):
         acc_wt_elbo = 0
 
         for i in range(ensemble_count):
-            print(f"Doing model {i}...", end = "\r")
             model.sample_new_weights()
             m_elbo, *_ = model.protein_logp(mutants)
             wt_elbo, *_ = model.protein_logp(wt.unsqueeze(0))
@@ -110,9 +109,6 @@ def get_elbos(model, wt, mutants, ensemble_count):
         ensemble_count = ensemble_count if isinstance(model, WaveNet) and model.bayesian else 1
 
         for m in range(ensemble_count):
-            if ensemble_count > 1:
-                print(f"Doing model {m}...", end = "\r")
-
             log_probs = []
             for i in range(batches):
                 batch_mutants = mutants[batch_size * i: batch_size * (i + 1)]
