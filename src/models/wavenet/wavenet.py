@@ -69,15 +69,12 @@ class WaveNet(nn.Module):
         return log_probabilities
 
     def parameter_kld(self):
-        kld = layer_kld(self.first_conv) if isinstance(self.first_conv, NormConv) else 0
-
-        # get loss from last convolution layer
-        kld += layer_kld(self.last_conv_layer)
+        kld = layer_kld(self.first_conv.layer) if isinstance(self.first_conv, NormConv) else 0
+        kld += layer_kld(self.last_conv_layer.layer) if isinstance(self.last_conv_layer, NormConv) else 0
 
         # get loss from stack layers
-        for layer in self.dilated_conv_stack.layers:
-            if isinstance(layer, NormConv):
-                kld += layer_kld(layer)
+        for stack in self.dilated_conv_stack:
+            kld += stack.parameter_kld()
 
         return kld
 
@@ -252,6 +249,12 @@ class WaveNetLayer(nn.Module):
         x = self._layer_norm(x, self.layer_norm_out)
         return x
 
+    def parameter_kld(self):
+        kld = layer_kld(self.before_layer.layer)
+        kld += layer_kld(self.middle_layer.layer)
+        kld += layer_kld(self.after_layer.layer)
+        return kld
+
 class WaveNetStack(nn.Module):
     def __init__(self, dilations, channels, dropout, kernel_size, activation, causal = True, bias = True, bayesian = False):
         super().__init__()
@@ -283,6 +286,13 @@ class WaveNetStack(nn.Module):
         for layer in self.layers:
             x += layer(x)
         return x
+
+    def parameter_kld(self):
+        kld = 0
+        for layer in self.layers:
+            kld += layer.parameter_kld()
+
+        return kld
 
     def sample_new_weights(self):
         for layer in self.layers:
