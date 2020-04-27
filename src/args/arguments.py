@@ -52,7 +52,7 @@ def get_vae_args():
     return args
 
 def get_unirep_args():
-    parser = argparse.ArgumentParser(description = "UniRep model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description = "UniRep model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
     basic_args(parser)
 
     # Data
@@ -72,7 +72,7 @@ def get_unirep_args():
     return args
 
 def get_unirep_finetune_args():
-    parser = argparse.ArgumentParser(description = "UniRep model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description = "UniRep model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
     basic_args(parser)
 
     # Data
@@ -93,7 +93,7 @@ def get_unirep_finetune_args():
     return args
 
 def get_wavenet_args():
-    parser = argparse.ArgumentParser(description = "WaveNet model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description = "WaveNet model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
     basic_args(parser)
 
     # Data
@@ -133,7 +133,7 @@ def get_wavenet_args():
     return args
 
 def get_transformer_args():
-    parser = argparse.ArgumentParser(description = "Transformer model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description = "Transformer model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
     basic_args(parser)
 
     # Data
