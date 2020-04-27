@@ -11,7 +11,8 @@ date -Is
 hostname
 echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
 
-model="$1"
+run_script="$1"
+model=${run_script:4:-3}
 
 for filepath in ./args/dataset_args/*
 do
@@ -28,5 +29,5 @@ do
     touch "./results/${model}/${protein_family}/${protein_family}.out"
 
     # run the model unbuffered
-    python3 -u "${model}" "@${filepath}" -r "${model}/${protein_family}" "${@:2}" | tee "./results/${model}/${protein_family}/${protein_family}.out"
+    python3 -u "${run_script}" "@${filepath}" -r "${model}/${protein_family}" "${@:2}" | tee "./results/${model}/${protein_family}/${protein_family}.out"
 done
