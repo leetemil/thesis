@@ -44,7 +44,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device_name}")
 
     # Load data
-    all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio, use_saved = True)
+    all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio)
 
     # Construct dataloaders for batches
     train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size, shuffle = True)
