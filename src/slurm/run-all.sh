@@ -13,7 +13,7 @@ echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
 
 model="$1"
 
-for filepath in ./args/dataset_args2/*
+for filepath in ./args/dataset_args/*
 do
     protein_family="$(basename $filepath)"
     echo ""
