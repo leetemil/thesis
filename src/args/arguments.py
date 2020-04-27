@@ -11,7 +11,7 @@ def basic_args(parser):
     parser.add_argument("-cv", "--clip_grad_value", type = lambda x: None if x is None else float(x), default = None, help = "Gradient values will be clipped to this value. Disabled if None.")
     parser.add_argument("-l2", "--L2", type = float, default = 0, help = "L2 regularization added as weight decay to Adam optimizer.")
     parser.add_argument("-d", "--device", type = str, default = "cuda", choices = ["cpu", "cuda"], help = "Which device to use (CPU or CUDA for GPU).")
-    parser.add_argument("-p", "--patience", type = int, default = 300, help = "Training will stop if the model does not improve on the validation set for this many epochs.")
+    parser.add_argument("-p", "--patience", type = int, default = 10, help = "Training will stop if the model does not improve on the validation set for this many epochs.")
     parser.add_argument("-li", "--log_interval", type = lambda x: x if x == "batch" else float(x), default = 0, help = "How many seconds to wait between training status logging. 0 to disable loading bar progress. \"batch\" for log at every batch.")
     parser.add_argument("-r", "--results_dir", type = Path, default = Path(f"{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory name to save results under. Will be saved under results/results_dir.")
     parser.add_argument("-s", "--seed", type = int, help = "Seed for random number generation. If not set, a random seed will be used.")
