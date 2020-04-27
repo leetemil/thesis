@@ -124,6 +124,7 @@ if __name__ == "__main__" or __name__ == "__console__":
             train_param_klds.append(train_metrics["param_kld"])
             train_total_losses.append(train_loss)
 
+            rho_str = ""
             if improved:
                 # If model improved, save the model
                 model.save(model_save_name)
@@ -137,6 +138,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                     rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir, savefig = False)
 
                     spearman_rhos.append(rho)
+                    rho_str = f" Spearman's Rho: {rho:.3f}"
 
                 name = args.results_dir / Path(f"epoch_{epoch}_loss_{loss_value_str}.png") if save else None
                 # plot_data(name, args.figure_type, model, all_data, rho, args.batch_size, show = show)
@@ -159,7 +161,7 @@ if __name__ == "__main__" or __name__ == "__console__":
             train_name = args.results_dir / Path("Train_losses.png")
             plot_loss(epochs, train_nll_losses, train_kld_losses, train_param_klds, train_total_losses, val_nll_losses, val_kld_losses, val_param_klds, val_total_losses, train_name, figure_type = args.figure_type, show = show)
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}Time: {readable_time(time.time() - start_time)}{rho_str} Memory: {get_memory_usage(device):.2f}GiB", end = "\n\n")
 
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
