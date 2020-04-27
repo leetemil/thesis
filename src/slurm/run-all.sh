@@ -12,7 +12,10 @@ hostname
 echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
 
 run_script="$1"
+folder_suffix="$2"
 model=${run_script:4:-3}
+model_folder="${model}_${folder_suffix}"
+model_args="${@:3}"
 
 for filepath in ./args/dataset_args/*
 do
@@ -25,9 +28,9 @@ do
     echo ""
 
     # set up result folder and output file (otherwise tee complains)
-    mkdir -p "./results/${model}/${protein_family}"
-    touch "./results/${model}/${protein_family}/${protein_family}.out"
+    mkdir -p "./results/${model_folder}/${protein_family}"
+    touch "./results/${model_folder}/${protein_family}/${protein_family}.out"
 
     # run the model unbuffered
-    python3 -u "${run_script}" "@${filepath}" -r "${model}/${protein_family}" "${@:2}" | tee "./results/${model}/${protein_family}/${protein_family}.out"
+    python3 -u "${run_script}" "@${filepath}" -r "${model_folder}/${protein_family}" "${model_args}" | tee "./results/${model_folder}/${protein_family}/${protein_family}.out"
 done
