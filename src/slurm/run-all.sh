@@ -11,8 +11,8 @@ date -Is
 hostname
 echo "GPU IDs: $CUDA_VISIBLE_DEVICES"
 
-run_script="$1"
-folder_suffix="$2"
+folder_suffix="$1"
+run_script="$2"
 model=${run_script:4:-3}
 model_folder="${model}_${folder_suffix}"
 model_args="${@:3}"
