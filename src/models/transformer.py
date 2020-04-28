@@ -9,7 +9,7 @@ from data import IUPAC_SEQ2IDX
 from data import NUM_TOKENS
 
 class LossTransformer(nn.Module):
-	def __init__(self, num_tokens = 30, d_model = 30, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, max_len = 2000):
+	def __init__(self, num_tokens = 30, d_model = 30, nhead = 3, num_encoder_layers = 2, num_decoder_layers = 2, dim_feedforward = 512, dropout = 0.1, embed = True, max_len = 2000):
 		super().__init__()
 		self.num_tokens = num_tokens
 		self.d_model = d_model
@@ -18,6 +18,7 @@ class LossTransformer(nn.Module):
 		self.num_decoder_layers = num_decoder_layers
 		self.dim_feedforward = dim_feedforward
 		self.dropout = dropout
+		self.embed = embed
 		self.max_len = max_len
 
 		self.embedding = nn.Embedding(self.num_tokens, self.d_model)
@@ -30,8 +31,10 @@ class LossTransformer(nn.Module):
 		tgt[:, 1:] = xb_src[:, :-1]
 		tgt[tgt == IUPAC_SEQ2IDX["<sep>"]] = 0
 
-		src = self.embedding(xb_src).permute(1, 0, 2)
-		# src = F.one_hot(xb_src, self.d_model).to(torch.float).permute(1, 0, 2)
+		if self.embed:
+			src = self.embedding(xb_src).permute(1, 0, 2)
+		else:
+			src = F.one_hot(xb_src, self.d_model).to(torch.float).permute(1, 0, 2)
 		tgt = F.one_hot(tgt, self.num_tokens).to(torch.float).permute(1, 0, 2)
 
 		src = self.pos_encoder(src)
@@ -99,6 +102,7 @@ class LossTransformer(nn.Module):
 			"num_decoder_layers": self.num_decoder_layers,
 			"dim_feedforward": self.dim_feedforward,
 			"dropout": self.dropout,
+			"embed": self.embed,
 			"max_len": self.max_len,
 		}
 

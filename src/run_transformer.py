@@ -49,6 +49,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 		num_decoder_layers = args.num_decoder_layers,
 		dim_feedforward = args.dim_feedforward,
         dropout = args.dropout,
+        embed = args.embed,
         max_len = all_data[0].size(0),
 	).to(device)
 

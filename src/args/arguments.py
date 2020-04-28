@@ -146,6 +146,8 @@ def get_transformer_args():
     parser.add_argument("-ff", "--dim_feedforward", type = int, default = 512, help = "Size of the feedforward network model.")
     parser.add_argument("-do", "--dropout", type = float, default = 0.5, help = "Rate of dropout to apply between layers.")
     parser.add_argument("-ml", "--max_len", type = int, default = 5000, help = "Maximum length of the proteins given to the Transformer.")
+    parser.add_argument("-em", "--embed", action = "store_true", dest = "embed", default = True, help = "Use an embedding layer.")
+    parser.add_argument("-no_em", "--no_embed", action = "store_false", dest = "embed", default = False, help = "Do not use an embedding layer.")
     parser.add_argument("-rg", "--remove_gaps", action = "store_true", dest = "remove_gaps", default = True, help = "Remove gaps from the alignment.")
     parser.add_argument("-no_rg", "--no_remove_gaps", action = "store_false", dest = "remove_gaps", default = False, help = "Do not remove gaps from the alignment.")
 
