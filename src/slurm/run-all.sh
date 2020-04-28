@@ -32,5 +32,5 @@ do
     touch "./results/${model_folder}/${protein_family}/${protein_family}.out"
 
     # run the model unbuffered
-    python3 -u "${run_script}" "@${filepath}" -r "${model_folder}/${protein_family}" "${model_args}" | tee "./results/${model_folder}/${protein_family}/${protein_family}.out"
+    python3 -u "${run_script}" "@${filepath}" -r "${model_folder}/${protein_family}" ${model_args} | tee "./results/${model_folder}/${protein_family}/${protein_family}.out"
 done
