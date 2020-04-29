@@ -43,7 +43,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     if args.seed is not None:
         torch.manual_seed(args.seed)
-    else:
+    elif args.validation_split_seed is not None:
         torch.manual_seed(torch.initial_seed())
 
     train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True, use_weights = args.use_weights)
