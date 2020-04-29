@@ -101,7 +101,7 @@ def get_elbos(model, wt, mutants, ensemble_count):
         mutants = F.pad(mutants, (1, 0), value = IUPAC_SEQ2IDX["<cls>"])
         mutants = F.pad(mutants, (0, 1), value = IUPAC_SEQ2IDX["<sep>"])
 
-        batch_size = 256
+        batch_size = 2048
         batches = len(mutants) // batch_size + 1
 
         model_logps = []
