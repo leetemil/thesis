@@ -47,6 +47,14 @@ class WaveNet(nn.Module):
 
         self.dilated_conv_stack = nn.Sequential(*blocks)
 
+    def preprocess(self, xb):
+        if self.backwards:
+            lengths = (xb != 0).sum(dim = 1)
+            for seq, length in zip(xb, lengths):
+                seq[1:length - 1] = reversed(seq[1:length - 1])
+        # one-hot encode and permute to (batch size x channels x length)
+        xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
+        return xb_encoded
 
     def get_predictions(self, xb):
         """
@@ -55,9 +63,10 @@ class WaveNet(nn.Module):
         Returns:
         Tensor: shape (batch size, num tokens, seq length)
         """
-        # one-hot encode and permute to (batch size x channels x length)
-        xb_encoded = F.one_hot(xb, self.input_channels).to(torch.float).permute(0, 2, 1)
-        pred = self.first_conv(xb_encoded)
+        # encode and, if needed, reverse sequences
+        xb = self.preprocess(xb)
+
+        pred = self.first_conv(xb)
         pred = self.dilated_conv_stack(pred)
         pred = self.last_conv_layer(pred)
 
@@ -78,12 +87,15 @@ class WaveNet(nn.Module):
 
         return kld
 
-    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
-        if self.backwards:
-            lengths = (xb != 0).sum(dim = 1)
-            for seq, length in zip(xb, lengths):
-                seq[1:length - 1] = reversed(seq[1:length - 1])
+    def get_representation(self, xb):
+        # encode and, if needed, reverse sequences
+        xb = self.preprocess(xb)
+        xb = self.first_conv(xb)
+        xb = self.dilated_conv_stack(xb)
+        # return mean of channels across each sequence. Representation is shape num_channels
+        return xb.mean(2)
 
+    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
         pred = self.get_predictions(xb)
 
         # Calculate loss

@@ -117,9 +117,11 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
 
     plt.close(pca_fig)
 
-def plot_spearman(name, epochs, rhos):
+def plot_spearman(data, name, epochs, rhos):
     fig = plt.figure()
-    plt.title('Spearman\'s $\\rho$')
+    plt.title(data.stem.split('_')[0])
+    plt.xlabel('Epochs')
+    plt.ylabel('Spearman\'s $\\rho$')
     plt.plot(epochs, rhos, '+--')
     plt.savefig(name)
     plt.close(fig)

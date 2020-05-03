@@ -131,7 +131,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                 spearman_rhos.append(rho)
                 improved_epochs.append(epoch)
-                plot_spearman(spearman_name, improved_epochs, spearman_rhos)
+                plot_spearman(args.data, spearman_name, improved_epochs, spearman_rhos)
                 plot_softmax(softmax_name, predictions)
 
             elif args.patience:
