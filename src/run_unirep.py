@@ -66,7 +66,8 @@ if __name__ == "__main__" or __name__ == "__console__":
     prev_time = time.time()
     epoch = 0
     try:
-        while True:
+        stop = False
+        while not stop:
             total_batches = 39_069_211 // args.batch_size # used for annealing; maybe import number of data samples?
             for batch_idx, xb in enumerate(train_loader):
                 batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
@@ -97,9 +98,11 @@ if __name__ == "__main__" or __name__ == "__console__":
                         patience -= 1
                         if patience == 0:
                             print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
+                            stop = True
                             break
                     print("")
                     if epoch >= args.epochs:
+                        stop = True
                         break
 
     except KeyboardInterrupt:
