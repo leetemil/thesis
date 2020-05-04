@@ -46,7 +46,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     if args.load_model.exists() and args.load_model.is_file():
         print(f"Loading saved model from {args.load_model}...")
-        model = torch.load(args.load_model, map_location = device)
+        model.load_state_dict(torch.load(args.load_model, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
     best_val_loss = float("inf")
