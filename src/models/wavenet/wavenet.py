@@ -17,14 +17,13 @@ class WaveNet(nn.Module):
         self.out_channels = out_channels
         self.stacks = stacks
         self.layers_per_stack = layers_per_stack
+        self.total_samples = total_samples
+        self.l2_lambda = l2_lambda
         self.bias = bias
         self.dropout = dropout
         self.bayesian = bayesian
-        self.total_samples = total_samples
-        self.l2_lambda = l2_lambda
         self.backwards = backwards
         self.activation = F.elu
-
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
         self.last_conv_layer = NormConv(self.residual_channels, self.out_channels, self.bayesian, kernel_size = 1, bias = self.bias)
 
