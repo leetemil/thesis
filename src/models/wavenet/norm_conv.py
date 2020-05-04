@@ -8,8 +8,8 @@ class NormConv(nn.Module):
         super().__init__()
 
         self.layer = nn.Conv1d(in_channels, out_channels, *args, **kwargs)
-        self.gamma = nn.Parameter(torch.ones(out_channels))
-        self.beta = nn.Parameter(torch.ones(out_channels) * 0.1)
+        self.factor = nn.Parameter(torch.ones(out_channels))
+        self.term = nn.Parameter(torch.ones(out_channels) * 0.1)
         self.activation = activation
 
         if bayesian:
@@ -24,7 +24,7 @@ class NormConv(nn.Module):
 
     def forward(self, *args, **kwargs):
         x = self.layer(*args, **kwargs).permute(0, 2, 1)
-        x = self.gamma * x + self.beta
+        x = self.factor * x + self.term
 
         if self.activation is not None:
             x = self.activation(x)

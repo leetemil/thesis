@@ -1,18 +1,6 @@
 import torch
 import torch.nn as nn
 
-
-# load tape module directly from repository
-from pathlib import Path
-MODULE_PATH = Path('C:/Users/1337e/Desktop/CS/tape/tape/__init__.py')
-MODULE_NAME = "tape"
-import importlib
-import sys
-spec = importlib.util.spec_from_file_location(MODULE_NAME, MODULE_PATH)
-module = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = module
-spec.loader.exec_module(module)
-
 from tape import ProteinModel, ProteinConfig
 from tape.models.modeling_utils import SequenceClassificationHead, SequenceToSequenceClassificationHead, ValuePredictionHead, PairwiseContactPredictionHead
 from tape.registry import registry
