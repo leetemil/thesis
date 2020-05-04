@@ -89,8 +89,8 @@ class WaveNetForValuePrediction(WaveNetAbstractModel):
         self.init_weights()
 
     def forward(self, input_ids, input_mask=None, targets=None):
-        representations = self.wavenet(input_ids, input_mask=input_mask)
-        prediction, *_ = self.predict(representations)
+        sequence_output, pooled_output = self.wavenet(input_ids, input_mask=input_mask)
+        prediction, *_ = self.predict(pooled_output)
         outputs = (prediction,)
 
         if targets is not None:
@@ -107,27 +107,14 @@ class WaveNetForSequenceClassification(WaveNetAbstractModel):
         super().__init__(config)
 
         self.wavenet = WaveNetModel(config)
-
-        if self.wavenet.inner_model.rnn_type == "GRU":
-            predict_size = config.hidden_size
-        else:
-            predict_size = config.hidden_size * 2
-
+        predict_size = config.residual_channels # guess we use this as representation size
         self.classify = SequenceClassificationHead(predict_size, config.num_labels)
-
         self.init_weights()
 
     def forward(self, input_ids, input_mask=None, targets=None):
 
-        outputs = self.wavenet(input_ids, input_mask=input_mask)
-
-        sequence_output, pooled_output = outputs[:2]
-        # outputs = self.classify(pooled_output, targets) + outputs[2:]
-        # # (loss), prediction_scores, (hidden_states)
-        # return outputs
-
+        sequence_output, pooled_output = self.wavenet(input_ids, input_mask=input_mask)
         prediction, *_ = self.classify(pooled_output)
-
         outputs = (prediction,)
 
         if targets is not None:
@@ -151,21 +138,14 @@ class WaveNetForSequenceToSequenceClassification(WaveNetAbstractModel):
         super().__init__(config)
 
         self.wavenet = WaveNetModel(config)
-        self.classify = SequenceToSequenceClassificationHead(config.hidden_size, config.num_labels, ignore_index=-1)
-
+        predict_size = config.residual_channels # guess we use this as representation size
+        self.classify = SequenceToSequenceClassificationHead(predict_size, config.num_labels, ignore_index=-1)
         self.init_weights()
 
     def forward(self, input_ids, input_mask=None, targets=None):
 
-        outputs = self.wavenet(input_ids, input_mask=input_mask)
-
-        sequence_output, pooled_output = outputs[:2]
-        # outputs = self.classify(sequence_output, targets) + outputs[2:]
-        # # (loss), prediction_scores, (hidden_states)
-        # return outputs
-
+        sequence_output, pooled_output = self.wavenet(input_ids, input_mask=input_mask)
         prediction, *_ = self.classify(sequence_output)
-
         outputs = (prediction,)
 
         if targets is not None:
@@ -190,15 +170,13 @@ class WaveNetForContactPrediction(WaveNetAbstractModel):
         super().__init__(config)
 
         self.wavenet = WaveNetModel(config)
-        self.predict = PairwiseContactPredictionHead(config.hidden_size, ignore_index=-1)
-
+        predict_size = config.residual_channels # guess we use this as representation size
+        self.predict = PairwiseContactPredictionHead(predict_size, ignore_index=-1)
         self.init_weights()
 
     def forward(self, input_ids, protein_length, input_mask=None, targets=None):
-
         outputs = self.wavenet(input_ids, input_mask=input_mask)
-
-        sequence_output, pooled_output = outputs[:2]
+        sequence_output = outputs[0]
         outputs = self.predict(sequence_output, protein_length, targets) + outputs[2:]
         # (loss), prediction_scores, (hidden_states), (attentions)
         return outputs

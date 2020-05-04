@@ -92,7 +92,7 @@ class WaveNet(nn.Module):
         xb = self.first_conv(xb)
         xb = self.dilated_conv_stack(xb)
         # return mean of channels across each sequence. Representation is shape num_channels
-        return xb.mean(2)
+        return xb.permute(0, 2, 1), xb.mean(2)
 
     def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
         pred = self.get_predictions(xb)
