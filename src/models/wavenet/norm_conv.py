@@ -1,20 +1,20 @@
 import torch
 from torch import nn
-from ..vae.variational import variational
+from ..vae.bayesian import bayesian
 
 class NormConv(nn.Module):
 
-    def __init__(self, in_channels, out_channels, bayesian, activation = None,*args, **kwargs):
+    def __init__(self, in_channels, out_channels, use_bayesian, activation = None,*args, **kwargs):
         super().__init__()
 
         self.layer = nn.Conv1d(in_channels, out_channels, *args, **kwargs)
         self.factor = nn.Parameter(torch.ones(out_channels))
         self.term = nn.Parameter(torch.ones(out_channels) * 0.1)
         self.activation = activation
+        self.bayesian = use_bayesian
 
-        if bayesian:
-            variational(self.layer) # consider calling on weights and biases separately
-
+        if self.bayesian:
+            bayesian(self.layer) # consider calling on weights and biases separately
         else:
             # Initialize weights
             nn.init.kaiming_normal_(self.layer.weight, nonlinearity="relu")

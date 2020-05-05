@@ -6,28 +6,28 @@ from torch.distributions.normal import Normal
 from torch.nn.parameter import Parameter
 from torch.nn import init
 
-def variational(module, parameter_names = "weight_and_bias"):
+def bayesian(module, parameter_names = "weight_and_bias"):
     if isinstance(parameter_names, str):
-        Variational.apply(module, parameter_names)
+        Bayesian.apply(module, parameter_names)
     elif isinstance(parameter_names, Iterable):
         for parameter_name in parameter_names:
-            Variational.apply(module, parameter_name)
+            Bayesian.apply(module, parameter_name)
     else:
-        raise NotImplementedError
+        raise NotImplementedError("Unknown parameter name type.")
     return module
 
-class Variational:
+class Bayesian:
     def __init__(self, name):
         self.name = name
 
     @staticmethod
     def apply_linear(module):
         for hook in module._forward_pre_hooks.values():
-            if isinstance(hook, Variational) and hook.name == "weight" or hook.name == "bias":
-                raise RuntimeError(f"Cannot register two variational hooks on the same parameter.")
+            if isinstance(hook, Bayesian) and hook.name == "weight" or hook.name == "bias":
+                raise RuntimeError(f"Cannot register two bayesian hooks on the same parameter.")
 
-        hook_weight = Variational("weight")
-        hook_bias = Variational("bias")
+        hook_weight = Bayesian("weight")
+        hook_bias = Bayesian("bias")
 
         weight = getattr(module, "weight")
         bias = getattr(module, "bias")
@@ -50,14 +50,6 @@ class Variational:
         init.constant_(bias_mean_parameter, 0.1)
         init.constant_(bias_logvar_parameter, -10)
 
-        # with torch.no_grad():
-        #     variance = 2 / (weight.size(0) + weight.size(1))
-        #     weight_logvar_parameter[:] = math.log(variance)
-
-        #     bound = 1 / math.sqrt(weight.size(1))
-        #     variance = ((bound * 2) ** 2) / 12
-        #     bias_logvar_parameter[:] = math.log(variance)
-
         module.register_parameter("weight_mean", weight_mean_parameter)
         module.register_parameter("weight_logvar", weight_logvar_parameter)
         module.register_parameter("bias_mean", bias_mean_parameter)
@@ -74,13 +66,13 @@ class Variational:
     @staticmethod
     def apply(module, parameter_name):
         if parameter_name == "weight_and_bias":
-            return Variational.apply_linear(module)
+            return Bayesian.apply_linear(module)
 
         for hook in module._forward_pre_hooks.values():
-            if isinstance(hook, Variational) and hook.name == parameter_name:
-                raise RuntimeError(f"Cannot register two variational hooks on the same parameter {parameter_name}")
+            if isinstance(hook, Bayesian) and hook.name == parameter_name:
+                raise RuntimeError(f"Cannot register two bayesian hooks on the same parameter {parameter_name}")
 
-        hook = Variational(parameter_name)
+        hook = Bayesian(parameter_name)
         parameter = getattr(module, parameter_name)
 
         del module._parameters[parameter_name]

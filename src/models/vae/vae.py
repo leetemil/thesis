@@ -10,17 +10,13 @@ from torch.nn import init
 from torch.distributions.normal import Normal
 from torch.distributions import kl_divergence
 
-from .variational import variational, Variational
+from .bayesian import bayesian, Bayesian
 from ..utils import smooth_one_hot
-
-class LayerModification(Enum):
-    NONE        = 1 << 0
-    VARIATIONAL = 1 << 1
 
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, layer_mod = "variational", num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = False, label_smoothing = 0.0, warm_up = 0):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, use_bayesian = True, num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = False, label_smoothing = 0.0, warm_up = 0):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -30,7 +26,7 @@ class VAE(nn.Module):
         self.sequence_length = self.layer_sizes[0] // self.num_tokens
         self.z_samples = z_samples
         self.dropout = dropout
-        self.layer_mod = LayerModification.__members__[layer_mod.upper()] if type(layer_mod) == str else layer_mod
+        self.bayesian = use_bayesian
         self.num_patterns = num_patterns
         self.inner_CW_dim = inner_CW_dim
         self.use_param_loss = use_param_loss
@@ -67,13 +63,11 @@ class VAE(nn.Module):
         init.constant_(self.encode_logvar.bias, -10)
 
         # Construct decode layers
-        if self.layer_mod == LayerModification.VARIATIONAL:
-            decode_mod = variational
-        elif self.layer_mod == LayerModification.NONE:
+        if self.bayesian:
+            decode_mod = bayesian
+        else:
             def decode_mod(x, *args, **kwargs):
                 return x
-        else:
-            raise NotImplementedError("Unsupported layer modification.")
 
         decode_layers = []
         layer_sizes_doubles = [(s1, s2) for s1, s2 in zip(layer_sizes[bottleneck_idx:], layer_sizes[bottleneck_idx + 1:])]
@@ -93,7 +87,7 @@ class VAE(nn.Module):
             s1, s2 = layer_sizes_doubles[-1]
             decode_layers.append(decode_mod(nn.Linear(s1, s2)))
         else:
-            if self.layer_mod == LayerModification.VARIATIONAL:
+            if self.bayesian:
                 self.b3_mean = nn.Parameter(torch.Tensor([0.1] * self.num_tokens * self.sequence_length))
                 self.b3_logvar = nn.Parameter(torch.Tensor([-10.0] * self.num_tokens * self.sequence_length))
                 self.l_mean = nn.Parameter(torch.Tensor([1]))
@@ -128,7 +122,7 @@ class VAE(nn.Module):
             z = torch.log_softmax(z, dim = -1)
             return z
 
-        if self.layer_mod == LayerModification.VARIATIONAL:
+        if self.bayesian:
             self.S.sample_new_weight()
             self.W3.sample_new_weight()
             self.C.sample_new_weight()
@@ -202,8 +196,8 @@ class VAE(nn.Module):
 
         return (f"Variational Auto-Encoder summary:\n"
                 f"  Layer sizes: {self.layer_sizes}\n"
-                f"  Parameters:  {num_params:,}\n"
-                f"  Layer modification:  {str(self.layer_mod).split('.', maxsplit = 1)[1].title()}\n")
+                f"  Parameters: {num_params:,}\n"
+                f"  Bayesian: {self.bayesian}\n")
 
     def protein_logp(self, x):
         encoded_distribution = self.encode(x)
@@ -216,12 +210,6 @@ class VAE(nn.Module):
 
         # amino acid probabilities are independent conditioned on z
         return elbo, logp, kld
-
-    def sample_new_weights(self):
-        for layer in self.decode_layers:
-            for hook in layer._forward_pre_hooks.values():
-                if isinstance(hook, Variational):
-                    hook.rsample_new(layer)
 
     def recon_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
@@ -303,15 +291,12 @@ class VAE(nn.Module):
 
         weighted_loss = torch.mean(recon_loss + kld_loss)
 
-        if self.layer_mod == LayerModification.VARIATIONAL and self.use_param_loss:
+        if self.bayesian and self.use_param_loss:
             param_kld = self.warm_up_scale * self.global_parameter_kld() / neff
             total = weighted_loss + param_kld
-
-        elif self.layer_mod == LayerModification.NONE or not self.use_param_loss:
+        else:
             param_kld = torch.zeros(1) + 1e-5
             total = weighted_loss
-        else:
-            raise NotImplementedError("Unsupported layer modification.")
 
         return total, recon_loss.mean().item(), kld_loss.mean().item(), param_kld.item()
 
@@ -321,7 +306,7 @@ class VAE(nn.Module):
             "num_tokens": self.num_tokens,
             "z_samples": self.z_samples,
             "dropout": self.dropout,
-            "layer_mod": self.layer_mod,
+            "use_bayesian": self.bayesian,
             "num_patterns": self.num_patterns,
             "inner_CW_dim": self.inner_CW_dim,
             "use_param_loss": self.use_param_loss,

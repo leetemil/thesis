@@ -3,13 +3,13 @@ from torch import nn
 from torch.nn import functional as F
 
 from .norm_conv import NormConv
-from ..vae.variational import variational, Variational
+from ..vae.bayesian import bayesian, Bayesian
 from ..utils import layer_kld
 from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, bayesian = False, backwards = False):
+    def __init__(self, input_channels, residual_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, use_bayesian = False, backwards = False):
         super().__init__()
 
         self.input_channels = input_channels
@@ -21,7 +21,7 @@ class WaveNet(nn.Module):
         self.l2_lambda = l2_lambda
         self.bias = bias
         self.dropout = dropout
-        self.bayesian = bayesian
+        self.bayesian = use_bayesian
         self.backwards = backwards
         self.activation = F.elu
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
@@ -147,21 +147,6 @@ class WaveNet(nn.Module):
             total_loss += l2_loss
 
         return total_loss, metrics_dict
-
-    def sample_new_weights(self):
-        # rsample first layer
-        for hook in self.first_conv._forward_pre_hooks.values():
-            if isinstance(hook, Variational):
-                hook.rsample_new(self.first_conv)
-
-        # rsample layers in stack
-        self.dilated_conv_stack.sample_new_weights()
-
-        # rsample last conv layers
-        for layer in self.last_conv_layers:
-            for hook in layer._forward_pre_hooks.values():
-                if isinstance(hook, Variational):
-                    hook.rsample_new(layer)
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())
@@ -304,9 +289,3 @@ class WaveNetStack(nn.Module):
             kld += layer.parameter_kld()
 
         return kld
-
-    def sample_new_weights(self):
-        for layer in self.layers:
-            for hook in layer._forward_pre_hooks.values():
-                if isinstance(hook, Variational):
-                    hook.rsample_new(layer)

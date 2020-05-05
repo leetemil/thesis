@@ -45,7 +45,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         NUM_TOKENS,
         z_samples = args.z_samples,
         dropout = args.dropout,
-        layer_mod = args.layer_mod,
+        use_bayesian = args.bayesian,
         use_param_loss = args.param_loss,
         use_dictionary = args.dictionary,
         label_smoothing = args.label_smoothing,

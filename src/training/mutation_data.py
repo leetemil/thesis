@@ -82,7 +82,6 @@ def get_elbos(model, wt, mutants, ensemble_count):
         acc_wt_elbo = 0
 
         for i in range(ensemble_count):
-            model.sample_new_weights()
             m_elbo, *_ = model.protein_logp(mutants)
             wt_elbo, *_ = model.protein_logp(wt.unsqueeze(0))
 

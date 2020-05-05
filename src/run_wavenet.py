@@ -61,7 +61,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         l2_lambda = args.L2,
 		bias = args.bias,
         dropout = args.dropout,
-        bayesian = args.bayesian,
+        use_bayesian = args.bayesian,
         backwards = args.backwards
 	).to(device)
 
