@@ -274,4 +274,5 @@ TSWLatexianTemp*
 
 # Makeindex log files
 *.lpz
+.vscode/
 src/.vscode/settings.json

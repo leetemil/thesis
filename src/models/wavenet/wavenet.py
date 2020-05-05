@@ -26,7 +26,6 @@ class WaveNet(nn.Module):
         self.activation = F.elu
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
         self.last_conv_layer = NormConv(self.residual_channels, self.out_channels, self.bayesian, kernel_size = 1, bias = self.bias)
-
         dilations = []
         for i in range(self.layers_per_stack):
             dilations.append(2**i)
@@ -205,7 +204,7 @@ class WaveNetLayer(nn.Module):
         self.before_layer = NormConv(
             in_channels = self.channels,
             out_channels = self.channels,
-            bayesian = self.bayesian,
+            use_bayesian = self.bayesian,
             activation = self.activation,
             kernel_size = 1,
             dilation = 1,
@@ -215,7 +214,7 @@ class WaveNetLayer(nn.Module):
         self.middle_layer = NormConv(
             in_channels = self.channels,
             out_channels = self.channels,
-            bayesian = self.bayesian,
+            use_bayesian = self.bayesian,
             activation = self.activation,
             kernel_size = self.kernel_size,
             dilation = self.dilation,
@@ -225,7 +224,7 @@ class WaveNetLayer(nn.Module):
         self.after_layer = NormConv(
             in_channels = self.channels,
             out_channels = self.channels,
-            bayesian = self.bayesian,
+            use_bayesian = self.bayesian,
             activation = self.activation,
             kernel_size = 1,
             dilation = 1,

@@ -93,14 +93,22 @@ def get_unirep_finetune_args():
     print_args(args)
     return args
 
-def get_wavenet_args():
+def get_wavenet_args(pretrain = False):
     parser = argparse.ArgumentParser(description = "WaveNet model on protein sequences", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
     basic_args(parser)
 
     # Data
-    parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
-    parser.add_argument("-vr", "--val_ratio", type = float, default = 0.0, help = "What fraction of data to use for validation.")
-    parser.add_argument("-vs", "--validation_split_seed", type = int, default = None, help = "Seed to use for validation set splitting.")
+    if pretrain:
+        train_data = Path("data/files/uniref50_short_train.fasta")
+        val_data = Path("data/files/uniref50_short_validation.fasta")
+        parser.add_argument("-td", "--train_data", default = train_data, type = Path, help = "Fasta input file for training.")
+        parser.add_argument("-vd", "--validation_data", default = val_data, type = Path, help = "Fasta input file for validation.")
+
+    else:
+        parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+        parser.add_argument("-vr", "--val_ratio", type = float, default = 0.0, help = "What fraction of data to use for validation.")
+        parser.add_argument("-vs", "--validation_split_seed", type = int, default = None, help = "Seed to use for validation set splitting.")
+
     mutation_effect_prediction_args(parser)
     parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("-rc", "--residual_channels", type = int, default = 48, help = "Number of channels in the residual layers.")
@@ -125,7 +133,9 @@ def get_wavenet_args():
     if args.plot_learning_rates and not args.anneal_learning_rates:
         raise ValueError("Plot learning rates was specified, but learning rates are not annealed. Use \"--anneal_learning_rates\" or \"-alr\" to activate annealing.")
 
-    args.train_ratio = 1 - args.val_ratio
+    if not pretrain:
+        args.train_ratio = 1 - args.val_ratio
+
     args.results_dir = Path("results") / args.results_dir
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
