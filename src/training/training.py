@@ -78,7 +78,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
 
     return average_loss, metrics_dict
 
-def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None):
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None, multi_gpu = False):
     model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
@@ -92,8 +92,9 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
         loss, batch_metrics_dict = model(*xb)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
-    loss.mean() # This fixes a multi GPU issue
-    print('EMIL', loss)
+    print('EMIL1', loss)
+    loss.sum() # This fixes a multi GPU issue
+    print('EMIL2', loss)
     loss.backward()
 
     if clip_grad_norm is not None:
