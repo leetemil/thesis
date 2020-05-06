@@ -108,13 +108,15 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     print_every_samples = 100_000
     print_seqs_count = 0
+    print_seqs_overall_time = time.time()
+    print_seqs_iteration_time = time.time()
 
     try:
         stop = False
         while not stop:
             for batch_idx, xb in enumerate(train_loader):
                 # train_loss, train_metrics = train_batch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
-                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
+                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches, multi_gpu = True)
 
                 seqs_processed += batch_size
                 acc_train_loss += batch_train_loss
@@ -122,7 +124,8 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                 print_seqs_count += batch_size
                 if print_seqs_count >= print_every_samples:
-                    print(f'Processed {seqs_processed} out of {total_samples}.')
+                    print(f'Progress: {seqs_processed / total_samples:.3f}% of epoch. Total time:{readable_time(time.time() - print_seqs_overall_time):>7s}. Iteration time:{readable_time(time.time() - print_seqs_iteration_time):>7s}.')
+                    print_seqs_iteration_time = time.time()
                     print_seqs_count = 0
 
                 if seqs_processed >= train_seqs_per_epoch:

@@ -93,7 +93,7 @@ class WaveNet(nn.Module):
         # return mean of channels across each sequence. Representation is shape num_channels
         return xb.permute(0, 2, 1), xb.mean(2)
 
-    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
+    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean", multi_gpu = False):
         pred = self.get_predictions(xb)
 
         # Calculate loss
@@ -125,7 +125,8 @@ class WaveNet(nn.Module):
             else:
                 kld_loss = self.parameter_kld() * (1 / self.total_samples)
 
-            metrics_dict["kld_loss"] = kld_loss.item()
+            if not multi_gpu:
+                metrics_dict["kld_loss"] = kld_loss.item()
             total_loss = nll_loss + kld_loss
         else:
             total_loss = nll_loss
@@ -142,7 +143,9 @@ class WaveNet(nn.Module):
             else:
                 l2_loss *= self.l2_lambda / self.total_samples # per sample l2 loss
 
-            metrics_dict['l2_loss'] = l2_loss.item()
+            if not multi_gpu:
+                metrics_dict['l2_loss'] = l2_loss.item()
+
             total_loss += l2_loss
 
         return total_loss, metrics_dict
