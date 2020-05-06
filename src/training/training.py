@@ -92,6 +92,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
         loss, batch_metrics_dict = model(*xb)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
+    loss = loss.mean() # fixes multi GPU issues; leave it
     loss.backward()
 
     if clip_grad_norm is not None:
