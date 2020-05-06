@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import torch
+from torch import nn
 from torch import optim
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
@@ -27,18 +28,24 @@ if __name__ == "__main__" or __name__ == "__console__":
     device = torch.device(args.device)
     try:
         device_name = torch.cuda.get_device_name()
+        num_gpus = f"\nNumber of GPUs: {torch.cuda.device_count()}"
     except:
         device_name = "CPU"
+        num_gpus = ""
 
-    print(f"Using device: {device_name}")
+    print(f"Using device: {device_name}{num_gpus}")
 
     if args.seed is not None:
         torch.manual_seed(args.seed)
         print(f"Random seed set to {args.seed}")
 
+    data_device = torch.device(args.device)
+    if args.multi_gpu:
+        data_device = torch.device("cpu")
+
     # Load data
-    train_data = IterProteinDataset(args.train_data, device = device)
-    validation_data = IterProteinDataset(args.validation_data, device = device)
+    train_data = IterProteinDataset(args.train_data, device = data_device)
+    validation_data = IterProteinDataset(args.validation_data, device = data_device)
     val_len = len(validation_data)
     train_seqs_per_epoch = val_len * 9
 
@@ -61,9 +68,13 @@ if __name__ == "__main__" or __name__ == "__console__":
         dropout = args.dropout,
         use_bayesian = args.bayesian,
         backwards = args.backwards
-	).to(device)
-
+	)
     print(model.summary())
+
+    if args.multi_gpu:
+        model = nn.DataParallel(model)
+    model.to(device)
+
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate)
 
     if args.anneal_learning_rates:
@@ -76,7 +87,10 @@ if __name__ == "__main__" or __name__ == "__console__":
     model_save_name = args.results_dir / Path("model.torch")
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
-        model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
+        if args.multi_gpu:
+            model.module.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
+        else:
+            model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
     best_val_loss = float("inf")
@@ -93,13 +107,14 @@ if __name__ == "__main__" or __name__ == "__console__":
     spearman_name = args.results_dir / Path("spearman_rhos.png")
     total_batches = total_samples // args.batch_size # used for annealing
 
-    print_every_samples = 250_000
+    print_every_samples = 100_000
     print_seqs_count = 0
 
     try:
         stop = False
         while not stop:
             for batch_idx, xb in enumerate(train_loader):
+                # train_loss, train_metrics = train_batch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
                 batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
 
                 seqs_processed += batch_size
@@ -123,18 +138,13 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                     if improved:
                         # If model improved, save the model
-                        model.save(model_save_name)
+                        if args.multi_gpu:
+                            model.module.save(model_save_name)
+                        else:
+                            model.save(model_save_name)
                         print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                         best_val_loss = val_loss
                         patience = args.patience
-
-                        with torch.no_grad():
-                            rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 100, args.results_dir, savefig = False)
-
-                        spearman_rhos.append(rho)
-                        improved_epochs.append(epoch)
-                        plot_spearman(args.data, spearman_name, improved_epochs, spearman_rhos)
-
                     elif args.patience:
                         # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                         patience -= 1
@@ -149,20 +159,14 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                     print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n" if improved else "\n\n")
 
-                    if improved:
-                        print(f"Spearman\'s Rho: {rho:.3f}", end = "\n\n")
-
                     start_time = time.time()
-
-        print('Computing mutation effect prediction correlation...')
 
         with torch.no_grad():
             if model_save_name.exists():
-                model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
-
-            rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, ensemble_count, args.results_dir)
-
-        print(f'Spearman\'s Rho: {rho:.3f}')
+                if args.multi_gpu:
+                    model.module.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
+                else:
+                    model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
