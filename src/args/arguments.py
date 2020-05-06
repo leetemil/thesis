@@ -105,6 +105,8 @@ def get_wavenet_args(pretrain = False):
         val_data = Path("data/files/uniref/uniref50_short_validation.fasta")
         parser.add_argument("-td", "--train_data", default = train_data, type = Path, help = "Fasta input file for training.")
         parser.add_argument("-vd", "--validation_data", default = val_data, type = Path, help = "Fasta input file for validation.")
+        parser.add_argument("-mg", "--multi_gpu", action = "store_true", dest = "multi_gpu", default = True, help = "Enables multi GPU training.")
+        parser.add_argument("-no_mg", "--no_multi_gpu", action = "store_false", dest = "multi_gpu", default = False, help = "Disables multi GPU training.")
 
     else:
         parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
