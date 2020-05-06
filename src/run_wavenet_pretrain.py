@@ -124,7 +124,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
                 print_seqs_count += batch_size
                 if print_seqs_count >= print_every_samples:
-                    print(f'Progress: {100 * seqs_processed / total_samples:6.3f}% of epoch. Total time:{readable_time(time.time() - print_seqs_overall_time):>7s}. Iteration time:{readable_time(time.time() - print_seqs_iteration_time):>7s}.')
+                    print(f'Progress: {100 * seqs_processed / train_seqs_per_epoch:6.3f}% of epoch. Total time:{readable_time(time.time() - print_seqs_overall_time):>7s}. Iteration time:{readable_time(time.time() - print_seqs_iteration_time):>7s}.')
                     print_seqs_iteration_time = time.time()
                     print_seqs_count = 0
 
