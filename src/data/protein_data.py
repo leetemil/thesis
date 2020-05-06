@@ -124,7 +124,6 @@ class VariableLengthProteinDataset(Dataset):
         CLS = "<cls>"
         SEP = "<sep>"
 
-
         unpadded_seqs = [[CLS] + list(filter(lambda c: not remove_gaps or (c not in ".-" and c == c.upper()), str(s.seq))) + [SEP] for s in seqs if len(s) <= self.max_len]
 
         if use_weights:

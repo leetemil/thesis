@@ -114,6 +114,7 @@ def get_wavenet_args(pretrain = False):
     mutation_effect_prediction_args(parser)
     parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
     parser.add_argument("-rc", "--residual_channels", type = int, default = 48, help = "Number of channels in the residual layers.")
+    parser.add_argument("-rs", "--representation_size", type = int, default = 48, help = "The size of the produced model representation.")
     parser.add_argument("-ss", "--stacks", type = int, default = 6, help = "Number of stacks of dilated convolutions.")
     parser.add_argument("-ly", "--layers", type = int, default = 9, help = "Number of layers for each stack.")
     parser.add_argument("-b", "--bias", action = "store_true", dest = "bias", default = True, help = "Enables bias.")

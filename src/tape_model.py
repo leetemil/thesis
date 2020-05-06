@@ -14,6 +14,7 @@ class WaveNetConfig(ProteinConfig):
         input_channels: int = 30,
         residual_channels: int = 48,
         out_channels: int = 30,
+        representation_size = 100,
         stacks: int = 6,
         layers_per_stack: int = 9,
         total_samples: int = 0, # I think we can make do by just setting this to 0
@@ -22,12 +23,14 @@ class WaveNetConfig(ProteinConfig):
         dropout : float = 0.5,
         bayesian : bool = False,
         backwards : bool = False,
+        representation_variant : str = "last",
         **kwargs):
 
         super().__init__(**kwargs)
         self.input_channels = input_channels
         self.residual_channels = residual_channels
         self.out_channels = out_channels
+        self.representation_size = representation_size
         self.stacks = stacks
         self.layers_per_stack = layers_per_stack
         self.total_samples = total_samples
@@ -37,6 +40,7 @@ class WaveNetConfig(ProteinConfig):
         self.bayesian = bayesian
         self.backwards = backwards
         self.initializer_range = 0.02 # stolen from unirep
+        self.representation_variant = representation_variant
 
 class WaveNetAbstractModel(ProteinModel):
     config_class = WaveNetConfig
@@ -58,6 +62,7 @@ class WaveNetModel(WaveNetAbstractModel):
             config.input_channels,
             config.residual_channels,
             config.out_channels,
+            config.representation_size,
             config.stacks,
             config.layers_per_stack,
             config.total_samples,
@@ -68,11 +73,12 @@ class WaveNetModel(WaveNetAbstractModel):
             config.backwards
         )
         self.init_weights()
+        self.representation_variant = config.representation_variant
 
     def forward(self, input_ids, input_mask = None):
         # if input_mask is None:
         #     input_mask = torch.ones_like(input_ids)
-        representations = self.inner_model.get_representation(input_ids)
+        representations = self.inner_model.get_representation(input_ids, variant = self.representation_variant)
         return representations
 
 @registry.register_task_model('fluorescence', 'wavenet')
@@ -83,8 +89,8 @@ class WaveNetForValuePrediction(WaveNetAbstractModel):
         super().__init__(config)
 
         self.wavenet = WaveNetModel(config)
-        predict_size = config.residual_channels # guess we use this as representation size
-        self.predict = ValuePredictionHead(predict_size)
+        representation_size = config.representation_size # guess we use this as representation size
+        self.predict = ValuePredictionHead(representation_size)
 
         self.init_weights()
 
@@ -107,8 +113,8 @@ class WaveNetForSequenceClassification(WaveNetAbstractModel):
         super().__init__(config)
 
         self.wavenet = WaveNetModel(config)
-        predict_size = config.residual_channels # guess we use this as representation size
-        self.classify = SequenceClassificationHead(predict_size, config.num_labels)
+        representation_size = config.representation_size # guess we use this as representation size
+        self.classify = SequenceClassificationHead(representation_size, config.num_labels)
         self.init_weights()
 
     def forward(self, input_ids, input_mask=None, targets=None):
@@ -138,8 +144,8 @@ class WaveNetForSequenceToSequenceClassification(WaveNetAbstractModel):
         super().__init__(config)
 
         self.wavenet = WaveNetModel(config)
-        predict_size = config.residual_channels # guess we use this as representation size
-        self.classify = SequenceToSequenceClassificationHead(predict_size, config.num_labels, ignore_index=-1)
+        representation_size = config.representation_size # guess we use this as representation size
+        self.classify = SequenceToSequenceClassificationHead(representation_size, config.num_labels, ignore_index=-1)
         self.init_weights()
 
     def forward(self, input_ids, input_mask=None, targets=None):
@@ -170,8 +176,8 @@ class WaveNetForContactPrediction(WaveNetAbstractModel):
         super().__init__(config)
 
         self.wavenet = WaveNetModel(config)
-        predict_size = config.residual_channels # guess we use this as representation size
-        self.predict = PairwiseContactPredictionHead(predict_size, ignore_index=-1)
+        representation_size = config.representation_size # guess we use this as representation size
+        self.predict = PairwiseContactPredictionHead(representation_size, ignore_index=-1)
         self.init_weights()
 
     def forward(self, input_ids, protein_length, input_mask=None, targets=None):

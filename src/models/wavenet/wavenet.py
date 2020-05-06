@@ -9,12 +9,13 @@ from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, use_bayesian = False, backwards = False):
+    def __init__(self, input_channels, residual_channels, out_channels, representation_size, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, use_bayesian = False, backwards = False):
         super().__init__()
 
         self.input_channels = input_channels
         self.residual_channels = residual_channels
         self.out_channels = out_channels
+        self.representation_size = representation_size
         self.stacks = stacks
         self.layers_per_stack = layers_per_stack
         self.total_samples = total_samples
@@ -25,7 +26,8 @@ class WaveNet(nn.Module):
         self.backwards = backwards
         self.activation = F.elu
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
-        self.last_conv_layer = NormConv(self.residual_channels, self.out_channels, self.bayesian, kernel_size = 1, bias = self.bias)
+        self.representation_conv = NormConv(self.residual_channels, self.representation_size, self.bayesian, kernel_size = 1, bias = self.bias)
+        self.last_conv = NormConv(self.representation_size, self.out_channels, self.bayesian, kernel_size = 1, bias = self.bias)
         dilations = []
         for i in range(self.layers_per_stack):
             dilations.append(2**i)
@@ -66,7 +68,8 @@ class WaveNet(nn.Module):
 
         pred = self.first_conv(xb)
         pred = self.dilated_conv_stack(pred)
-        pred = self.last_conv_layer(pred)
+        pred = self.representation_conv(pred)
+        pred = self.last_conv(pred)
 
         return F.log_softmax(pred, dim = 1)
 
@@ -77,7 +80,7 @@ class WaveNet(nn.Module):
 
     def parameter_kld(self):
         kld = layer_kld(self.first_conv.layer) if isinstance(self.first_conv, NormConv) else 0
-        kld += layer_kld(self.last_conv_layer.layer) if isinstance(self.last_conv_layer, NormConv) else 0
+        kld += layer_kld(self.last_conv.layer) if isinstance(self.last_conv, NormConv) else 0
 
         # get loss from stack layers
         for stack in self.dilated_conv_stack:
@@ -85,13 +88,23 @@ class WaveNet(nn.Module):
 
         return kld
 
-    def get_representation(self, xb):
+    def get_representation(self, xb, variant = "mean"):
         # encode and, if needed, reverse sequences
         xb = self.preprocess(xb)
         xb = self.first_conv(xb)
         xb = self.dilated_conv_stack(xb)
-        # return mean of channels across each sequence. Representation is shape num_channels
-        return xb.permute(0, 2, 1), xb.mean(2)
+        xb = self.representation_conv(xb)
+        if variant == "mean":
+            # return mean of channels across each sequence. Representation is shape num_channels
+            representation = xb.mean(2)
+
+        elif variant == "last":
+            representation = xb[:, :, -1]
+
+        else:
+            raise ValueError(f"Representation variant {variant} is not supported.")
+
+        return xb.permute(0, 2, 1), representation
 
     def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
         pred = self.get_predictions(xb)
@@ -154,6 +167,7 @@ class WaveNet(nn.Module):
                 f"  Input channels: {self.input_channels}\n"
                 f"  Residual channels: {self.residual_channels}\n"
                 f"  Output channels: {self.out_channels}\n"
+                f"  Representation size: {self.representation_size}\n"
                 f"  Stacks: {self.stacks}\n"
                 f"  Layers: {self.layers_per_stack} (max. {2**(self.layers_per_stack - 1)} dilation)\n"
                 f"  Parameters: {num_params:,}\n"

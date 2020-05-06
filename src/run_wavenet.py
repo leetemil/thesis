@@ -55,6 +55,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         input_channels = NUM_TOKENS,
         residual_channels = args.residual_channels,
         out_channels = NUM_TOKENS,
+        representation_size = args.representation_size,
         stacks = args.stacks,
         layers_per_stack = args.layers,
         total_samples = train_length,
