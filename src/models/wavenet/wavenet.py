@@ -106,7 +106,7 @@ class WaveNet(nn.Module):
 
         return xb.permute(0, 2, 1), representation
 
-    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
+    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean", multi_gpu = False):
         pred = self.get_predictions(xb)
 
         # Calculate loss
@@ -157,6 +157,9 @@ class WaveNet(nn.Module):
 
             metrics_dict['l2_loss'] = l2_loss.item()
             total_loss += l2_loss
+
+        if multi_gpu:
+            total_loss.unsqueeze(0)
 
         return total_loss, metrics_dict
 

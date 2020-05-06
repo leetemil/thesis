@@ -115,7 +115,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         while not stop:
             for batch_idx, xb in enumerate(train_loader):
                 # train_loss, train_metrics = train_batch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
-                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
+                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches, multi_gpu = True)
 
                 seqs_processed += batch_size
                 acc_train_loss += batch_train_loss

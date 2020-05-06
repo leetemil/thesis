@@ -87,14 +87,12 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
-        loss, batch_metrics_dict = model(xb)
+        loss, batch_metrics_dict = model(xb, multi_gpu = multi_gpu)
     else:
-        loss, batch_metrics_dict = model(*xb)
+        loss, batch_metrics_dict = model(*xb, multi_gpu = multi_gpu)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
     print('EMIL1', loss)
-    loss.sum() # This fixes a multi GPU issue
-    print('EMIL2', loss)
     loss.backward()
 
     if clip_grad_norm is not None:
