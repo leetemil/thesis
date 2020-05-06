@@ -59,16 +59,20 @@ if __name__ == "__main__" or __name__ == "__console__":
             train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
             val_loss, val_metrics = validate(epoch, model, val_loader)
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB")
-
             improved = val_loss < best_val_loss
 
+            rho_str = ""
             if improved:
                 # If model improved, save the model
                 model.save(model_save_name)
                 print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                 best_val_loss = val_loss
                 patience = args.patience
+
+                with torch.no_grad():
+                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 1, args.results_dir)
+                rho_str = f"Spearman's rho {rho:.3f} "
+
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                 patience -= 1
@@ -76,14 +80,14 @@ if __name__ == "__main__" or __name__ == "__console__":
                     print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
                     break
 
-            print("")
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} {rho_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB\n")
 
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
             if model_save_name.exists():
                 model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
-            cor = mutation_effect_prediction(model, args.data, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
-        print(f'Spearman\'s Rho: {cor}')
+            rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 1, args.results_dir)
+        print(f'Spearman\'s Rho: {rho}')
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
