@@ -93,6 +93,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
     loss.mean() # This fixes a multi GPU issue
+    print('EMIL', loss)
     loss.backward()
 
     if clip_grad_norm is not None:
