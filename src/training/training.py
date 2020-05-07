@@ -78,7 +78,7 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
 
     return average_loss, metrics_dict
 
-def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None, multi_gpu = False):
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None):
     model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
@@ -87,9 +87,9 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
-        loss, batch_metrics_dict = model(xb, multi_gpu = multi_gpu)
+        loss, batch_metrics_dict = model(xb)
     else:
-        loss, batch_metrics_dict = model(*xb, multi_gpu = multi_gpu)
+        loss, batch_metrics_dict = model(*xb)
 
     # Calculate the gradient of the loss w.r.t. the graph leaves
     loss = loss.mean() # fixes multi GPU issues; leave it
@@ -112,7 +112,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     return batch_size, loss, batch_metrics_dict
 
-def validate(epoch, model, validation_loader, multi_gpu = False):
+def validate(epoch, model, validation_loader):
     model.eval()
 
     validation_loss = 0
@@ -124,9 +124,9 @@ def validate(epoch, model, validation_loader, multi_gpu = False):
 
             # Push whole batch of data through model.forward()
             if isinstance(xb, Tensor):
-                loss, batch_metrics_dict = model(xb, multi_gpu = multi_gpu)
+                loss, batch_metrics_dict = model(xb)
             else:
-                loss, batch_metrics_dict = model(*xb, multi_gpu = multi_gpu)
+                loss, batch_metrics_dict = model(*xb)
 
             loss = loss.mean()
 
