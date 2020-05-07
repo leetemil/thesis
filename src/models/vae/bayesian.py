@@ -103,5 +103,4 @@ class Bayesian:
         setattr(module, self.name, self.rsample(module))
 
     def __call__(self, module, inputs):
-        if module.training:
-            self.rsample_new(module)
+        self.rsample_new(module)
