@@ -66,7 +66,8 @@ if __name__ == "__main__" or __name__ == "__console__":
 		bias = args.bias,
         dropout = args.dropout,
         use_bayesian = args.bayesian,
-        backwards = args.backwards
+        backwards = args.backwards,
+        multi_gpu = True
 	)
     print(model.summary())
 
@@ -116,7 +117,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         while not stop:
             for batch_idx, xb in enumerate(train_loader):
                 # train_loss, train_metrics = train_batch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
-                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches, multi_gpu = True)
+                batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
 
                 seqs_processed += batch_size
                 acc_train_loss += batch_train_loss
@@ -128,13 +129,13 @@ if __name__ == "__main__" or __name__ == "__console__":
                     print_seqs_iteration_time = time.time()
                     print_seqs_count = 0
 
-                if True:#seqs_processed >= train_seqs_per_epoch:
+                if seqs_processed >= train_seqs_per_epoch:
                     epoch += 1
                     train_loss = acc_train_loss / train_loss_count
                     seqs_processed = 0
                     acc_train_loss = 0
                     train_loss_count = 0
-                    val_loss, _ = validate(epoch, model, val_loader, multi_gpu = True)
+                    val_loss, _ = validate(epoch, model, val_loader)
 
                     improved = val_loss < best_val_loss
 

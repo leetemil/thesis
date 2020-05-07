@@ -9,7 +9,7 @@ from data import IUPAC_SEQ2IDX
 
 class WaveNet(nn.Module):
 
-    def __init__(self, input_channels, residual_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, use_bayesian = False, backwards = False):
+    def __init__(self, input_channels, residual_channels, out_channels, stacks, layers_per_stack, total_samples, l2_lambda = 0, bias = True, dropout = 0.5, use_bayesian = False, backwards = False, multi_gpu = False):
         super().__init__()
 
         self.input_channels = input_channels
@@ -26,6 +26,9 @@ class WaveNet(nn.Module):
         self.activation = F.elu
         self.first_conv = NormConv(self.input_channels, self.residual_channels, self.bayesian, kernel_size = 1, bias = self.bias)
         self.last_conv_layer = NormConv(self.residual_channels, self.out_channels, self.bayesian, kernel_size = 1, bias = self.bias)
+
+        self.multi_gpu = multi_gpu
+
         dilations = []
         for i in range(self.layers_per_stack):
             dilations.append(2**i)
@@ -93,7 +96,7 @@ class WaveNet(nn.Module):
         # return mean of channels across each sequence. Representation is shape num_channels
         return xb.permute(0, 2, 1), xb.mean(2)
 
-    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean", multi_gpu = False):
+    def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
         pred = self.get_predictions(xb)
 
         # Calculate loss
@@ -125,7 +128,7 @@ class WaveNet(nn.Module):
             else:
                 kld_loss = self.parameter_kld() * (1 / self.total_samples)
 
-            if not multi_gpu:
+            if not self.multi_gpu:
                 metrics_dict["kld_loss"] = kld_loss.item()
             total_loss = nll_loss + kld_loss
         else:
@@ -143,7 +146,7 @@ class WaveNet(nn.Module):
             else:
                 l2_loss *= self.l2_lambda / self.total_samples # per sample l2 loss
 
-            if not multi_gpu:
+            if not self.multi_gpu:
                 metrics_dict['l2_loss'] = l2_loss.item()
 
             total_loss += l2_loss
