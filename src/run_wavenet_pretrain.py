@@ -128,13 +128,13 @@ if __name__ == "__main__" or __name__ == "__console__":
                     print_seqs_iteration_time = time.time()
                     print_seqs_count = 0
 
-                if seqs_processed >= train_seqs_per_epoch:
+                if True:#seqs_processed >= train_seqs_per_epoch:
                     epoch += 1
                     train_loss = acc_train_loss / train_loss_count
                     seqs_processed = 0
                     acc_train_loss = 0
                     train_loss_count = 0
-                    val_loss, _ = validate(epoch, model, val_loader)
+                    val_loss, _ = validate(epoch, model, val_loader, multi_gpu = True)
 
                     improved = val_loss < best_val_loss
 
