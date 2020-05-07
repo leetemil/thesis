@@ -112,7 +112,7 @@ def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = N
 
     return batch_size, loss, batch_metrics_dict
 
-def validate(epoch, model, validation_loader):
+def validate(epoch, model, validation_loader, multi_gpu = False):
     model.eval()
 
     validation_loss = 0
@@ -124,9 +124,11 @@ def validate(epoch, model, validation_loader):
 
             # Push whole batch of data through model.forward()
             if isinstance(xb, Tensor):
-                loss, batch_metrics_dict = model(xb)
+                loss, batch_metrics_dict = model(xb, multi_gpu = multi_gpu)
             else:
-                loss, batch_metrics_dict = model(*xb)
+                loss, batch_metrics_dict = model(*xb, multi_gpu = multi_gpu)
+
+            loss = loss.mean()
 
             # Calculate accumulated metrics
             for key, value in batch_metrics_dict.items():
