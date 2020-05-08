@@ -175,7 +175,7 @@ def get_transformer_args():
     return args
 
 def get_evaluate_ensemble_args():
-    parser = argparse.ArgumentParser(description = "Evaluate an ensemble of models.", formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description = "Evaluate an ensemble of models.", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
     parser.add_argument("model_directories", type = Path, nargs = "+", help = "Directories to search for models. Considers any file with a .torch extension as a model file.")
     parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
     parser.add_argument("-d", "--device", type = str, default = "cuda", choices = ["cpu", "cuda"], help = "Which device to use (CPU or CUDA for GPU).")
