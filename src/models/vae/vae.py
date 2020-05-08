@@ -211,6 +211,12 @@ class VAE(nn.Module):
         # amino acid probabilities are independent conditioned on z
         return elbo, logp, kld
 
+    def sample_new_weights(self):
+        for layer in self.decode_layers:
+            for hook in layer._forward_pre_hooks.values():
+                if isinstance(hook, Variational):
+                    hook.rsample_new(layer)
+
     def recon_loss(self, recon_x, x):
         # How well do input x and output recon_x agree?
         recon_x = recon_x.view(self.z_samples, -1, recon_x.size(1), self.num_tokens).permute(1, 2, 0, 3)
