@@ -174,7 +174,7 @@ class WaveNet(nn.Module):
             "layers_per_stack": self.layers_per_stack,
             "bias": self.bias,
             "dropout": self.dropout,
-            "bayesian": self.bayesian,
+            "use_bayesian": self.bayesian,
             "total_samples": self.total_samples,
             "backwards": self.backwards,
         }
