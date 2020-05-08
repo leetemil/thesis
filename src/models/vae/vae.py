@@ -214,7 +214,7 @@ class VAE(nn.Module):
     def sample_new_weights(self):
         for layer in self.decode_layers:
             for hook in layer._forward_pre_hooks.values():
-                if isinstance(hook, Variational):
+                if isinstance(hook, Bayesian):
                     hook.rsample_new(layer)
 
     def recon_loss(self, recon_x, x):
