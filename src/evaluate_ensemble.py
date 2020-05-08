@@ -44,7 +44,7 @@ for directory in args.model_directories:
         else:
             raise ValueError("Unrecognized model name.")
 
-        args_dict["use_bayesian"] = args_dict.pop("bayesian") # use this if you get bayesian keyword error for wavenet
+        # args_dict["use_bayesian"] = args_dict.pop("bayesian") # use this if you get bayesian keyword error for wavenet
         model = model_type(**args_dict).to(device)
         model.load_state_dict(state_dict)
 
