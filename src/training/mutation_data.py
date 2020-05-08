@@ -81,12 +81,15 @@ def get_elbos(model, wt, mutants, ensemble_count):
         acc_m_elbo = 0
         acc_wt_elbo = 0
 
-        for i in range(ensemble_count):
-            m_elbo, *_ = model.protein_logp(mutants)
-            wt_elbo, *_ = model.protein_logp(wt.unsqueeze(0))
+        batch = torch.cat([wt.unsqueeze(0), mutants])
 
+        for i in range(ensemble_count):
+            elbos, *_ = model.protein_logp(batch)
+            wt_elbo = elbos[0]
+            m_elbo = elbos[1:]
             acc_m_elbo += m_elbo
             acc_wt_elbo += wt_elbo
+
         print("Done!" + " " * 50, end = "\r")
 
         mutants_logp = acc_m_elbo / ensemble_count
@@ -106,6 +109,10 @@ def get_elbos(model, wt, mutants, ensemble_count):
         model_logps = []
 
         ensemble_count = ensemble_count if isinstance(model, WaveNet) and model.bayesian else 1
+
+        if isinstance(model, WaveNet) and model.bayesian:
+            print('Emil: Warning, you are using wavenet bayesian. the ensemble count currently does not calculate logp wt from ensemble. You should probaby fix this.')
+            breakpoint()
 
         for m in range(ensemble_count):
             log_probs = []
