@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from .mlstm import mLSTM
 
 class UniRep(nn.Module):
-    def __init__(self, num_tokens, padding_idx, embed_size, hidden_size, num_layers = 1, is_multiplicative = False):
+    def __init__(self, num_tokens = 30, padding_idx = 0, embed_size = 10, hidden_size = 512, num_layers = 1, is_multiplicative = False):
         super().__init__()
 
         # Define parameters
