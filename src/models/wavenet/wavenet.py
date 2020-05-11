@@ -88,13 +88,23 @@ class WaveNet(nn.Module):
 
         return kld
 
-    def get_representation(self, xb):
+    def get_representation(self, xb, variant = "mean"):
         # encode and, if needed, reverse sequences
         xb = self.preprocess(xb)
         xb = self.first_conv(xb)
         xb = self.dilated_conv_stack(xb)
-        # return mean of channels across each sequence. Representation is shape num_channels
-        return xb.permute(0, 2, 1), xb.mean(2)
+
+        if variant == "mean":
+            # return mean of channels across each sequence. Representation is shape num_channels
+            representation = xb.mean(2)
+
+        elif variant == "last":
+            representation = xb[:, :, -1]
+
+        else:
+            raise ValueError(f"Representation variant {variant} is not supported.")
+
+        return xb.permute(0, 2, 1), representation
 
     def forward(self, xb, weights = None, neff = None, loss_reduction = "mean"):
         pred = self.get_predictions(xb)
