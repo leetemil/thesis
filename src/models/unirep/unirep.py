@@ -21,6 +21,18 @@ class UniRep(nn.Module):
 
         self.lin = nn.Linear(self.hidden_size, self.num_tokens)
 
+    def run_rnn(self, xb):
+        # Get length of each sequence by looking at pad values
+        lengths = (xb != self.padding_idx).sum(dim = 1)
+
+        # Convert indices to embedded vectors
+        embedding = self.embed(xb)
+
+        # Pack padded sequence
+        packed_seq = pack_padded_sequence(embedding, lengths, batch_first = True, enforce_sorted = False)
+        packed_out, _ = self.rnn(packed_seq)
+        return pad_packed_sequence(packed_out, batch_first = True)
+
     def predict(self, xb, lengths):
         # Convert indices to embedded vectors
         embedding = self.embed(xb)
