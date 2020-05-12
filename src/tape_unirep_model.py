@@ -43,8 +43,7 @@ class UniRepReimpModel(UniRepReimpAbstractModel):
         if input_mask is None:
             input_mask = torch.ones_like(input_ids)
 
-        embed = self.inner_model.embed(input_ids)
-        out, state = self.inner_model.rnn(embed)
+        out, state = self.inner_model.run_rnn(input_ids)
 
         if self.representaton == "mean":
             representations = out.mean(1)
