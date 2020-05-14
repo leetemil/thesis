@@ -3,6 +3,8 @@ args = get_wavenet_args(pretrain = True)
 
 import time
 from pathlib import Path
+import os
+import psutil
 
 import torch
 from torch import nn
@@ -120,12 +122,13 @@ if __name__ == "__main__" or __name__ == "__console__":
                 batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
 
                 seqs_processed += batch_size
-                acc_train_loss += batch_train_loss
+                acc_train_loss += batch_train_loss.item()
                 train_loss_count += 1
 
                 print_seqs_count += batch_size
                 if print_seqs_count >= print_every_samples:
-                    print(f'Progress: {100 * seqs_processed / train_seqs_per_epoch:6.3f}% of epoch. Total time:{readable_time(time.time() - print_seqs_overall_time):>7s}. Iteration time:{readable_time(time.time() - print_seqs_iteration_time):>7s}.')
+                    process = psutil.Process(os.getpid())
+                    print(f'Progress: {100 * seqs_processed / train_seqs_per_epoch:6.3f}% of epoch. Total time: {readable_time(time.time() - print_seqs_overall_time):>7s}. Iteration time: {readable_time(time.time() - print_seqs_iteration_time):>7s} CPU Memory: {process.memory_info().rss}')
                     print_seqs_iteration_time = time.time()
                     print_seqs_count = 0
 
