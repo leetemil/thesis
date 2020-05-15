@@ -49,7 +49,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         model.load_state_dict(torch.load(args.load_model, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
-    best_val_loss = float("inf")
+    best_loss = float("inf")
     patience = args.patience
     epoch = 0
     model_save_name = args.results_dir / Path("model.torch")
@@ -57,16 +57,25 @@ if __name__ == "__main__" or __name__ == "__console__":
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
-            val_loss, val_metrics = validate(epoch, model, val_loader)
 
-            improved = val_loss < best_val_loss
+            if args.val_ratio > 0:
+                val_loss, val_metrics = validate(epoch, model, val_loader)
+                improved = val_loss < best_loss
+                loss_str = "Validation"
+                loss_value_str = f"{val_loss:.5f}"
+                val_str = f"{loss_str} loss: {loss_value_str} "
+            else:
+                loss_str = "Training"
+                loss_value_str = f"{train_loss:.5f}"
+                val_str = ""
+                improved = train_loss < best_loss
 
             rho_str = ""
             if improved:
                 # If model improved, save the model
                 model.save(model_save_name)
-                print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
-                best_val_loss = val_loss
+                print(f"Validation loss improved from {best_loss:.5f} to {loss_value_str}. Saved model to: {model_save_name}")
+                best_loss = val_loss if args.val_ratio > 0 else train_loss
                 patience = args.patience
 
                 with torch.no_grad():
@@ -77,10 +86,10 @@ if __name__ == "__main__" or __name__ == "__console__":
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                 patience -= 1
                 if patience == 0:
-                    print(f"Model has not improved for {args.patience} epochs. Stopping training. Best validation loss achieved was: {best_val_loss:.5f}.")
+                    print(f"Model has not improved for {args.patience} epochs. Stopping training. Best loss achieved was: {best_loss:.5f}.")
                     break
 
-            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} {rho_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB\n")
+            print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} {val_str}{rho_str}Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB\n")
 
         print('Computing mutation effect prediction correlation...')
         with torch.no_grad():
@@ -90,5 +99,5 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f'Spearman\'s Rho: {rho}')
 
     except KeyboardInterrupt:
-        print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")
+        print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_loss:.5f}.\n")
         breakpoint()
