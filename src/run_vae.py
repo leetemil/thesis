@@ -159,7 +159,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f'Spearman\'s Rho: {rho}')
 
     except KeyboardInterrupt:
-        print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_loss:.5f}.\n")
+        print(f"\n\nTraining stopped manually. Best loss achieved was: {best_loss:.5f}.\n")
         breakpoint()
     finally:
         if args.visualize_interval == "always":
