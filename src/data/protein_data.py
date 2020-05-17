@@ -215,8 +215,9 @@ def discard_seqs_collate(tensors):
     encoded_seq, weights, neffs, seq = zip(*tensors)
     return torch.stack(encoded_seq), torch.stack(weights), neffs[0]
 
-def get_protein_dataloader(dataset, batch_size = 128, shuffle = False, get_seqs = False):
-    return DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate)
+def get_protein_dataloader(dataset, batch_size = 128, shuffle = False, get_seqs = False, random_weighted_sampling = False):
+    sampler = WeightedRandomSampler(weights = dataset.weights, num_samples = len(dataset.weights), replacement = True) if random_weighted_sampling else None
+    return DataLoader(dataset, batch_size = batch_size, shuffle = shuffle if not random_weighted_sampling else not random_weighted_sampling, collate_fn = get_seqs_collate if get_seqs else discard_seqs_collate, sampler = sampler)
 
 def variable_length_sequence_collate(sequences, use_weights = False, neff = None):
     if use_weights:
@@ -294,7 +295,6 @@ def parallel_retrieve_labels(infile, outfile):
         joined += 1
         print(f"Joined on {joined} threads.")
 
-    breakpoint()
     with open(outfile, "w") as out:
         pass
 

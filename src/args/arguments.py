@@ -34,10 +34,15 @@ def get_vae_args():
     parser.add_argument("-zs", "--z_samples", type = int, default = 1, help = "How many latent variables to sample per batch point.")
     mutation_effect_prediction_args(parser)
     parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
+    parser.add_argument("-ect", "--ensemble_count_training", type = int, default = 50, help = "How many samples of the model to use during training for evaluation as an ensemble.")
     parser.add_argument("-dict", "--dictionary", action = "store_true", dest = "dictionary", default = False, help = "Enables the dictionary of the VAE.")
     parser.add_argument("-no_dict", "--no_dictionary", action = "store_false", dest = "dictionary", default = True, help = "Disables the dictionary of the VAE.")
     parser.add_argument("-pl", "--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
     parser.add_argument("-no_pl", "--no_param_loss", action = "store_false", dest = "param_loss", default = False, help = "Disables the param loss")
+
+    parser.add_argument("-rws", "--random_weighted_sampling", action = "store_true", dest = "random_weighted_sampling", default = False, help = "Enables batch sampling according to sample weights.")
+    parser.add_argument("-no_rws", "--no_random_weighted_sampling", action = "store_false", dest = "random_weighted_sampling", default = True, help = "Disables batch sampling according to sample weights.")
+
     parser.add_argument("-wu", "--warm_up", type = int, default = 0, help = "Number of warm-up batches. Will affect the scale of global param loss during warm-up.")
     parser.add_argument("-vi", "--visualize_interval", type = str, default = "improvement", choices = ["always", "improvement", "never"], help = "Visualize the output at every epoch (always), only at validation loss improvement or never.")
     parser.add_argument("-vs", "--visualize_style", type = str, default = "save", choices = ["save", "show", "both"], help = "Save or show the visualization, or both.")

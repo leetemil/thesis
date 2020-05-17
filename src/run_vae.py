@@ -34,7 +34,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio)
 
     # Construct dataloaders for batches
-    train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size, shuffle = True)
+    train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size, shuffle = True, random_weighted_sampling = args.random_weighted_sampling)
     val_loader = get_protein_dataloader(val_data, batch_size = args.batch_size)
     print("Data loaded!")
 
@@ -86,7 +86,7 @@ if __name__ == "__main__" or __name__ == "__console__":
         #     plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show)
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
-            train_loss, train_metrics = train_epoch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value)
+            train_loss, train_metrics = train_epoch(epoch = epoch, model = model, optimizer = optimizer, train_loader = train_loader, log_interval = args.log_interval, clip_grad_norm = args.clip_grad_norm, clip_grad_value = args.clip_grad_value, random_weighted_sampling = args.random_weighted_sampling)
 
             if args.val_ratio > 0:
                 val_loss, val_metrics = validate(epoch, model, val_loader)
@@ -122,7 +122,7 @@ if __name__ == "__main__" or __name__ == "__console__":
 
             if args.visualize_interval == "always" or (args.visualize_interval == "improvement" and improved):
                 with torch.no_grad():
-                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, 500, args.results_dir, savefig = False)
+                    rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, args.ensemble_count_training, args.results_dir, savefig = False)
 
                     spearman_rhos.append(rho)
                     rho_str = f" Spearman's Rho: {rho:.3f}"
