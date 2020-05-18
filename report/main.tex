@@ -1,10 +1,14 @@
 \documentclass[a4paper,11pt]{report}
 
+\newif\iftodo
+\todotrue
+
 \input{packages.tex}
 
 \input{formatting.tex}
 
 \begin{document}
+
 
 % Front page
 \input{frontpage.tex}
@@ -14,6 +18,7 @@
 \input{report/acknowledgements.tex}
 
 % Table of contents
+\setcounter{tocdepth}{1}
 \tableofcontents
 \thispagestyle{empty}
 \clearpage
@@ -24,7 +29,9 @@
 \input{report/chapters/02_representation_learning.tex}
 \input{report/chapters/03_probabilistic_modeling.tex}
 \input{report/chapters/04_sequence_learning.tex}
-\input{report/chapters/05_experiments.tex}
+\input{report/chapters/05_models.tex}
+\input{report/chapters/06_experiments.tex}
+\input{report/chapters/07_discussion}
 
 % References
 \clearpage

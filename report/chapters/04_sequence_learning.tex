@@ -1,9 +1,12 @@
 \chapter{Sequence Learning}
+\label{chapter:sequence_learning}
 In this chapter we delve into the models used when data is in the form of sequences of variable length. Sequential variable-length data require models that do not make assumptions on the length of the inputs. For example, standard dense linear layers cannot work on variable-length inputs, since the linear layer has a set number of input neurons.
 
 In section~\ref{sec:recurrent_neural_networks} we discuss Recurrent Neural Networks (RNNs), which are sequential models that can be applied to variable-length input data. We cover the most common kind of RNN, the Long Short-Term Memory (LSTM) model, and briefly mention some alternatives.
 
 In section~\ref{sec:sequence_alignments} we discuss how sequential protein data  within a single protein family can be manipulated to avoid the problem of variable-length data altogether, with some other disadvantages as a trade-off.
+
+\todo{general stuff about next sequence element prediction}
 
 % Finally, we discuss the transformer model?
 
@@ -92,9 +95,24 @@ There are many more RNNs, of which many are variations of the above. For example
 \[m_i = \mathrm{L_{m_1}}\prts{x_i} * \mathrm{L_{m_2}}\prts{h_{i - 1}}\]
 and then uses $m_i$ instead of $h_{i - 1}$ in the gates of the LSTM.
 
+\section{Sequence-to-Sequence Models versus Bottleneck Models}
+\label{sec:seq2seqvsbottleneck}
+As mentioned above, an RNN's output may be considered either its last hidden state $h_n$, or the entire sequence of resulting hidden states $\prts{h_1, \dots, h_n}$.
+
+In the case of the last hidden state, the model produces a ``bottleneck''; It forces the sequence through a representation of a fixed size, which is small in the sense that it does not depend on the length of the input sequence. For such a model, a compact representation is readily available in the form of the bottleneck layer. We say that the model up to the bottleneck layer encodes the sequence to the bottleneck and is as such known as the encoder. In order to facilitate conversion from the bottleneck representation back to a sequence (which is useful if you want to explore the space of representations) and in order to ensure that the representation holds the most essential features of the sequence, a model (the decoder) is trained to decode the representation back to the input sequence -- thus we reach the concept of an auto-encoder. The decoding of a representation into a variable-length sequence is however very difficult for a model to learn and perform correctly to an acceptable degree. In section \ref{sec:sequence_alignments} we will see how this problem may be circumvented.
+
+In the case of the entire sequence of hidden states as the output, we say that the RNN is a ``sequence-to-sequence'' model, since it takes one sequence of some length $n$ and produces another sequence of the same length\footnote{It is possible to have sequence-to-sequence models which produce sequences of another length than the input, but this is more relevant to natural language processing and not as relevant to protein processing.}. A compact, fixed-size representation is not as easily obtained from the resulting sequence as in the case of bottleneck models, since there is no obvious canonical way to reduce the sequence to such a representation. The sequence could be reduced in many different ways, but this is not always desired, as the translation back to a sequence becomes more complicated or impractical, depending on the way the reduction is done.
+
+It's not obvious which of the above two approaches should be preferred. Bottleneck models easily provide a compact representation, but such a representation is hard to decode back to a variable-length sequence. Sequence-to-sequence models don't need a decoder, since they produce a sequence out of the box -- however, obtaining a compact representation is more difficult. We will explore both bottleneck models, in the form of the variational autoencoder, and sequence-to-sequence models in the form of models based on RNNs or other methods.
+
+RNNs are just one type of sequence-to-sequence models. There are other types of models that can be used to process sequences into new sequences. For example, convolutional neural networks (CNNs) can also do this. CNNs are known for their ability to process images, but sequences work just as well -- one could after all just consider a sequence as a 1-dimensional image. Making a sequence-to-sequence model based on CNNs simply involves appropriately padding the input, so that the resulting output remains the same length as the original sequence. Then it is only a question of how exactly the convolution is applied to the sequence. We will explore one such method in section \ref{sec:wavenet_model}.
+
+% EMIL: uncommented
+% Another possibility is attention-based models. Attention is a general mechanism which can be applied to sequence-to-sequence models, but it is most famously utilized in the Transformer model \cite{vaswani2017attention}. The Transformer uses a mix of linear layers and so-called ``self-attention'' layers to encode and decode the input sequence. Despite the presence of an encoder and decoder, the Transformer never reduces the sequence into a fixed-length representation, so it is not a bottleneck model. We will explore the Transformer in more detail in section \ref{sec:transformer_model}.
+
 \section{Sequence Alignments}
 \label{sec:sequence_alignments}
-As proteins are sequential in nature, RNNs can be used to integrate them into deep learning models. However, despite RNNs being suited for sequential data, it is not always the best model to use for proteins. While RNNs are able to process proteins, there are certain disadvantages in the way that RNNs do this. For example, when an RNN processes a single amino acid, it cannot take into account any remaining amino acids of the protein, because it has not reached those amino acids yet, even though it may be worthwhile to consider both previous and future amino acids. Also, the RNN cannot directly take into account the previous amino acids -- it can only use the hidden state up to a certain point, which is not guaranteed to actually hold any useful information about the sequence so far.
+As proteins are sequential in nature, RNNs can be used to integrate them into deep learning models. However, despite RNNs being suited for sequential data, it is not always the best model to use for proteins. While RNNs are able to process proteins, there are certain disadvantages in the way that RNNs do processing. For example, when an RNN processes a single amino acid, it cannot take into account any remaining amino acids of the protein, because it has not reached those amino acids yet, even though it may be worthwhile to consider both previous and future amino acids. Also, the RNN cannot directly take into account the sequence seen so far -- it can only use the hidden state up to a certain point, which is only a compact representation of the sequence so far.
 
 A model which could directly take into account the entire rest of the sequence when making a prediction could potentially perform better. It would be difficult to make such a model work with variable-length data however. Fortunately, it is possible to convert a family of proteins into a fixed-length number of sequences, by performing a \textit{sequence alignment}.
 
@@ -107,7 +125,7 @@ An example of a sequence alignment of this toy protein family can be seen in the
 \begin{figure}[ht]
     \centering
     \includegraphics{report/figures/sequence_alignments.pdf}
-    \caption{A toy example of a tiny protein family's evolution and an example sequence alignment.}
+    \caption{A toy example of a tiny protein family's evolution and an example sequence alignment. \todo{change to actual protein}}
     \label{fig:sequence_alignment_toy_example}
 \end{figure}
 
@@ -115,4 +133,16 @@ Notice that the resulting sequence alignment causes all the sequences to be of t
 
 For example, we can now apply densely connected linear layers to the sequences, since we now know the length of our data beforehand. This will prove to be very useful when we implement variational autoencoders in section \ref{sec:variational_autoencoders_experiement}.
 
-However, sequence alignments are not perfect. There are significant disadvantages to using sequence alignments. First of all, they are not exactly well-defined. The toy example in figure \ref{fig:sequence_alignment_toy_example} is simple and the resulting alignment is obvious, but given thousands of sequences, the problem becomes much more complicated. You may not have the evolutionary tree which resulted in the protein family
+However, sequence alignments are not perfect. There are significant disadvantages to using sequence alignments. First of all, the production of a sequence alignments requires the definition of a sort of scoring function, which basically optimizes the alignment based on how much an insertion of a gap or substitution costs. How exactly to decide on the specifics of the scoring function is not clear, making each alignment produced slightly different based on the parameters chosen. The toy example in figure \ref{fig:sequence_alignment_toy_example} is simple and the resulting alignment is obvious, but given thousands of sequences, the problem becomes much more complicated. Also, you may not have the evolutionary tree which resulted in the protein family (like we do in the toy example), which makes the analysis of the proteins much more complicated. As if it wasn't enough, multiple sequence alignment is also NP-hard \cite{wang1994complexity}, which means that an alignment must rely on heuristics and sub-optimal solutions in order to be tractable.
+
+To actually produce an alignment, many parameters must be decided upon. There are many different methods and heuristics to choose from and the resulting alignment could be different depending on these choices. This makes the training of models on alignments difficult -- some alignments may be well-suited for training, while others may not, and it is difficult to tell the two apart.
+
+Another problem with alignments is the way that they modify the underlying data. Fundamentally, protein data is variable-length. Changing this assumption involves the insertion of gaps. These gaps may change the proteins in ways that make it difficult for models to learn patterns that would otherwise have been easy if the gaps were not inserted.
+
+Even worse, some alignments do not just insert gaps, they also cut away parts of the protein, or only preserve a certain section of the sequences. This is a much more destructive operation to the data, which may simply remove necessary sequence information.
+
+Ideally, we wouldn't have to use sequence alignments, but sometimes an alignment leads to better training data than unaligned sequences. It also allows some additional choices for model architecture. The ``holy grail'' of protein modeling would be a model which does not require an alignment and can thus process variable-length sequences, while still being able to figure out the underlying protein structure and get some sense of absolute positions of the amino acids. Whether or not such a model is possible is very much an open question, which we will explore further in chapter \ref{chapter:experiments}. \todo{we actually do explore this right?}
+
+%\todo{this is a conclusion, throw it away, save for later. Formulate as question instead and refer to chapter 6}
+
+%Unfortunately, as we will see in chapter \ref{chapter:experiments}, we are still quite far from such a model.
