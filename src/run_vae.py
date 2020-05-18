@@ -82,8 +82,8 @@ if __name__ == "__main__" or __name__ == "__console__":
         val_param_klds = []
         val_total_losses = []
         spearman_rhos = []
-        # if args.visualize_interval != "never":
-        #     plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show)
+        if args.visualize_interval != "never":
+            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show, only_subset_labels=True)
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss, train_metrics = train_epoch(epoch = epoch, model = model, optimizer = optimizer, train_loader = train_loader, log_interval = args.log_interval, clip_grad_norm = args.clip_grad_norm, clip_grad_value = args.clip_grad_value, random_weighted_sampling = args.random_weighted_sampling)
@@ -128,7 +128,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                     rho_str = f" Spearman's Rho: {rho:.3f}"
 
                 name = args.results_dir / Path(f"epoch_{epoch}_loss_{loss_value_str}.png") if save else None
-                # plot_data(name, args.figure_type, model, all_data, rho, args.batch_size, show = show)
+                plot_data(name, args.figure_type, model, all_data, rho, args.batch_size, show = show, only_subset_labels = True)
 
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop

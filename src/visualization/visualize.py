@@ -35,7 +35,7 @@ BLAT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_1_b
 BLAT_HMMERBIT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105_LABELS.a2m"))
 
 def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
-    pca_fig = plt.figure()
+    pca_fig = plt.figure(figsize = [6.0, 6.0])
     subset_labels = set([
         "Acidobacteria",
         "Actinobacteria",
