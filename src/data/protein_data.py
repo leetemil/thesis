@@ -120,7 +120,8 @@ class VariableLengthProteinDataset(Dataset):
         self.device = device
         self.max_len = max_len
 
-        seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
+        self.seqs = seqs if isinstance(seqs, list) else list(SeqIO.parse(seqs, "fasta"))
+        seqs = self.seqs
         CLS = "<cls>"
         SEP = "<sep>"
 
@@ -146,7 +147,7 @@ class VariableLengthProteinDataset(Dataset):
         return len(self.encoded_seqs)
 
     def __getitem__(self, i):
-        return self.encoded_seqs[i]
+        return self.encoded_seqs[i], self.seqs[i]
 
 class IterProteinDataset(IterableDataset):
     def __init__(self, file, device = None):
@@ -220,11 +221,12 @@ def get_protein_dataloader(dataset, batch_size = 128, shuffle = False, get_seqs 
 
 def variable_length_sequence_collate(sequences, use_weights = False, neff = None):
     if use_weights:
-        seqs, weights = zip(*sequences)
+        seqs, weights = zip(*sequences[0])
         weights = torch.tensor(weights, device = seqs[0].device)
         return torch.nn.utils.rnn.pad_sequence(seqs, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True), weights, neff
 
-    return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True)
+    sequences, seqs = zip(*sequences)
+    return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True), seqs
 
 def get_variable_length_protein_dataLoader(dataset, batch_size = 128, shuffle = False, use_weights = False):
     if use_weights:

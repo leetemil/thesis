@@ -10,6 +10,7 @@ from torch import optim
 from models import UniRep
 from data import VariableLengthProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS, IUPAC_SEQ2IDX
 from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction
+from visualization import plot_representations
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -48,6 +49,8 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f"Loading saved model from {args.load_model}...")
         model.load_state_dict(torch.load(args.load_model, map_location = device)["state_dict"])
         print(f"Model loaded.")
+
+    plot_representations(Path("lol.png"), ".png", model, all_data)
 
     best_loss = float("inf")
     patience = args.patience

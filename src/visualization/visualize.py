@@ -6,11 +6,12 @@ import torch
 import numpy as np
 from Bio import SeqIO
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from models import VAE
-from data import get_protein_dataloader, IUPAC_AMINO_IDX_PAIRS
+from data import get_protein_dataloader, IUPAC_AMINO_IDX_PAIRS, get_variable_length_protein_dataLoader
 
 def get_pfam_label_dict():
     file = Path("data/files/PF00144_full_length_sequences_labeled.fasta")
@@ -192,6 +193,96 @@ def plot_loss(epochs, train_recon_loss, train_kld_loss, train_param_loss, train_
         plt.show()
 
     plt.close(fig)
+
+def plot_representations(name, figure_type, model, dataset, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
+    pca_fig = plt.figure(figsize = [10.0, 10.0])
+    subset_labels = set([
+        "Acidobacteria",
+        "Actinobacteria",
+        "Bacteroidetes",
+        "Chloroflexi",
+        "Cyanobacteria",
+        "Deinococcus-Thermus",
+        "Other",
+        "Firmicutes",
+        "Fusobacteria",
+        "Proteobacteria"
+    ])
+
+    dataloader = get_variable_length_protein_dataLoader(dataset, batch_size = batch_size)
+
+    scatter_dict = defaultdict(lambda: [])
+    with torch.no_grad():
+        for xb, seqs in dataloader:
+            ids = [s.id for s in seqs]
+
+            lengths = (xb != model.padding_idx).sum(dim = 1)
+            out, _ = model.run_rnn(xb)
+            reprs = out.sum(1) / lengths.unsqueeze(1)
+
+            for point, ID in zip(reprs, ids):
+                try:
+                    label = BLAT_HMMERBIT_LABEL_DICT[ID]
+                    if only_subset_labels:
+                        if label in subset_labels:
+                            scatter_dict[label].append(point)
+                    else:
+                        scatter_dict[label].append(point)
+                except KeyError:
+                    if not only_subset_labels:
+                        scatter_dict["Others"].append(point)
+
+    # plt.title(f"Encoded points")
+    all_points_list = list(itertools.chain(*scatter_dict.values()))
+    all_points = torch.stack(all_points_list) if len(all_points_list) > 0 else torch.zeros(0, 0)
+    if all_points.size(1) > 2:
+        if pca_dim == 3:
+            axis = Axes3D(pca_fig)
+        pca = TSNE(pca_dim, perplexity = 50)
+        transformed_points = pca.fit_transform(all_points.cpu())
+        # explained_variance = pca.explained_variance_ratio_.sum()
+        # plt.title(f"t-SNE of UniRep representations")
+
+        # # Make explained variance figure
+        # variance_fig = plt.figure()
+        # plt.title("Explained variance of principal components")
+        # plt.xlabel("Principal components")
+        # plt.ylabel("Ratio of variance")
+        # plt.ylim((0, 1))
+
+        # pca_highdim = PCA(all_points.size(1))
+        # pca_highdim.fit(all_points.cpu())
+        # explained_variances = pca_highdim.explained_variance_ratio_
+        # plt.plot(range(len(explained_variances)), explained_variances, label = "Explained variance ratio")
+        # plt.legend()
+
+        # if name is not None:
+        #     variance_fig.savefig(name.with_name("explained_variance").with_suffix(figure_type))
+        # plt.close(variance_fig)
+        # plt.figure(pca_fig.number)
+
+    count = 0
+    for label, points in scatter_dict.items():
+        l = len(points)
+        points = transformed_points[count:count + l]
+        count += l
+        if points.shape[1] == 2:
+            plt.scatter(points[:, 0], points[:, 1], s = 5, label = label)
+        elif points.shape[1] > 2:
+            if pca_dim == 2:
+                plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 5, label = label)
+            elif pca_dim == 3:
+                axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 5, label = label)
+
+    plt.legend(bbox_to_anchor = (1.04, 1), markerscale = 6, fontsize = 14)
+
+    if name is not None:
+        pca_fig.savefig(name.with_suffix(figure_type), bbox_inches = "tight")
+
+    if show:
+        plt.show()
+
+    plt.close(pca_fig)
 
 if __name__ == "__main__":
     device = torch.device("cuda")

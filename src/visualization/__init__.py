@@ -3,5 +3,6 @@ from .visualize import (
 	plot_loss,
 	plot_spearman,
 	plot_learning_rates,
-	plot_softmax
+	plot_softmax,
+	plot_representations
 )
