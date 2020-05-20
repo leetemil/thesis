@@ -13,6 +13,10 @@
 % \titlespacing*{\subsection}   {0pt}{8pt plus 2pt minus 2pt}{2pt plus 1pt minus 1pt}
 % \titlespacing*{\subsubsection}{0pt}{4pt plus 1pt minus 1pt}{2pt plus 1pt minus 1pt}
 
+% tabular horizontal and vertical strecting
+\setlength{\tabcolsep}{6pt} % Column spacing. Default value: 6pt
+\renewcommand{\arraystretch}{1.5} % Row spacing. Default value: 1
+
 % Declaring definitions, theorems etc.
 \newtheorem*{definition}{Definition}
 \newtheorem*{theorem}{Theorem}
@@ -30,7 +34,7 @@
 
 % -- Commands
 % TODO macro
-\newcommand{\todo}[1]{{\color{red} TODO: { #1 }}}
+\newcommand{\todo}[1]{\iftodo {\color{red} TODO: { #1 }} \fi }
 
 % Internal formatting method
 \newcommand{\mo}[1]{{\mathopen{} #1 \mathclose{}}}
@@ -62,9 +66,18 @@
 \newcommand{\pxz}{p(\ve{x} \mid \ve{z})}
 \newcommand{\pz}{p(\ve{z})}
 \newcommand{\px}{p(\ve{x})}
+\newcommand{\pX}{p(\ve{X})}
+\newcommand{\qtheta}{q(\ve{\theta})}
+\newcommand{\ptheta}{p(\ve{\theta})}
+\newcommand{\pXtheta}{p(\ve{X} \mid \ve{\theta})}
+\newcommand{\pthetaX}{p(\ve{\theta} \mid \ve{X})}
+\newcommand{\qthetaX}{q(\ve{\theta} \mid \ve{X})}
 
 % Vector
 \newcommand{\ve}[1]{\bm{ #1 }}
+
+% Matrix
+\newcommand{\mat}[1]{\mathbf{ #1 }}
 
 % Tensor
 \newcommand{\te}[1]{\mathsf{ #1 }}

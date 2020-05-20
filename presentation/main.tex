@@ -2,7 +2,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-
+\usepackage{graphicx}
 
 \title{\large Deep Unsupervised Representation Learning on Protein
 Sequences using Variational Autoencoders}
@@ -39,11 +39,11 @@ This is desirable because it (potentially) yields a scalable, data-efficient pro
     \end{itemize}
     \end{block}
     
-    \begin{block}{Approaches}
+    \begin{block}{Approaches (so far)}
     \begin{itemize}
         \item VAE: Aligned, local, latent space based representations.
         \item UniRep: Unaligned, global, mean-based (proteins not recoverable from representations).
-        \item WaveNet: Unaligned, local, auto-regressive (convolutions). Proteins potentially recoverable from representations.
+        \item WaveNet: Unaligned, local, auto-regressive (convolutions). Direct sequence-to-sequence model, but an inner representation could potentially be extracted.
     \end{itemize}
     \end{block}
 \end{frame}
@@ -51,9 +51,17 @@ This is desirable because it (potentially) yields a scalable, data-efficient pro
 \begin{frame}{Preliminary results}
     \begin{itemize}
         \item Our VAE with Bayesian decoder parameters achieves $\approx 0.72$ $\rho$ correlation on mutation effect prediction ($\beta$ lactamase family). Comparable to existing results, but room for improvement.
-        \item UniRep pretrained globally, finetuned locally performs significantly worse. Around 0.5 $\rho$.
-        \item WaveNet is originally used for sound, but has shown promising results on proteins ($\geq 0.7 \rho$). Currently working on this.
+        \item UniRep pretrained globally, fine-tuned locally performs significantly worse. Around 0.37 $\rho$. Result is not final; there are significant details in finetuning left.
+        \item WaveNet is originally used for sound, but has shown promising results (by others) on proteins ($\geq 0.7 \rho$). Currently working on this.
     \end{itemize}
+\end{frame}
+
+\begin{frame}{Projection of VAE representations}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\linewidth]{presentation/vae.png}
+\end{figure}
+    
 \end{frame}
 
 \end{document}

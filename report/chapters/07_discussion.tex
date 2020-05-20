@@ -1,0 +1,31 @@
+\chapter{Discussion}
+% Noget Daniele har sagt: it will be useful to use representation to explain the behavior of variants of protein that we know, but we need to optimize. For example, the representation is important to help explaining the experimental results of variants screening, trying to map the effect of mutations, especially in case when we don’t have a structure.
+
+% from master thesis contract: Discuss how a well-performing representation learning model on protein sequences can be used for exploring new proteins and their properties, and other potential applications, if any.
+
+\todo{discuss why we have used VAE and not some other probabilistic sampling scheme. Reason: bullet 1 and 2, page 2 in https://arxiv.org/pdf/1312.6114.pdf}
+
+\todo{discuss the importance of neff and weights. something like: this makes a significant difference, but requires an alignment. discuss how to circumvent the alignment by getting some other similarity-measure that can be used to cluster proteins into similar groups.}
+
+\todo{maybe check out this ? https://www.hindawi.com/journals/bmri/2019/2796971/}
+
+%  discuss the trade-offs between the latent spaces of different models
+An RNN is just one example of a sequence-to-sequence model.
+\section{Comparison of experimental Representations}
+
+% discuss why alignments are so powerful/important for the results
+
+\section{UniRep}
+\todo{discuss TAPE results}
+\todo{note difference in remote homolgy in no pretrain vs pretrain. this makes sense, as remote homology is a task that depends on global, general properties as you need to classify to folds. therefore it makes sense that it is benefitial to have seen many proteins in a broad context. Plus, this is state of the art according to TAPE leaderboard.}
+
+\section{Protein Exploration}
+
+\section{Representation Applications}
+
+\todo{discuss how to extract representation from autoregressive models (wavenet tansformer, unirep}
+
+\todo{discuss the learning objective used for extracting representations. We use reconstruction loss. The problems with this is that it is a function on the ``sequence space'' and not in some more abstract space (like the representation space or on spearman rho measure itself). If we can map data space to good representations, i.e. to representation space, then reasoning, planning etc. in that space is much more convenient, and hence we would like to measure loss based on that space as well. We do this a little bit I think, as the softmax predictions are conditioned on the representations. Got this point from Yoshua Bengio \href{https://www.youtube.com/watch?time\_continue=376\&v=Yr1mOzC93xs\&feature=emb\_logo}{here}. One way to maybe do this is to have encoders, but not decoders, i.e. you go to latent space and work on objective functions there.}
+
+\section{Further Work}
+\todo{discuss alternatives to variational inference, namely MCMC sampling. MCMC sampling has less error if you are willing to wait long enough (takes many samples to coverge), so over time MCMC is better than VI. maybe check this https://arxiv.org/pdf/1410.6460.pdf and Langevin monte carlo}

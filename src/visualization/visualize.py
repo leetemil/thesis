@@ -35,7 +35,7 @@ BLAT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_1_b
 BLAT_HMMERBIT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105_LABELS.a2m"))
 
 def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subset_labels = True, show = False, pca_dim = 2):
-    pca_fig = plt.figure()
+    pca_fig = plt.figure(figsize = [10.0, 10.0])
     subset_labels = set([
         "Acidobacteria",
         "Actinobacteria",
@@ -69,7 +69,9 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
                     if not only_subset_labels:
                         scatter_dict["Others"].append(point)
 
-    plt.title(f"Encoded points")
+    # plt.title(f"Encoded points", fontsize = 18)
+    plt.xlabel("$z_1$", fontsize = 16)
+    plt.ylabel("$z_2$", fontsize = 16)
     all_points_list = list(itertools.chain(*scatter_dict.values()))
     all_points = torch.stack(all_points_list) if len(all_points_list) > 0 else torch.zeros(0, 0)
     if all_points.size(1) > 2:
@@ -91,26 +93,31 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
         pca_highdim.fit(all_points)
         explained_variances = pca_highdim.explained_variance_ratio_
         plt.plot(range(len(explained_variances)), explained_variances, label = "Explained variance ratio")
-        plt.legend()
+
+
 
         if name is not None:
             variance_fig.savefig(name.with_name("explained_variance").with_suffix(figure_type))
         plt.close(variance_fig)
         plt.figure(pca_fig.number)
 
+    size = 5
     for label, points in scatter_dict.items():
         points = torch.stack(points)
         if points.size(1) == 2:
-            plt.scatter(points[:, 0], points[:, 1], s = 1, label = label)
+            plt.scatter(points[:, 0], points[:, 1], s = size, label = label)
         elif points.size(1) > 2:
             pca_points = pca.transform(points)
             if pca_dim == 2:
-                plt.scatter(pca_points[:, 0], pca_points[:, 1], s = 1, label = label)
+                plt.scatter(pca_points[:, 0], pca_points[:, 1], s = size, label = label)
             elif pca_dim == 3:
-                axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = 1, label = label)
+                axis.scatter(pca_points[:, 0], pca_points[:, 1], pca_points[:, 2], s = size, label = label)
+
+
+    plt.legend(bbox_to_anchor=(1.04, 1), markerscale = 6, fontsize = 14)
 
     if name is not None:
-        pca_fig.savefig(name.with_suffix(figure_type))
+        pca_fig.savefig(name.with_suffix(figure_type), bbox_inches='tight')
 
     if show:
         plt.show()
