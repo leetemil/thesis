@@ -157,6 +157,9 @@ class VAE(nn.Module):
         sample = z.exp().argmax(dim = -1)
         return sample
 
+    def get_representation(self, xb):
+        return self.encode(xb).mean
+
     def sample_random(self, batch_size = 1):
         z = torch.randn(batch_size, self.layer_sizes[-1])
         return self.sample(z)
@@ -200,6 +203,19 @@ class VAE(nn.Module):
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters: {num_params:,}\n"
                 f"  Bayesian: {self.bayesian}\n")
+
+    def get_predictions(self, xb):
+        """
+        Returns log-softmax distributions of amino acids over the input sequences.
+
+        Returns:
+        Tensor: shape (batch size, num tokens, seq length)
+        """
+        encoded_distribution = self.encode(xb)
+        z = encoded_distribution.rsample((self.z_samples,))
+        recon_xb = self.decode(z.flatten(0, 1))
+        return recon_xb.permute(0, 2, 1)
+
 
     def protein_logp(self, x):
         encoded_distribution = self.encode(x)

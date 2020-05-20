@@ -18,7 +18,7 @@ from models import VAE
 from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
 
 parser = argparse.ArgumentParser(description = "Make some figures for the provided model", formatter_class = argparse.ArgumentDefaultsHelpFormatter, fromfile_prefix_chars = "@")
-parser.add_argument("--model_path", type = Path, default = Path("results/emil_vae/model.torch"), help = "Model path.")
+parser.add_argument("--model_path", type = Path, default = Path("results/BLAT_ECOLX_Ranganathan2015/model.torch"), help = "Model path.")
 args = parser.parse_args()
 
 PICKLE_FILE = Path('data/files/mutation_data.pickle')
@@ -41,12 +41,17 @@ with open(PICKLE_FILE, 'rb') as f:
     proteins = pickle.load(f)
     p = proteins[sheet].dropna(subset=['mutation_effect_prediction_vae_ensemble']).reset_index(drop=True)
 
-wt_seq = next(SeqIO.parse(data_path, "fasta"))
-wt = seq2idx(wt_seq, device)
+sequences = SeqIO.parse(data_path, "fasta")
+wt_seq = next(sequences)
+other_seq = next(sequences)
+
+chosen_seq = wt_seq
+
+wt = seq2idx(chosen_seq, device)
 encoded = model.encode(wt.unsqueeze(0)).mean
 decoded = model.sample(encoded)
 
-in_seq = str(wt_seq.seq).upper()
+in_seq = str(chosen_seq.seq).upper()
 out_seq = idx2seq(decoded.squeeze().cpu().numpy()).replace('<mask>', '.')
 
 accuracy = sum(a1 == a2 for (a1, a2) in zip(in_seq, out_seq)) / len(in_seq)

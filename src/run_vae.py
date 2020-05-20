@@ -9,8 +9,8 @@ from torch import optim
 
 from models import VAE
 from data import get_protein_dataloader, NUM_TOKENS, get_datasets
-from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction
-from visualization import plot_data, plot_loss, plot_spearman
+from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction, make_mutants
+from visualization import plot_data, plot_loss, plot_spearman, plot_softmax, plot_protein_family_and_mutations, plot_tsne
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -31,7 +31,7 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device_name}")
 
     # Load data
-    all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio)
+    all_data, train_data, val_data = get_datasets(args.data, device, args.train_ratio, use_saved = True)
 
     # Construct dataloaders for batches
     train_loader = get_protein_dataloader(train_data, batch_size = args.batch_size, shuffle = True, random_weighted_sampling = args.random_weighted_sampling)
@@ -82,8 +82,11 @@ if __name__ == "__main__" or __name__ == "__console__":
         val_param_klds = []
         val_total_losses = []
         spearman_rhos = []
+
+        subset_labels = True
+
         if args.visualize_interval != "never":
-            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show, only_subset_labels=True)
+            plot_data(args.results_dir / Path(f"epoch_0_val_loss_inf.png") if save else None, args.figure_type, model, all_data, args.batch_size, show = show, only_subset_labels=subset_labels)
         for epoch in range(1, args.epochs + 1):
             start_time = time.time()
             train_loss, train_metrics = train_epoch(epoch = epoch, model = model, optimizer = optimizer, train_loader = train_loader, log_interval = args.log_interval, clip_grad_norm = args.clip_grad_norm, clip_grad_value = args.clip_grad_value, random_weighted_sampling = args.random_weighted_sampling)
@@ -128,7 +131,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                     rho_str = f" Spearman's Rho: {rho:.3f}"
 
                 name = args.results_dir / Path(f"epoch_{epoch}_loss_{loss_value_str}.png") if save else None
-                plot_data(name, args.figure_type, model, all_data, rho, args.batch_size, show = show, only_subset_labels = True)
+                plot_data(name, args.figure_type, model, all_data, rho, args.batch_size, show = show, only_subset_labels = subset_labels)
 
             elif args.patience:
                 # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
@@ -156,6 +159,28 @@ if __name__ == "__main__" or __name__ == "__console__":
                 model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
                 print("Model loaded.")
             rho = mutation_effect_prediction(model, args.data, args.query_protein, args.data_sheet, args.metric_column, device, args.ensemble_count, args.results_dir)
+
+            softmax_proteins, *_ = next(iter(train_loader))
+            softmax_proteins = softmax_proteins[:4]
+            predictions = model.get_predictions(softmax_proteins).permute(0, 2, 1).exp().cpu().numpy()
+            softmax_name = args.results_dir / Path("softmax.png")
+            plot_softmax(softmax_name, predictions)
+
+            mutants_fn = make_mutants(args.query_protein, args.data_sheet, args.metric_column, device)
+            mutant_data = next(mutants_fn)
+
+            plot_tsne(args.results_dir / Path("tsne.png"), args.figure_type, model, all_data, rho, args.batch_size, show = show, only_subset_labels = subset_labels)
+            breakpoint()
+
+            plot_protein_family_and_mutations(
+                model = model,
+                protein_family_data = all_data,
+                mutant_data = mutant_data,
+                batch_size = args.batch_size,
+                model_path = args.results_dir
+            )
+
+
         print(f'Spearman\'s Rho: {rho}')
 
     except KeyboardInterrupt:
