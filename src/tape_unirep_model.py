@@ -9,7 +9,7 @@ from scipy import stats
 from models import UniRep
 
 class UniRepReimpConfig(ProteinConfig):
-    def __init__(self, num_tokens = 30, padding_idx = 0, embed_size: int = 10, hidden_size: int = 512, num_layers: int = 1, representation = "mean", **kwargs):
+    def __init__(self, num_tokens = 30, padding_idx = 0, embed_size: int = 10, hidden_size: int = 512, num_layers: int = 1, representation = "mean", train_inner = True, **kwargs):
         super().__init__(**kwargs)
         self.num_tokens = num_tokens
         self.padding_idx = padding_idx
@@ -18,6 +18,7 @@ class UniRepReimpConfig(ProteinConfig):
         self.num_layers = num_layers
         self.initializer_range = 0.02
         self.representation = representation
+        self.train_inner = train_inner
 
 class UniRepReimpAbstractModel(ProteinModel):
     config_class = UniRepReimpConfig
@@ -36,14 +37,21 @@ class UniRepReimpModel(UniRepReimpAbstractModel):
     def __init__(self, config: UniRepReimpConfig):
         super().__init__(config)
         self.inner_model = UniRep(config.num_tokens, config.padding_idx, config.embed_size, config.hidden_size, config.num_layers)
-        self.init_weights()
         self.representaton = config.representation
+        self.train_inner = config.train_inner
+
+        self.init_weights()
 
     def forward(self, input_ids, input_mask = None):
         if input_mask is None:
             input_mask = torch.ones_like(input_ids)
 
-        out, state = self.inner_model.run_rnn(input_ids)
+        if self.train_inner:
+            out, state = self.inner_model.run_rnn(input_ids)
+        else:
+            with torch.no_grad():
+                self.inner_model.eval()
+                out, state = self.inner_model.run_rnn(input_ids)
 
         if self.representaton == "mean":
             representations = out.mean(1)
@@ -53,42 +61,6 @@ class UniRepReimpModel(UniRepReimpAbstractModel):
             raise ValueError(f"Unrecognized representation type {self.representation}.")
 
         return (out, representations)
-
-# @registry.register_task_model('language_modeling', 'unirep_reimp')
-# class UniRepReimpForLM(UniRepReimpAbstractModel):
-#     # TODO: Fix this for UniRep - UniRep changes the size of the targets
-
-#     def __init__(self, config):
-#         super().__init__(config)
-
-#         self.unirep = UniRepModel(config)
-#         self.feedforward = nn.Linear(config.hidden_size, config.vocab_size - 1)
-
-#         self.init_weights()
-
-#     def forward(self,
-#                 input_ids,
-#                 input_mask=None,
-#                 targets=None):
-
-#         outputs = self.unirep(input_ids, input_mask=input_mask)
-
-#         sequence_output, pooled_output = outputs[:2]
-#         prediction_scores = self.feedforward(sequence_output)
-
-#         # add hidden states and if they are here
-#         outputs = (prediction_scores,) + outputs[2:]
-
-#         if targets is not None:
-#             targets = targets[:, 1:]
-#             prediction_scores = prediction_scores[:, :-1]
-#             loss_fct = nn.CrossEntropyLoss(ignore_index=-1)
-#             lm_loss = loss_fct(
-#                 prediction_scores.view(-1, self.config.vocab_size), targets.view(-1))
-#             outputs = (lm_loss,) + outputs
-
-#         # (loss), prediction_scores, (hidden_states)
-#         return outputs
 
 @registry.register_task_model('fluorescence', 'unirep_reimp')
 @registry.register_task_model('stability', 'unirep_reimp')
