@@ -56,7 +56,7 @@ class UniRepReimpModel(UniRepReimpAbstractModel):
         if self.representaton == "mean":
             representations = out.mean(1)
         elif self.representaton == "last":
-            representations = state[0]
+            representations = state[0].squeeze()
         else:
             raise ValueError(f"Unrecognized representation type {self.representation}.")
 
