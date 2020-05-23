@@ -67,8 +67,9 @@ class WaveNetModel(WaveNetAbstractModel):
             config.bias,
             config.dropout,
             config.bayesian,
-            config.backwards
+            config.backwards,
         )
+        self.train_inner = config.train_inner
         self.init_weights()
 
     def forward(self, input_ids, input_mask = None):
