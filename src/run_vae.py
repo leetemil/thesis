@@ -7,10 +7,12 @@ from pathlib import Path
 import torch
 from torch import optim
 
+import matplotlib.pyplot as plt
+
 from models import VAE
 from data import get_protein_dataloader, NUM_TOKENS, get_datasets
 from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction, make_mutants
-from visualization import plot_data, plot_loss, plot_spearman, plot_softmax, plot_protein_family_and_mutations, plot_tsne
+from visualization import plot_data, plot_loss, plot_spearman, plot_softmax, plot_protein_family_and_mutations, plot_tsne, plot_gaussian_distribution
 
 if __name__ == "__main__" or __name__ == "__console__":
     # Argument postprocessing
@@ -59,6 +61,34 @@ if __name__ == "__main__" or __name__ == "__console__":
         print(f"Loading saved model from {model_save_name}...")
         model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
+
+    # for layer in [model.decode_layers[3]]:#[model.decode_layers[0], model.decode_layers[3]]:
+    #     print(len(layer.weight))
+    #     # for i in range(len(layer.weight)):
+
+    #     fig, axs = plt.subplots(2)
+    #     # fig.suptitle('Vertically stacked subplots')
+    #     # axs[0].plot(x, y)
+    #     # axs[1].plot(x, -y)
+
+    #     for n, i in enumerate([0, 32]):
+    #         # plt.figure(figsize = [10, 3])
+
+    #         if i == 32:
+    #             axs[n].set_ylim([0,15])
+
+    #         means = layer.weight_mean[i]
+    #         logvars = layer.weight_logvar[i]
+
+    #         for j in range(len(means)):
+    #             mean = means[j].detach().cpu()
+    #             logvar = logvars[j].detach().cpu()
+    #             plot_gaussian_distribution(mean, logvar, axs[n])
+
+    #     plt.tight_layout()
+    #     plt.savefig(f'../report/figures/bayesian_weighs.png', bbox_inces = 'tight')
+    #     plt.show()
+    # breakpoint()
 
     # Train, validate, save
     show = False

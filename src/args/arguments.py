@@ -117,6 +117,8 @@ def get_wavenet_args(pretrain = False):
         parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
         parser.add_argument("-vr", "--val_ratio", type = float, default = 0.0, help = "What fraction of data to use for validation.")
         parser.add_argument("-vs", "--validation_split_seed", type = int, default = None, help = "Seed to use for validation set splitting.")
+        parser.add_argument("-w", "--weights", action = "store_true", dest = "use_weights", default = False, help = "Extract weights from dataset.")
+        parser.add_argument("-no_w", "--no_weights", action = "store_false", dest = "use_weights", default = True, help = "Do not extract weights from dataset.")
 
     mutation_effect_prediction_args(parser)
     parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
@@ -134,8 +136,6 @@ def get_wavenet_args(pretrain = False):
     parser.add_argument("-no_alr", "--no_anneal_learning_rates", action = "store_false", dest = "anneal_learning_rates", default = True, help = "Do not anneal learning rates.")
     parser.add_argument("-bayes", "--bayesian_model", action = "store_true", dest = "bayesian", default = False, help = "Use bayesian parameters of the model.")
     parser.add_argument("-no_bayes", "--no_bayesian_model", action = "store_false", dest = "bayesian", default = True, help = "Do not use bayesian parameters of the model.")
-    parser.add_argument("-w", "--weights", action = "store_true", dest = "use_weights", default = False, help = "Extract weights from dataset.")
-    parser.add_argument("-no_w", "--no_weights", action = "store_false", dest = "use_weights", default = True, help = "Do not extract weights from dataset.")
 
     args = parser.parse_args()
 

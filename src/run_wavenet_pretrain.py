@@ -13,12 +13,9 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from models import WaveNet
 from data import IterProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS
-from training import train_batch, validate, readable_time, get_memory_usage, mutation_effect_prediction
-from visualization import plot_spearman
+from training import train_batch, validate, readable_time, get_memory_usage
 
-
-if __name__ == "__main__" or __name__ == "__console__":
-    # Argument postprocessing
+if __name__ in ["__main__", "__console__"]:
     # Seed
     if args.seed is not None:
         torch.manual_seed(args.seed)
@@ -75,14 +72,15 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     if args.multi_gpu:
         model = nn.DataParallel(model)
-    model.to(device)
 
+    model.to(device)
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate)
 
     if args.anneal_learning_rates:
         T_0 = 1
         T_mult = 2
         scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult)
+
     else:
         scheduler = None
 
@@ -97,9 +95,11 @@ if __name__ == "__main__" or __name__ == "__console__":
             model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
-    best_val_loss = float("inf")
     ensemble_count = args.ensemble_count if args.bayesian else 0
     patience = args.patience
+
+    # Training variables
+    best_val_loss = float("inf")
     seqs_processed = 0
     acc_train_loss = 0
     train_loss_count = 0

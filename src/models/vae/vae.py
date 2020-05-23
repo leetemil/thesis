@@ -310,8 +310,11 @@ class VAE(nn.Module):
         if self.weight_loss:
             recon_loss *= weights
             kld_loss *= weights
+            # Emil: This change is not tested. Maybe revert to simply always do .mean()
+            recon_kld_loss = (recon_loss + kld_loss).sum()
 
-        recon_kld_loss = torch.mean(recon_loss + kld_loss)
+        else:
+            recon_kld_loss = torch.mean(recon_loss + kld_loss)
 
         if self.bayesian and self.use_param_loss:
             param_kld = self.warm_up_scale * self.global_parameter_kld() / neff

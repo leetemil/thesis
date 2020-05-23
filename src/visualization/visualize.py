@@ -7,6 +7,7 @@ import numpy as np
 from Bio import SeqIO
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+import scipy.stats as stats
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -127,11 +128,12 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
         plt.title(f"PCA of encoded points ({explained_variance:.3f} explained variance). Spearman's $\\rho$: {rho:.3f}")
 
         # Make explained variance figure
-        variance_fig = plt.figure()
+        variance_fig = plt.figure(figsize = [10, 3])
         plt.title("Explained variance of principal components")
         plt.xlabel("Principal components")
         plt.ylabel("Ratio of variance")
-        plt.ylim((0, 1))
+        # plt.ylim((0, 1))
+        plt.ylim((0, 0.2))
 
         pca_highdim = PCA(all_points.size(1))
         pca_highdim.fit(all_points)
@@ -139,7 +141,8 @@ def plot_data(name, figure_type, model, dataset, rho, batch_size = 64, only_subs
         plt.plot(range(len(explained_variances)), explained_variances, label = "Explained variance ratio")
 
         if name is not None:
-            variance_fig.savefig(name.with_name("explained_variance").with_suffix(figure_type))
+            plt.tight_layout()
+            variance_fig.savefig(name.with_name("explained_variance").with_suffix(figure_type), bbox_inces = 'tight')
         plt.close(variance_fig)
         plt.figure(pca_fig.number)
 
@@ -192,6 +195,7 @@ def plot_softmax(name, predictions):
         ax.set_yticklabels(list(acids))
         # ax.set_title(seq.id)
 
+    plt.tight_layout()
     plt.savefig(name, bbox_inces = 'tight')
     plt.close(fig)
 
@@ -322,6 +326,11 @@ def plot_protein_family_and_mutations(model, protein_family_data, mutant_data, b
     plt.savefig(model_path / Path("family_and_mutations.png"), bbox_inces = 'tight')
     plt.show()
     return
+
+def plot_gaussian_distribution(mean, logvar, fig):
+    std = (0.5 * logvar).exp()
+    x = np.linspace(mean - 3 * std, mean + 3 * std, 100)
+    fig.plot(x, stats.norm.pdf(x, mean, std))
 
 # if __name__ == "__main__":
 #     device = torch.device("cuda")

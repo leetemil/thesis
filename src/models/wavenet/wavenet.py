@@ -117,11 +117,16 @@ class WaveNet(nn.Module):
         # Compare each timestep in cross entropy loss
         if loss_reduction == "mean":
             nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = "none").sum(1)
+            lengths = mask.sum(1)
+            nll_loss /= lengths
 
             if weights is not None:
+                # weighted mean
                 nll_loss *= weights
+                nll_loss = nll_loss.sum()
 
-            nll_loss = nll_loss.mean()
+            else:
+                nll_loss = nll_loss.mean()
         else:
             nll_loss = F.nll_loss(pred, true, ignore_index = 0, reduction = "none")
 

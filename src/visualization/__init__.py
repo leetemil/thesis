@@ -6,5 +6,6 @@ from .visualize import (
 	plot_softmax,
 	plot_mutations,
 	plot_protein_family_and_mutations,
-	plot_tsne
+	plot_tsne,
+	plot_gaussian_distribution
 )
