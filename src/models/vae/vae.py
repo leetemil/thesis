@@ -16,7 +16,7 @@ from ..utils import smooth_one_hot
 class VAE(nn.Module):
     """Variational Auto-Encoder for protein sequences with optional variational approximation of global parameters"""
 
-    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, use_bayesian = True, num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = False, label_smoothing = 0.0, warm_up = 0):
+    def __init__(self, layer_sizes, num_tokens, z_samples = 4, dropout = 0.5, use_bayesian = True, num_patterns = 4, inner_CW_dim = 40, use_param_loss = True, use_dictionary = False, label_smoothing = 0.0, warm_up = 0, weight_loss = True):
         super().__init__()
 
         assert len(layer_sizes) >= 2
@@ -34,6 +34,7 @@ class VAE(nn.Module):
         self.label_smoothing = label_smoothing
         self.warm_up = warm_up
         self.warm_up_scale = 0
+        self.weight_loss = weight_loss
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
 
@@ -79,7 +80,7 @@ class VAE(nn.Module):
         # Second-to-last decode layer has sigmoid activation
         s1, s2 = layer_sizes_doubles[-2]
         decode_layers.append(decode_mod(nn.Linear(s1, s2)))
-        decode_layers.append(nn.Sigmoid()) # Experimental
+        decode_layers.append(nn.ReLU()) # Experimental
         decode_layers.append(nn.Dropout(self.dropout))
 
         if not self.use_dictionary:
@@ -156,6 +157,9 @@ class VAE(nn.Module):
         sample = z.exp().argmax(dim = -1)
         return sample
 
+    def get_representation(self, xb):
+        return self.encode(xb).mean
+
     def sample_random(self, batch_size = 1):
         z = torch.randn(batch_size, self.layer_sizes[-1])
         return self.sample(z)
@@ -171,6 +175,7 @@ class VAE(nn.Module):
             warm_up_scale = self.warm_up_scale
         else:
             warm_up_scale = 1
+            self.weight_loss = True
 
         # Forward pass + loss + metrics
         encoded_distribution = self.encode(x)
@@ -198,6 +203,19 @@ class VAE(nn.Module):
                 f"  Layer sizes: {self.layer_sizes}\n"
                 f"  Parameters: {num_params:,}\n"
                 f"  Bayesian: {self.bayesian}\n")
+
+    def get_predictions(self, xb):
+        """
+        Returns log-softmax distributions of amino acids over the input sequences.
+
+        Returns:
+        Tensor: shape (batch size, num tokens, seq length)
+        """
+        encoded_distribution = self.encode(xb)
+        z = encoded_distribution.rsample((self.z_samples,))
+        recon_xb = self.decode(z.flatten(0, 1))
+        return recon_xb.permute(0, 2, 1)
+
 
     def protein_logp(self, x):
         encoded_distribution = self.encode(x)
@@ -286,19 +304,26 @@ class VAE(nn.Module):
         return global_kld
 
     def vae_loss(self, recon_x, x, encoded_distribution, weights, neff, warm_up_scale):
-        recon_loss = self.recon_loss(recon_x, x) * weights
-        kld_loss = self.kld_loss(encoded_distribution) * weights
+        recon_loss = self.recon_loss(recon_x, x)
+        kld_loss = self.kld_loss(encoded_distribution)
 
-        weighted_loss = torch.mean(recon_loss + kld_loss)
+        if self.weight_loss:
+            recon_loss *= weights
+            kld_loss *= weights
+            # Emil: This change is not tested. Maybe revert to simply always do .mean()
+            recon_kld_loss = (recon_loss + kld_loss).sum()
+
+        else:
+            recon_kld_loss = torch.mean(recon_loss + kld_loss)
 
         if self.bayesian and self.use_param_loss:
             param_kld = self.warm_up_scale * self.global_parameter_kld() / neff
-            total = weighted_loss + param_kld
+            total_loss = recon_kld_loss + param_kld
         else:
             param_kld = torch.zeros(1) + 1e-5
-            total = weighted_loss
+            total_loss = recon_kld_loss
 
-        return total, recon_loss.mean().item(), kld_loss.mean().item(), param_kld.item()
+        return total_loss, recon_loss.mean().item(), kld_loss.mean().item(), param_kld.item()
 
     def save(self, f):
         args_dict = {

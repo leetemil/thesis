@@ -22,6 +22,7 @@ class WaveNetConfig(ProteinConfig):
         dropout : float = 0.5,
         bayesian : bool = False,
         backwards : bool = False,
+        train_inner = True,
         **kwargs):
 
         super().__init__(**kwargs)
@@ -36,6 +37,7 @@ class WaveNetConfig(ProteinConfig):
         self.dropout = dropout
         self.bayesian = bayesian
         self.backwards = backwards
+        self.train_inner = train_inner
         self.initializer_range = 0.02 # stolen from unirep
 
 class WaveNetAbstractModel(ProteinModel):
@@ -65,14 +67,22 @@ class WaveNetModel(WaveNetAbstractModel):
             config.bias,
             config.dropout,
             config.bayesian,
-            config.backwards
+            config.backwards,
         )
+        self.train_inner = config.train_inner
         self.init_weights()
 
     def forward(self, input_ids, input_mask = None):
-        # if input_mask is None:
-        #     input_mask = torch.ones_like(input_ids)
-        representations = self.inner_model.get_representation(input_ids)
+        if input_mask is None:
+            input_mask = torch.ones_like(input_ids)
+
+        if self.train_inner:
+            representations = self.inner_model.get_representation(input_ids, input_mask)
+        else:
+            with torch.no_grad():
+                self.inner_model.eval()
+                representations = self.inner_model.get_representation(input_ids, input_mask)
+
         return representations
 
 @registry.register_task_model('fluorescence', 'wavenet')

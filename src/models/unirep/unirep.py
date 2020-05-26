@@ -30,8 +30,8 @@ class UniRep(nn.Module):
 
         # Pack padded sequence
         packed_seq = pack_padded_sequence(embedding, lengths, batch_first = True, enforce_sorted = False)
-        packed_out, _ = self.rnn(packed_seq)
-        return pad_packed_sequence(packed_out, batch_first = True)
+        packed_out, last = self.rnn(packed_seq)
+        return pad_packed_sequence(packed_out, batch_first = True)[0], lenghts, last
 
     def predict(self, xb, lengths):
         # Convert indices to embedded vectors
@@ -79,20 +79,6 @@ class UniRep(nn.Module):
         loss = F.nll_loss(pred.permute(0, 2, 1), true, ignore_index = self.padding_idx, reduction = "none")
         log_probabilities = -1 * loss.sum(dim = 1)
         return log_probabilities
-
-    def get_representations(self, xb, mask):
-        with torch.no_grad():
-            embedding = self.embed(xb)
-            hidden = None
-            if self.rnn_type == "mLSTM":
-                out, _ = self.rnn(embedding, hidden, mask)
-            else:
-                out, _ = self.rnn(embedding, hidden)
-
-            mask = mask.unsqueeze(-1)
-            masked_out = out * mask
-            representations = masked_out.sum(dim = 1) / mask.sum(dim = 1)
-            return representations
 
     def summary(self):
         num_params = sum(p.numel() for p in self.parameters())

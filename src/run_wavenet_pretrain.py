@@ -13,12 +13,9 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 
 from models import WaveNet
 from data import IterProteinDataset, get_variable_length_protein_dataLoader, NUM_TOKENS
-from training import train_batch, validate, readable_time, get_memory_usage, mutation_effect_prediction
-from visualization import plot_spearman
+from training import train_batch, validate, readable_time, get_memory_usage
 
-
-if __name__ == "__main__" or __name__ == "__console__":
-    # Argument postprocessing
+if __name__ in ["__main__", "__console__"]:
     # Seed
     if args.seed is not None:
         torch.manual_seed(args.seed)
@@ -75,18 +72,21 @@ if __name__ == "__main__" or __name__ == "__console__":
 
     if args.multi_gpu:
         model = nn.DataParallel(model)
-    model.to(device)
 
+    model.to(device)
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate)
 
     if args.anneal_learning_rates:
         T_0 = 1
         T_mult = 2
         scheduler = CosineAnnealingWarmRestarts(optimizer, T_0, T_mult)
+
     else:
         scheduler = None
 
     model_save_name = args.results_dir / Path("model.torch")
+    model_save_name_latest = args.results_dir / Path("model_latest.torch")
+
     if model_save_name.exists():
         print(f"Loading saved model from {model_save_name}...")
         if args.multi_gpu:
@@ -95,9 +95,11 @@ if __name__ == "__main__" or __name__ == "__console__":
             model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
-    best_val_loss = float("inf")
     ensemble_count = args.ensemble_count if args.bayesian else 0
     patience = args.patience
+
+    # Training variables
+    best_val_loss = float("inf")
     seqs_processed = 0
     acc_train_loss = 0
     train_loss_count = 0
@@ -118,7 +120,6 @@ if __name__ == "__main__" or __name__ == "__console__":
         stop = False
         while not stop:
             for batch_idx, xb in enumerate(train_loader):
-                # train_loss, train_metrics = train_batch(epoch, model, optimizer, train_loader, args.log_interval, args.clip_grad_norm, args.clip_grad_value, scheduler)
                 batch_size, batch_train_loss, batch_metrics_dict = train_batch(model, optimizer, xb, args.clip_grad_norm, args.clip_grad_value, scheduler=scheduler, epoch=epoch, batch = batch_idx, num_batches=total_batches)
 
                 seqs_processed += batch_size
@@ -128,7 +129,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                 print_seqs_count += batch_size
                 if print_seqs_count >= print_every_samples:
                     process = psutil.Process(os.getpid())
-                    print(f'Progress: {100 * seqs_processed / train_seqs_per_epoch:6.3f}% of epoch. Total time: {readable_time(time.time() - print_seqs_overall_time):>7s}. Iteration time: {readable_time(time.time() - print_seqs_iteration_time):>7s} CPU Memory: {process.memory_info().rss}')
+                    print(f'Progress: {100 * seqs_processed / train_seqs_per_epoch:6.3f}% of epoch. Total time: {readable_time(time.time() - print_seqs_overall_time):>7s}. Iteration time: {readable_time(time.time() - print_seqs_iteration_time):>7s} CPU Memory: {process.memory_info().rss / (1024**3)} GiB')
                     print_seqs_iteration_time = time.time()
                     print_seqs_count = 0
 
@@ -139,6 +140,12 @@ if __name__ == "__main__" or __name__ == "__console__":
                     acc_train_loss = 0
                     train_loss_count = 0
                     val_loss, _ = validate(epoch, model, val_loader)
+
+                    # If save the latest model
+                    if args.multi_gpu:
+                        model.module.save(model_save_name_latest)
+                    else:
+                        model.save(model_save_name_latest)
 
                     improved = val_loss < best_val_loss
 
@@ -151,6 +158,7 @@ if __name__ == "__main__" or __name__ == "__console__":
                         print(f"Validation loss improved from {best_val_loss:.5f} to {val_loss:.5f}. Saved model to: {model_save_name}")
                         best_val_loss = val_loss
                         patience = args.patience
+
                     elif args.patience:
                         # If save path and patience was specified, and model has not improved, decrease patience and possibly stop
                         patience -= 1
@@ -166,13 +174,6 @@ if __name__ == "__main__" or __name__ == "__console__":
                     print(f"Summary epoch: {epoch} Train loss: {train_loss:.5f} Validation loss: {val_loss:.5f} Time: {readable_time(time.time() - start_time)} Memory: {get_memory_usage(device):.2f}GiB", end = "\n" if improved else "\n\n")
 
                     start_time = time.time()
-
-        with torch.no_grad():
-            if model_save_name.exists():
-                if args.multi_gpu:
-                    model.module.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
-                else:
-                    model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
 
     except KeyboardInterrupt:
         print(f"\n\nTraining stopped manually. Best validation loss achieved was: {best_val_loss:.5f}.\n")

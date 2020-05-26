@@ -34,10 +34,15 @@ def get_vae_args():
     parser.add_argument("-zs", "--z_samples", type = int, default = 1, help = "How many latent variables to sample per batch point.")
     mutation_effect_prediction_args(parser)
     parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
+    parser.add_argument("-ect", "--ensemble_count_training", type = int, default = 50, help = "How many samples of the model to use during training for evaluation as an ensemble.")
     parser.add_argument("-dict", "--dictionary", action = "store_true", dest = "dictionary", default = False, help = "Enables the dictionary of the VAE.")
     parser.add_argument("-no_dict", "--no_dictionary", action = "store_false", dest = "dictionary", default = True, help = "Disables the dictionary of the VAE.")
     parser.add_argument("-pl", "--param_loss", action = "store_true", dest = "param_loss", default = True, help = "Enables the param_loss.")
     parser.add_argument("-no_pl", "--no_param_loss", action = "store_false", dest = "param_loss", default = False, help = "Disables the param loss")
+
+    parser.add_argument("-rws", "--random_weighted_sampling", action = "store_true", dest = "random_weighted_sampling", default = False, help = "Enables batch sampling according to sample weights.")
+    parser.add_argument("-no_rws", "--no_random_weighted_sampling", action = "store_false", dest = "random_weighted_sampling", default = True, help = "Disables batch sampling according to sample weights.")
+
     parser.add_argument("-wu", "--warm_up", type = int, default = 0, help = "Number of warm-up batches. Will affect the scale of global param loss during warm-up.")
     parser.add_argument("-vi", "--visualize_interval", type = str, default = "improvement", choices = ["always", "improvement", "never"], help = "Visualize the output at every epoch (always), only at validation loss improvement or never.")
     parser.add_argument("-vs", "--visualize_style", type = str, default = "save", choices = ["save", "show", "both"], help = "Save or show the visualization, or both.")
@@ -112,6 +117,8 @@ def get_wavenet_args(pretrain = False):
         parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
         parser.add_argument("-vr", "--val_ratio", type = float, default = 0.0, help = "What fraction of data to use for validation.")
         parser.add_argument("-vs", "--validation_split_seed", type = int, default = None, help = "Seed to use for validation set splitting.")
+        parser.add_argument("-w", "--weights", action = "store_true", dest = "use_weights", default = False, help = "Extract weights from dataset.")
+        parser.add_argument("-no_w", "--no_weights", action = "store_false", dest = "use_weights", default = True, help = "Do not extract weights from dataset.")
 
     mutation_effect_prediction_args(parser)
     parser.add_argument("-ec", "--ensemble_count", type = int, default = 2000, help = "How many samples of the model to use for evaluation as an ensemble.")
@@ -129,8 +136,6 @@ def get_wavenet_args(pretrain = False):
     parser.add_argument("-no_alr", "--no_anneal_learning_rates", action = "store_false", dest = "anneal_learning_rates", default = True, help = "Do not anneal learning rates.")
     parser.add_argument("-bayes", "--bayesian_model", action = "store_true", dest = "bayesian", default = False, help = "Use bayesian parameters of the model.")
     parser.add_argument("-no_bayes", "--no_bayesian_model", action = "store_false", dest = "bayesian", default = True, help = "Do not use bayesian parameters of the model.")
-    parser.add_argument("-w", "--weights", action = "store_true", dest = "use_weights", default = False, help = "Extract weights from dataset.")
-    parser.add_argument("-no_w", "--no_weights", action = "store_false", dest = "use_weights", default = True, help = "Do not extract weights from dataset.")
 
     args = parser.parse_args()
 

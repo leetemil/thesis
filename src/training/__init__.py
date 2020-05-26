@@ -4,7 +4,7 @@ from .training import (
 	validate
 )
 
-from .mutation_data import mutation_effect_prediction
+from .mutation_data import mutation_effect_prediction, make_mutants
 
 from .utils import (
 	readable_time,

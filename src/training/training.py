@@ -23,7 +23,7 @@ def log_progress(epoch, time, progress, total, end, **kwargs):
             report += (f" {key}: {value}")
     print(report, end = end)
 
-def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, scheduler = None):
+def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_norm = None, clip_grad_value = None, scheduler = None, random_weighted_sampling = False):
     """
         epoch: Index of the epoch to run
         model: The model to run data through. Forward should return a tuple of (loss, metrics_dict).
@@ -47,9 +47,10 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
         learning_rates = []
 
     acc_metrics_dict = defaultdict(lambda: 0)
+
     for batch_idx, xb in enumerate(train_loader):
 
-        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, scheduler, epoch, batch_idx, num_batches)
+        batch_size, loss, batch_metrics_dict = train_batch(model, optimizer, xb, clip_grad_norm, clip_grad_value, scheduler, epoch, batch_idx, num_batches, random_weighted_sampling = random_weighted_sampling)
 
         progressed_data += batch_size
 
@@ -78,12 +79,16 @@ def train_epoch(epoch, model, optimizer, train_loader, log_interval, clip_grad_n
 
     return average_loss, metrics_dict
 
-def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None):
+def train_batch(model, optimizer, xb, clip_grad_norm = None, clip_grad_value = None, scheduler = None, epoch = None, batch = None, num_batches = None, random_weighted_sampling = False):
     model.train()
     batch_size = xb.size(0) if isinstance(xb, torch.Tensor) else xb[0].size(0)
 
     # Reset gradient for next batch
     optimizer.zero_grad()
+
+    if model.training and random_weighted_sampling:
+        # this is currently only implemented for the VAE model
+        model.weight_loss = False
 
     # Push whole batch of data through model.forward()
     if isinstance(xb, Tensor):
