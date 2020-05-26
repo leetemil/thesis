@@ -62,34 +62,6 @@ if __name__ == "__main__" or __name__ == "__console__":
         model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
-    # for layer in [model.decode_layers[3]]:#[model.decode_layers[0], model.decode_layers[3]]:
-    #     print(len(layer.weight))
-    #     # for i in range(len(layer.weight)):
-
-    #     fig, axs = plt.subplots(2)
-    #     # fig.suptitle('Vertically stacked subplots')
-    #     # axs[0].plot(x, y)
-    #     # axs[1].plot(x, -y)
-
-    #     for n, i in enumerate([0, 32]):
-    #         # plt.figure(figsize = [10, 3])
-
-    #         if i == 32:
-    #             axs[n].set_ylim([0,15])
-
-    #         means = layer.weight_mean[i]
-    #         logvars = layer.weight_logvar[i]
-
-    #         for j in range(len(means)):
-    #             mean = means[j].detach().cpu()
-    #             logvar = logvars[j].detach().cpu()
-    #             plot_gaussian_distribution(mean, logvar, axs[n])
-
-    #     plt.tight_layout()
-    #     plt.savefig(f'../report/figures/bayesian_weighs.png', bbox_inces = 'tight')
-    #     plt.show()
-    # breakpoint()
-
     # Train, validate, save
     show = False
     save = False
