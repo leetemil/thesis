@@ -73,14 +73,15 @@ class WaveNetModel(WaveNetAbstractModel):
         self.init_weights()
 
     def forward(self, input_ids, input_mask = None):
-        # if input_mask is None:
-        #     input_mask = torch.ones_like(input_ids)
+        if input_mask is None:
+            input_mask = torch.ones_like(input_ids)
+
         if self.train_inner:
-            representations = self.inner_model.get_representation(input_ids)
+            representations = self.inner_model.get_representation(input_ids, input_mask)
         else:
             with torch.no_grad():
                 self.inner_model.eval()
-                representations = self.inner_model.get_representation(input_ids)
+                representations = self.inner_model.get_representation(input_ids, input_mask)
 
         return representations
 

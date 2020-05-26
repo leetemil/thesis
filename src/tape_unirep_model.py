@@ -43,18 +43,15 @@ class UniRepReimpModel(UniRepReimpAbstractModel):
         self.init_weights()
 
     def forward(self, input_ids, input_mask = None):
-        if input_mask is None:
-            input_mask = torch.ones_like(input_ids)
-
         if self.train_inner:
-            out, state = self.inner_model.run_rnn(input_ids)
+            out, lengths, state = self.inner_model.run_rnn(input_ids)
         else:
             with torch.no_grad():
                 self.inner_model.eval()
-                out, state = self.inner_model.run_rnn(input_ids)
+                out, lengths, state = self.inner_model.run_rnn(input_ids)
 
         if self.representaton == "mean":
-            representations = out.mean(1)
+            representations = out.sum(1) / lengths.unsqueeze(1)
         elif self.representaton == "last":
             representations = state[0].squeeze()
         else:

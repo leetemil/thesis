@@ -31,7 +31,7 @@ class UniRep(nn.Module):
         # Pack padded sequence
         packed_seq = pack_padded_sequence(embedding, lengths, batch_first = True, enforce_sorted = False)
         packed_out, last = self.rnn(packed_seq)
-        return pad_packed_sequence(packed_out, batch_first = True)[0], last
+        return pad_packed_sequence(packed_out, batch_first = True)[0], lenghts, last
 
     def predict(self, xb, lengths):
         # Convert indices to embedded vectors

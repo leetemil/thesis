@@ -88,7 +88,7 @@ class WaveNet(nn.Module):
 
         return kld
 
-    def get_representation(self, xb, variant = "mean"):
+    def get_representation(self, xb, input_mask, variant = "mean"):
         # encode and, if needed, reverse sequences
         xb = self.preprocess(xb)
         xb = self.first_conv(xb)
@@ -96,9 +96,10 @@ class WaveNet(nn.Module):
 
         if variant == "mean":
             # return mean of channels across each sequence. Representation is shape num_channels
-            representation = xb.mean(2)
+            representation = xb.mul(input_mask.unsqueeze(1)).sum(2).div(input_mask.sum(1).unsqueeze(1))
 
         elif variant == "last":
+            raise NotImplementedError("Last not implemented")
             representation = xb[:, :, -1]
 
         else:
