@@ -13,7 +13,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from models import VAE
 from training import make_mutants
-from data import get_protein_dataloader, IUPAC_AMINO_IDX_PAIRS
+from data import get_protein_dataloader, get_variable_length_protein_dataLoader, IUPAC_AMINO_IDX_PAIRS
 
 def get_pfam_label_dict():
     file = Path("data/files/PF00144_full_length_sequences_labeled.fasta")
@@ -268,7 +268,7 @@ def plot_representations(name, figure_type, model, dataset, batch_size = 64, onl
             ids = [s.id for s in seqs]
 
             lengths = (xb != model.padding_idx).sum(dim = 1)
-            out, _ = model.run_rnn(xb)
+            out, *_ = model.run_rnn(xb)
             reprs = out.sum(1) / lengths.unsqueeze(1)
 
             for point, ID in zip(reprs, ids):
