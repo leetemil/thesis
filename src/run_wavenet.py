@@ -81,6 +81,11 @@ if __name__ == "__main__" or __name__ == "__console__":
         model.load_state_dict(torch.load(model_save_name, map_location = device)["state_dict"])
         print(f"Model loaded.")
 
+    if args.load_model.exists() and args.load_model.is_file():
+        print(f"Loading saved model from {args.load_model}...")
+        model.load_state_dict(torch.load(args.load_model, map_location = device)["state_dict"])
+        print(f"Model loaded.")
+
     best_loss = float("inf")
     ensemble_count = args.ensemble_count if args.bayesian else 0
     patience = args.patience
