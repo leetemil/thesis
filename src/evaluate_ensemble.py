@@ -3,6 +3,10 @@ args = get_evaluate_ensemble_args()
 
 from pathlib import Path
 import glob
+import pickle
+from Bio import SeqIO
+from data import get_datasets, NUM_TOKENS, IUPAC_SEQ2IDX, IUPAC_IDX2SEQ, seq2idx, idx2seq
+
 
 import torch
 from scipy.stats import spearmanr
@@ -75,3 +79,39 @@ with torch.no_grad():
 
     cor, _ = spearmanr(scores, predictions.cpu())
     print(f'Ensemble Spearman\'s Rho over {len(models)} models: {cor:5.3f}')
+
+    if args.accuracy and isinstance(model, VAE):
+
+        PICKLE_FILE = Path('data/files/mutation_data.pickle')
+        with open(PICKLE_FILE, 'rb') as f:
+            proteins = pickle.load(f)
+            p = proteins[args.data_sheet].dropna(subset=['mutation_effect_prediction_vae_ensemble']).reset_index(drop=True)
+
+        sequences = SeqIO.parse(args.data, "fasta")
+        wt_seq = next(sequences)
+        other_seq = next(sequences)
+
+        chosen_seq = wt_seq
+
+        wt = seq2idx(chosen_seq, device)
+        batch_wt = wt.unsqueeze(0)
+
+        predictions = []
+
+        for model in models:
+            softmax = model.get_predictions(batch_wt).permute(0, 2, 1)
+
+            for i in range(args.ensemble_count - 1):
+                softmax += model.get_predictions(batch_wt).permute(0, 2, 1)
+            predictions += [softmax / args.ensemble_count]
+
+        reconstructed = torch.cat(predictions).mean(0).exp().argmax(dim = -1)
+
+        in_seq = str(chosen_seq.seq).upper()
+        out_seq = idx2seq(reconstructed.squeeze().cpu().numpy()).replace('<mask>', '.')
+
+        accuracy = sum(a1 == a2 for (a1, a2) in zip(in_seq, out_seq)) / len(in_seq)
+
+        print(f'{in_seq}')
+        print(f'{out_seq}')
+        print(accuracy)

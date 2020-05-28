@@ -47,7 +47,7 @@ class UniRep(nn.Module):
         log_likelihoods = nn.functional.log_softmax(linear, dim = 2)
         return log_likelihoods
 
-    def forward(self, xb):
+    def forward(self, xb, weights = None, neff = None):
         # Get length of each sequence by looking at pad values
         lengths = (xb != self.padding_idx).sum(dim = 1)
 
@@ -61,7 +61,14 @@ class UniRep(nn.Module):
         loss = F.nll_loss(pred.permute(0, 2, 1), true, ignore_index = self.padding_idx, reduction = "none")
 
         # Mean over sequence length first
-        loss = loss.sum(dim = 1).div(lengths).mean()
+        loss = loss.sum(dim = 1).div(lengths)
+
+        if weights is not None:
+            # weighted mean
+            loss *= weights
+            loss = loss.sum()
+        else:
+            loss = loss.mean()
 
         metrics_dict = {}
         return loss, metrics_dict

@@ -30,14 +30,14 @@ if __name__ == "__main__" or __name__ == "__console__":
     print(f"Using device: {device_name}")
 
     # Load data
-    all_data = VariableLengthProteinDataset(args.data, device = device)
+    all_data = VariableLengthProteinDataset(args.data, device = device, use_weights = args.use_weights)
     train_length = int(len(all_data) * args.train_ratio)
     val_length = len(all_data) - train_length
 
     train_data, val_data = torch.utils.data.random_split(all_data, [train_length, val_length])
 
-    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True)
-    val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size)
+    train_loader = get_variable_length_protein_dataLoader(train_data, batch_size = args.batch_size, shuffle = True, use_weights = args.use_weights, random_weighted_sampling = args.random_weighted_sampling)
+    val_loader = get_variable_length_protein_dataLoader(val_data, batch_size = args.batch_size, use_weights = args.use_weights)
     print("Data loaded!")
 
     model = UniRep(NUM_TOKENS, IUPAC_SEQ2IDX["<pad>"], args.embed_size, args.hidden_size, args.num_layers).to(device)

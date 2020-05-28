@@ -137,6 +137,7 @@ class VariableLengthProteinDataset(Dataset):
                 neff += weight
 
             self.neff = neff
+            self.weights = weights
             self.encoded_seqs = [(seq2idx(seq, device), weight) for (seq, weight) in zip(unpadded_seqs, weights)]
 
         else:
@@ -227,12 +228,21 @@ def variable_length_sequence_collate(sequences, use_weights = False, neff = None
 
     return torch.nn.utils.rnn.pad_sequence(sequences, padding_value = IUPAC_SEQ2IDX["<pad>"], batch_first = True)
 
-def get_variable_length_protein_dataLoader(dataset, batch_size = 128, shuffle = False, use_weights = False):
-    if use_weights:
-        neff = sum(w for _, w in dataset)
-        return DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, collate_fn = lambda xb: variable_length_sequence_collate(xb, use_weights, neff))
+def get_variable_length_protein_dataLoader(dataset, batch_size = 128, shuffle = False, use_weights = False, random_weighted_sampling = False):
+    sampler = None
+    is_shuffled = shuffle
 
-    return DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, collate_fn = variable_length_sequence_collate)
+    if random_weighted_sampling or use_weights:
+        weights = [w for _, w in dataset]
+        neff = sum(weights)
+
+        if random_weighted_sampling:
+            sampler = WeightedRandomSampler(weights = weights, num_samples = len(weights), replacement = True)
+            is_shuffled = shuffle if not random_weighted_sampling else not random_weighted_sampling
+
+        return DataLoader(dataset, batch_size = batch_size, shuffle = is_shuffled, collate_fn = lambda xb: variable_length_sequence_collate(xb, use_weights, neff), sampler = sampler)
+
+    return DataLoader(dataset, batch_size = batch_size, shuffle = is_shuffled, collate_fn = variable_length_sequence_collate, sampler = sampler)
 
 def retrieve_label_from_uniprot_df(ID):
     uniprot = UniProt()

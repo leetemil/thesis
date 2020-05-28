@@ -85,12 +85,19 @@ def get_unirep_finetune_args():
 
     # Data
     parser.add_argument("--data", type = Path, default = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m"), help = "Fasta input file of sequences.")
+    parser.add_argument("-w", "--weights", action = "store_true", dest = "use_weights", default = False, help = "Extract weights from dataset.")
+    parser.add_argument("-no_w", "--no_weights", action = "store_false", dest = "use_weights", default = True, help = "Do not extract weights from dataset.")
+
     parser.add_argument("-lm", "--load_model", type = Path, default = Path("."), help = "The model to load before training. Can be omitted.")
     parser.add_argument("-vr", "--val_ratio", type = float, default = 0.2, help = "What fraction of data to use for validation.")
     mutation_effect_prediction_args(parser)
     parser.add_argument("-es", "--embed_size", type = int, default = 10, help = "Size of the amino acid embedding.")
     parser.add_argument("-hs", "--hidden_size", type = int, default = 512, help = "Size of the hidden state of the LSTM.")
     parser.add_argument("-nl", "--num_layers", type = int, default = 1, help = "Number of layers of the LSTM.")
+
+    parser.add_argument("-rws", "--random_weighted_sampling", action = "store_true", dest = "random_weighted_sampling", default = False, help = "Enables batch sampling according to sample weights.")
+    parser.add_argument("-no_rws", "--no_random_weighted_sampling", action = "store_false", dest = "random_weighted_sampling", default = True, help = "Disables batch sampling according to sample weights.")
+
 
     args = parser.parse_args()
 
@@ -187,6 +194,8 @@ def get_evaluate_ensemble_args():
     parser.add_argument("-r", "--results_dir", type = Path, default = Path(f"{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}"), help = "Directory name to save results under. Will be saved under results/results_dir.")
     parser.add_argument("-ec", "--ensemble_count", type = int, default = 500, help = "How many samples of the VAE model to use for evaluation as an ensemble.")
     mutation_effect_prediction_args(parser)
+    parser.add_argument("-a", "--accuracy", action = "store_true", dest = "accuracy", default = False, help = "Make accuracy on query protein reconstruction.")
+    parser.add_argument("-no_a", "--no_accuracy", action = "store_false", dest = "accuracy", default = True, help = "Do not make accuracy on query protein reconstruction.")
 
     args = parser.parse_args()
 
