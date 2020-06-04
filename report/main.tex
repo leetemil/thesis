@@ -22,6 +22,7 @@
 \tableofcontents
 \thispagestyle{empty}
 \clearpage
+\addtocontents{toc}{\protect\thispagestyle{empty}}
 \setcounter{page}{1}
 
 % Chapters
@@ -31,10 +32,14 @@
 \input{report/chapters/04_sequence_learning.tex}
 \input{report/chapters/05_models.tex}
 \input{report/chapters/06_experiments.tex}
-\input{report/chapters/07_discussion}
+\input{report/chapters/07_discussion.tex}
+\input{report/chapters/08_conclusion.tex}
 
 % References
 \clearpage
 \printbibliography[heading = bibintoc, title={References}]
+
+\appendix
+\input{report/chapters/09_appendix.tex}
 
 \end{document}
