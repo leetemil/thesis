@@ -1,0 +1,60 @@
+\chapter{Appendix}
+\section{Code Availability. Results and Structure}
+\label{appendix}
+The implementation of the models and the code used to train them can be found at the following GitHub repository: \url{https://github.com/leetemil/thesis}. This repository will be made public soon after the submission deadline of this thesis report (2020-06-05T12:00+0200).
+
+At the top level, the repository is divided into the \texttt{report} directory (containing the \LaTeX code and figures for this report) and the \texttt{src} directory (containing the Python source code for the implementations of the model and their training code). The top level also contains the thesis project contract. The report directory should be self-explanatory.
+
+The source code directory is divided into multiple directories:
+
+\begin{description}
+    \item[args:] Code for extracting command-line arguments, and collections of standard arguments for the mutation effect prediction datasets.
+    \item[data:] Code for protein data handling, as well as the data itself.
+    \item[models:] Code for each model presented in the thesis.
+    \item[slurm:] Scripts for running slurm jobs on the DIKU compute cluster.
+    \item[training:] Generalized training infrastructure.
+    \item[visualization:] Code for figure generation and visualization of results.
+\end{description}
+
+At the top level, there are \texttt{run\_*.py} scripts, which run the training procedure for the various models. The \texttt{tape\_train.py} and \texttt{tape\_eval.py} files are used to train and evaluate the TAPE tasks.
+
+\section{Results}
+The full results can be found here: \url{https://bit.ly/2XsoN4C}
+
+\section{Learning Objectives}
+In the project contract for this thesis, we outlined the following learning objectives:
+
+\begin{enumerate}
+    \item Present the theory behind variational autoencoders and deep representation learning.
+    \item Survey similar approaches (such as \cite{alley2019unified}) within the field of representation learning on protein sequences and discuss how they relate to the presented theory.
+    \item Explore the theoretical strengths and weaknesses of model architectures. In addition, discuss the trade-offs between the latent spaces of different models.
+    \item Design, implement and evaluate representation learning models on protein sequences, using variational autoencoders. Argue for the underlying design and implementation choices and analyze the performance.
+    \item Discuss how a well-performing representation learning model on protein sequences can be used for exploring new proteins and their properties, and other potential applications, if any.
+\end{enumerate}
+
+Since the contract was written, the project has evolved to include more models than just the variational autoencoder, but suffice to say that we believe that we have lived up to the learning objectives.
+
+% \section{Project and Work-flow Evaluation}
+% Throughout the semester, we have collaborated continuously on the thesis project. Weekly meetings have been held between us and our supervisors. Here we have had detailed discussions on how to proceed, and received feedback on drafted sections of the report. Internally between us, we have met at DIKU and worked together 2-3 times a week on average, with increasing frequency as the project developed. Throughout the  semester, we have kept logs on tasks and questions we have had, and short recaps of our meetings. The majority of the project has been done together, but some delegations have been made on drafting the report. That is, we have each had delegated writing to do, which we have subsequently reviewed together and edited accordingly. We are in general very happy with our team work.
+
+% The project has in general been more theoretical and oriented toward the mathematical aspects of computer science than we are used to. This is reflected in the sections of this thesis, where roughly the first half is wholly theoretical foundations. The work process has accordingly been heavily concerned with understanding these foundations. The focus on the theory has made the project quite challenging, but also interesting and enlightening. 
+
+\section{External obstacles}
+During this thesis, we ran into some unfortunate external obstacles which, while not relating to the thesis directly, had an impact on the amount and quality of work that we could put into it.
+
+\subsection{Changing thesis rules at the UCPH}
+The rules on start and end dates of theses at the University of Copenhagen were in the process of being changed when we started our thesis. Traditionally, theses would run for 6 uninterrupted months. In the future, this will change to 4 months. As far as we have gathered, this is to make the theses end before the summer vacation, because this means the students will finish within the ministry's guidelines, thus prompting a funding bonus (this is our understanding, but it seems rather complicated).
+
+During a transition period from the old rules to the new rules, the theses duration would stay at 6 months, but be moved 2 months back, thus ending before the summer vacation. However, this meant that the first two months of our thesis was spent while we still had other university courses. Suffice to say that we were not as productive on the thesis during these 2 months as we would otherwise have been. We did however complete a project outside of course scope about the UniRep model \cite{unirepproject}, which did help us prepare for the thesis regardless of this rule change.
+
+\subsection{COVID-19 pandemic}
+On 13th of March 2020, about half-way into our thesis period, the Danish government shut down most non-essential public institutions, including the University of Copenhagen. This meant that we could not meet physically at the university with each other or to have meetings with our supervisor. Other potential meeting places, such as libraries, were also closed, forcing us to work from home, often separately with communication only over (occasionally video) calls.
+
+While a thesis such as ours (where the ``product'' just requires a computer) is probably least impacted by the pandemic in comparison to other theses (which may require a high-grade laboratory for example), we found that working in this manner decreased our productivity and motivation, and we will not be able to return to our normal working schedule before the thesis is over.
+
+The university offered to extend the thesis with up to a month, but we did not wish to delay the completion of our education.
+
+% \chapter{Appendix - Results}
+% \label{appendix:results}
+% All
+% \todo{insert all results from excel file}
