@@ -17,6 +17,9 @@
 \setlength{\tabcolsep}{6pt} % Column spacing. Default value: 6pt
 \renewcommand{\arraystretch}{1.5} % Row spacing. Default value: 1
 
+% lstlisting escape characters
+\lstset{escapeinside={<@}{@>}}
+
 % Declaring definitions, theorems etc.
 \newtheorem*{definition}{Definition}
 \newtheorem*{theorem}{Theorem}
@@ -26,11 +29,11 @@
 \newtheorem{example}{Example}
 
 % Hyperref colors/setup
-\hypersetup{
-    colorlinks=true,
-    linkcolor=blue,  
-    urlcolor=cyan,
-}
+%\hypersetup{
+%    colorlinks=true,
+%    linkcolor=blue,  
+%    urlcolor=cyan,
+%}
 
 % -- Commands
 % TODO macro

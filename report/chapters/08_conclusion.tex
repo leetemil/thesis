@@ -1,0 +1,111 @@
+\chapter{Conclusion}
+\label{chapter:conclusion}
+
+In chapter \ref{chapter:introduction}, we introduced the motivation for the work in this project and outlined its scope. We also introduced the essential terminology of proteins and related the protein engineering task to natural language processing.
+
+In chapter \ref{chapter:representation_learning}, we explained the need for unsupervised learning and presented the concept of representations living in a latent space. We also introduced the concept of global and local scales in the protein space, as well as some desirable properties such representations should contain.
+
+In chapter \ref{chapter:probabilistic_modelling}, we presented variational inference and the theory behind the variational autoencoder. We derived the evidence lower bound (ELBO) and showed how the reparameterization trick may be used for gradient-based optimization. This chapter concluded by presenting Bayesian neural networks and how these can be integrated with the variational autoencoder.
+
+In chapter \ref{chapter:sequence_learning}, we presented various ways of learning on sequential data, including recurrent neural networks (RNNs). We discussed sequence-to-sequence models and the issues these present with extracting their representations, in contrast to models that explicitly produce compressed representations. Finally, we explained the concept of sequence alignments, which can be used to apply classical linear neural networks to sequential protein data.
+
+In chapter \ref{chapter:models}, we presented the UniRep, variational autoencoder and WaveNet models and explained their architectures and different ways of processing protein sequences. These models were put to the test in chapter \ref{chapter:experiments}, where we conducted experiments on downstream tasks, including mutation effect prediction and prediction of protein properties, like stability. In the same chapter, we discussed the individual results, while in chapter \ref{chapter:discussion} we compared the results and discussed the overall implications. We show that the variational autoencoder achieves superior performance on mutation effect prediction for local protein families and argue that its representations display desirable properties for exploration, not exerted by the other models. Representations produced by UniRep outperform WaveNet on general protein analysis tasks. The tested models all indicate areas of limitation. We discuss why this is so, and potential ways to overcome these weaknesses.
+
+\section{Research Questions}
+In chapter \ref{chapter:introduction}, we asked a series of fundamental questions, on which we now conclude.
+
+Our first question asked how close protein deep learning is to reaching an ideal model; a probabilistic model which transforms arbitrary protein sequences into compact representations living in a smooth, explorable space. Our findings show that there are still significant advances to be made towards this ideal. The variational autoencoder does indeed produce probabilistic, compact representations, but it cannot transform arbitrary protein sequences and the space of representations is only smooth on a small scale, impairing exploration. The UniRep and WaveNet models are able to transform arbitrary sequences, but they trade this power for a weaker representation which is neither probabilistic nor able to be decoded back to a protein. In section \ref{sec:extracting_representations}, we suggest a way to possibly remedy this for future work.
+
+% Next we asked how these models can be implemented in a modern machine learning framework. This is not so much a theoretical question as it is a practical one -- nevertheless we have spent the majority of our time during this thesis tinkering with the specific implementation details of the models. 
+
+Next we asked what advantages and disadvantages exist between global and local representation. Our experiments indicate that the local representations provided by the variational autoencoder are better in general, but they do of course require training on each specific protein family. They also suggests that global representations may have a tendency to only learn coarse features that do not translate well to the local scale. One should take all this into account when considering global and local representations and the models that produce them.
+
+Finally, we asked how the choice of the representation affects the performance on downstream tasks. Foremost in this choice is what model to use in order to produce the representations. We can say now that the variational autoencoder is a strong choice in this case. The VAE's ability to decode its representation is an especially important property as it allows exploration, but it also forces the model to train on its representation. This is in contrast to UniRep's and WaveNet's representations which are not trained and only constructed externally. We believe this severely negatively affects the potential performance of UniRep and WaveNet.
+
+% \{intro questions}
+% \begin{itemize}
+%     \item To what extent do recent advances in protein deep learning reach such ideal representations as outlined above?
+%     % \item How can these be implemented in a modern machine learning framework?
+%     % \item What is a good protein representation?
+%     \item What are the advantages and disadvantages, if such exist, of global versus local representations?
+%     \item How does the choice of the representation affect the performance on select downstream tasks?
+%     % such as mutation effect prediction?
+%     % \item How does the properties of the representation affect the performance on a downstream task such as mutation effect prediction?
+% \end{itemize}
+
+% \{learning objectives}
+
+% 1. Present the theory behind variational autoencoders and deep representation learning.
+
+% 2. Survey similar approaches (such as [1]) within the field of representation learning on protein sequences and discuss how they relate to the presented theory.
+
+% 3. Explore the theoretical strengths and weaknesses of model architectures. In addition, discuss the trade-offs between the latent spaces of different models.
+
+% 4. Design, implement and evaluate representation learning models on protein sequences, using variational autoencoders. Argue for the underlying design and implementation choices and analyze the performance.
+
+% 5. Discuss how a well-performing representation learning model on protein sequences can be used for exploring new proteins and their properties, and other potential applications, if any.
+
+\section{Further Work}
+\label{sec:further_work}
+
+\subsection{Obtaining weighted sampling without an alignment}
+% As discussed above, alignments seem supremely important to achieve good performance, largely because they can make use of weights which mitigates the sampling bias present in the protein family data. It may be possible to use simpler pair-wise alignment methods to align proteins on the fly. This could allow a model to obtain an approximate sampling weight, without having to produce an alignment. This could in turn increase performance for models that work on arbitrary proteins, like UniRep and WaveNet.
+One key observation has been that the weighted sampling procedure that is applied to aligned sequences yield a significant increase in prediction performance. This is likely because good protein representations are guided by the uniqueness of protein sequences rather than their quantity. In our settings such weighting requires an alignment, but there seem to be existing similarity searching schemes that are not constrained to fixed-length sequences. It might be possible to recover some of the lost performance by using an algorithm such as the \textbf{MMseqs2} algorithm \cite{steinegger2018clustering}, which greedily clusters proteins based on identity and overlap between protein sequences (this is also the algorithm used to Cluster the UniRef100 dataset into UniRef90 and UniRef50). Each cluster has a representative protein sequence. Such clusters can be used to weigh sequences by giving each cluster a fixed weight and distributing that weight evenly across the sequences of each cluster. Otherwise, one could simply reduce the dataset to the cluster representative  sequences, as these are unique in comparison, but similar to the sequences in the clusters they represent, within some threshold. The effective number of protein sequences $n_{\texttt{eff}}$ would then be the number of clusters found by this procedure.
+
+% \{find a way to weigh unaligned data such that the performance boost from weighted sampling can be gained.}
+
+\subsection{Choice of prior}
+In the variational approximation setting, it seems that the prior distribution on both the latent variables and weights play a significant role on the performance. Interesting further work would be to experiment with other priors, or with the VAE setup to scale the significance of the KL divergence from the prior. A good place to start could be the $\beta$-VAE \cite{higgins2017beta}, which allows for this kind of scaling. The $\beta$-VAE proposes a scale factor $\beta \geq 1$ as they claim this yield more disentangled representations in their experimental settings, but we think that a scaling factor $\beta < 1$ is more interesting, as this makes the deviance of the approximation to the prior less significant in the objective function.
+
+% \{discuss alternatives to variational inference, namely MCMC sampling. MCMC sampling has less error if you are willing to wait long enough (takes many samples to coverge), so over time MCMC is better than VI. maybe check this https://arxiv.org/pdf/1410.6460.pdf and Langevin monte carlo}
+
+\subsection{Non-euclidean distance measure in the representation space}
+As discussed in section \ref{sec:protein_exploration} above, developing a non-euclidean distance measure may be necessary for effective exploration in the representation space on the large scale. One venture to develop such a measure may be manifold learning -- that is, learning a transformation from the representation space to another space in which linear interpolation \textit{does} follow the tree-like data. We have not looked into this in depth, but this may be one way to achieve the effective interpolation in the representation space.
+
+% \{non-euclidean manifold distance measure}
+
+\subsection{Transformer-based models}
+During the initial phases of this project, we considered various types of models to explore, arriving at the three models examined above. However, we also toyed with the idea of a model based on the Transformer architecture \cite{vaswani2017attention}. The Transformer is based on the idea of attention, which is a technique used with sequential models (classically recurrent neural networks). 
+
+The Transformer model has been shown to be incredibly effective in natural language processing, giving rise to models which can produce text that appears as though it was written by a human \cite{radford2019language}. We attempted to construct a Transformer-based model which could process protein sequences, but we did not have enough time to polish the model to a point where it achieved any interesting results. The architecture of the Transformer is also quite complex, and the models in NLP that achieve good performance are often obscenely large.
+
+However, we still believe that a Transformer-based model may be a fruitful exploration, as the Transformer includes some interesting ideas, such as a method to handle the positions in a variable-length sequence, using a special positional encoding.
+
+%\section{The Transformer: An Attention-based Model}
+%\label{sec:transformer_model}
+%The final model that we will consider is the Transformer \cite{vaswani2017attention}. The Transformer is based on the idea of attention, which is a technique used with sequential models (classically recurrent neural networks). Intuitively, an attention mechanism attempts to learn which parts of the input to ``pay attention to'' when decoding the output sequence. For example, in a natural language setting, this can be useful to disambiguate what previously mentioned subject a pronoun refers to, which makes a model much better at reading comprehension. In the protein setting, one would hope that the attention mechanism would learn which amino acids of the protein to pay attention to -- this could for example be the amino acids that are spatially close to the decoded amino acid, thus giving the model a way to account for physical contact between the protein itself.
+%
+%The Transformer model has been shown to be incredibly effective in natural language processing, giving rise to models which can produce text that appears as though it was written by a human \{cite GPT, GPT-2 or Bert or something}. In section \ref{sec:transformer_experiment} we would like to explore whether it can also be effective when working on proteins.
+%
+%The Transformer is a model capable of working on sequences, but it is not a sequential model per se. That is, it does not process one element of the input sequence at a time, unlike a recurrent neural network. Rather, it processes all the elements of the input sequence in parallel, which helps to improve the performance of the model, but also alleviate some of the problems with RNNs long computation graphs, that is, vanishing and exploding gradients.
+%
+%However, this lack of sequential processing means that the Transformer does not inherently know its position in the sequence when decoding. In order to give this information to the Transformer, one must use an embedding of the sequence elements. Consider a sequence $S = \crts{s_1, \dots, s_n}$. Typically, two methods of embedding the sequence elements are employed: learnable embedding and positional embedding. 
+%
+%A learnable embedding is simply a one-to-one mapping from sequence elements to high-dimensional vectors. In natural language processing, words are usually embedded to vectors with hundreds of dimensions, since there are so many different words. Comparatively, there are merely 20 or so amino acids, so fewer dimensions can suffice in this case. Actually, a simple one-hot encoding might even suffice, though this does not allow us to learn the embedding (which could be useful).
+%
+%A positional embedding is a special kind of embedding employed with the Transformer in order to inform the model of its current position in the sequence. Basically, the positional embedding is a ``fingerprint'' of where the element resides in the sequence. Usually, a mix of sine curves are used as this fingerprint. A positional embedding can be utilized at the same time as a learnable embedding or with a one-hot encoding, by simply summing or concatenating the two embeddings.
+%
+%\{something something transformer is not an autoregressive model either}
+%
+%The Transformer architecture consists of a mix of linear layers and so-called ``multi-head self-attention''. ``Self-attention'' signifies that this is a special kind of attention mechanism, while ``multi-head'' refers to the way the attention mechanism is performed multiple times and then combined to obtain the output.
+%
+%Consider an input sequence $X = \crts{x_1, \dots, x_n}$ where each $x_i$ is an embedded vector as described above. The self-attention mechanism calculates a weight (or ``attention'', if you will) for each pair $(x_i, x_j)$ of $X$. This weight is multiplied on $x_j$ and the resulting weighted sequence elements are summed to produce an output for $x_i$. Concretely, the calculation is done using matrices. Let $\mat{X}$ be a 2D matrix where row $i$ equals $x_i$. Then the output $\mat{Z}$ is calculated like so \cite{illustrated_transformer}:
+%\begin{align*}
+%    \mat{Q} &= \mat{X} \mat{W}_Q \\
+%    \mat{K} &= \mat{X} \mat{W}_K \\
+%    \mat{V} &= \mat{X} \mat{W}_V \\
+%    \mat{S} &= \sigma\prts{\frac{\mat{Q} \mat{K}^T}{\sqrt{d_k}}} \\
+%    \mat{Z} &= \mat{S} \mat{V}
+%\end{align*}
+%Where $Q$ is known as the query matrix, $K$ as the key matrix and $V$ as the value matrix. $\mat{W}_Q$, $\mat{W}_K$ and $\mat{W}_V$ are learnable parameters. $\mat{S}$ contains the score for each pair of elements in $X$, $\sigma$ is the softmax function and $d_k$ is the number of columns in the $\mat{W}_K$ matrix. Finally, $\mat{Z}$ is the output of the self-attention layer. In \textit{multi-head} self-attention, the Transformer will have $m$ self-attention layers, each producing a $\mat{Z}_i$. All of the $\mat{Z}_i$s are concatenated and the result is multiplied by another learnable parameter $\mat{W}_O$:
+%\[\mat{O} = \prts{\mat{Z}_1 \oplus \mat{Z}_2 \oplus \dots \oplus \mat{Z}_m} \mat{W}_O\]
+%Where $\oplus$ indicates concatenation along the horizontal axis. This final result $\mat{O}$ is then put through some linear layers, producing the final output sequence.
+
+
+% \{talk about the transformer}
+
+\subsection{Semi-supervised Learning}
+In the introduction we advocated unsupervised modelling, such that the vast amount of unlabeled data can be put to use. In our experiments, the models have however been trained solely on such data and have no direct mechanism for handling protein sequences where additional information is present. Effectively, this means that practitioners would have to discard labels in order to feed the data samples to the models. This is undesirable, and further work could look at merging supervised and unsupervised learning settings such that any labeled protein sequences can be used to inform the produced representations.
+
+\subsection{Training Objective in Representation Space}
+In order to teach the models, we use a learning objective that measures how well the model reconstructs the input. The problems with this is that it is a function on the ``sequence space'' and not in some more abstract space (like the representation space or, for mutation effect predictions, on the correlation measure itself). What we really want is to learn a good mapping from sample space to representation space, which is the assumed side-effect when learning to reconstruct the input. However, we could preferably measure loss based on the representation space as well. This could force additional characteristics onto the representation space, similar to the Kullback-Leibler term in the VAE which pulls the distribution on the space toward the prior distribution.
