@@ -37,6 +37,7 @@ class VAE(nn.Module):
         self.weight_loss = weight_loss
 
         bottleneck_idx = layer_sizes.index(min(layer_sizes))
+        self.representation_size = layer_sizes[bottleneck_idx]
 
         # Construct encode layers except last ones
         encode_layers = []
@@ -160,8 +161,8 @@ class VAE(nn.Module):
     def get_representation(self, xb):
         return self.encode(xb).mean
 
-    def sample_random(self, batch_size = 1):
-        z = torch.randn(batch_size, self.layer_sizes[-1])
+    def sample_random(self, device, batch_size = 1):
+        z = torch.randn(batch_size, self.representation_size).to(device)
         return self.sample(z)
 
     def reconstruct(self, x):
@@ -308,10 +309,8 @@ class VAE(nn.Module):
         kld_loss = self.kld_loss(encoded_distribution)
 
         if self.weight_loss:
-            recon_loss *= weights
-            kld_loss *= weights
-            # Emil: This change is not tested. Maybe revert to simply always do .mean()
-            recon_kld_loss = (recon_loss + kld_loss).sum()
+            normalized_weights = weights / neff
+            recon_kld_loss = (recon_loss + kld_loss).mul(normalized_weights).sum()
 
         else:
             recon_kld_loss = torch.mean(recon_loss + kld_loss)

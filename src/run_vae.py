@@ -7,10 +7,12 @@ from pathlib import Path
 import torch
 from torch import optim
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 
 from models import VAE
-from data import get_protein_dataloader, NUM_TOKENS, get_datasets
+from data import get_protein_dataloader, NUM_TOKENS, get_datasets, idx2seq
 from training import train_epoch, validate, readable_time, get_memory_usage, mutation_effect_prediction, make_mutants
 from visualization import plot_data, plot_loss, plot_spearman, plot_softmax, plot_protein_family_and_mutations, plot_tsne, plot_gaussian_distribution
 
@@ -171,16 +173,17 @@ if __name__ == "__main__" or __name__ == "__console__":
             mutants_fn = make_mutants(args.query_protein, args.data_sheet, args.metric_column, device)
             mutant_data = next(mutants_fn)
 
-            plot_tsne(args.results_dir / Path("tsne.png"), args.figure_type, model, all_data, rho, args.batch_size, show = show, only_subset_labels = subset_labels)
-            breakpoint()
+            # print('Plotting t-SNE')
+            # plot_tsne(args.results_dir / Path("tsne.png"), args.figure_type, model, all_data, rho, args.batch_size, show = show, only_subset_labels = subset_labels)
 
-            plot_protein_family_and_mutations(
-                model = model,
-                protein_family_data = all_data,
-                mutant_data = mutant_data,
-                batch_size = args.batch_size,
-                model_path = args.results_dir
-            )
+            # print('Plotting protein family and mutations.')
+            # plot_protein_family_and_mutations(
+            #     model = model,
+            #     protein_family_data = all_data,
+            #     mutant_data = mutant_data,
+            #     batch_size = args.batch_size,
+            #     model_path = args.results_dir
+            # )
 
 
         print(f'Spearman\'s Rho: {rho}')
