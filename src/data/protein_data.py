@@ -277,18 +277,17 @@ def retrieve_many_labels(seqs, outlist):
         ID = seq.id.split("/")[0].split("|")[:2][-1]
         label = retrieve_label(ID)
         thread_list.append((ID, label))
-        print(".", end = "")
 
     with lock:
         outlist += thread_list
-        print(f"List: {thread_list}")
+        print(".", end = "")
 
 def parallel_retrieve_labels(infile, outfile):
     print("Creating threads...")
     seqs = list(SeqIO.parse(infile, "fasta"))
     threads = []
     results = []
-    chunk_size = 10
+    chunk_size = 1
     for i in range(len(seqs) // chunk_size):
         args = [seqs[i * chunk_size:(i + 1) * chunk_size], results]
         threads.append(threading.Thread(target = retrieve_many_labels, args = args))
@@ -298,15 +297,16 @@ def parallel_retrieve_labels(infile, outfile):
     for thread in threads:
         thread.start()
 
-    print("Joining on threads...")
+    print("\nJoining on threads...")
     joined = 0
     for thread in threads:
         thread.join()
         joined += 1
-        print(f"Joined on {joined} threads.")
+        print(f"\nJoined on {joined} threads.")
 
     with open(outfile, "w") as out:
-        pass
+        for id, label in results:
+            out.write(f"{id}: {label}\n")
 
 def retrieve_labels(infile, outfile):
     seqs = SeqIO.parse(infile, "fasta")
@@ -360,10 +360,14 @@ def retrieve_labels(infile, outfile):
                         print("Couldn't handle it!")
                         breakpoint()
 
-            print(f"{label}")
             out.write(f"{seq.id}: {label}\n")
+            print(f"{label}")
+
+def run():
+    print("Retrieving phylum labels from UniProt database. This may take a while but will only have to be done once.")
+    infile = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105.a2m")
+    outfile = Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105_LABELS.a2m")
+    parallel_retrieve_labels(infile, outfile)
 
 if __name__ == "__main__":
-    infile = Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48.a2m")
-    outfile = Path("data/alignments/PABP_YEAST_hmmerbit_plmc_n5_m30_f50_t0.2_r115-210_id100_b48_LABELS.a2m")
-    parallel_retrieve_labels(infile, outfile)
+    run()

@@ -14,26 +14,30 @@ from mpl_toolkits.mplot3d import Axes3D
 from models import VAE
 from training import make_mutants
 from data import get_protein_dataloader, IUPAC_AMINO_IDX_PAIRS
+from data.protein_data import run
 
-def get_pfam_label_dict():
-    file = Path("data/files/PF00144_full_length_sequences_labeled.fasta")
-    seqs = SeqIO.parse(file, "fasta")
+# def get_pfam_label_dict():
+#     file = Path("data/files/PF00144_full_length_sequences_labeled.fasta")
+#     seqs = SeqIO.parse(file, "fasta")
 
-    def getKeyLabel(seq):
-        s = seq.description.split(" ")
-        return s[0], s[2].replace("[", "").replace("]", "")
+#     def getKeyLabel(seq):
+#         s = seq.description.split(" ")
+#         return s[0], s[2].replace("[", "").replace("]", "")
 
-    return {protein_id: label for protein_id, label in map(getKeyLabel, seqs)}
+#     return {protein_id: label for protein_id, label in map(getKeyLabel, seqs)}
 
-PFAM_LABEL_DICT = get_pfam_label_dict()
+# PFAM_LABEL_DICT = get_pfam_label_dict()
 
 def get_BLAT_label_dict(file):
+    if not file.exists():
+        run()
+
     with open(file, "r") as f:
         lines = f.readlines()
 
     return dict([line[:-1].split(": ") for line in lines])
 
-BLAT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m"))
+# BLAT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_1_b0.5_LABELS.a2m"))
 
 BLAT_HMMERBIT_LABEL_DICT = get_BLAT_label_dict(Path("data/files/alignments/BLAT_ECOLX_hmmerbit_plmc_n5_m30_f50_t0.2_r24-286_id100_b105_LABELS.a2m"))
 

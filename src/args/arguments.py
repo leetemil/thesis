@@ -53,6 +53,7 @@ def get_vae_args():
     # Argument postprocessing
     args.train_ratio = 1 - args.val_ratio
     args.results_dir = Path("results") / args.results_dir
+    Path("results").mkdir(exist_ok = True)
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args
@@ -75,6 +76,7 @@ def get_unirep_args():
     args = parser.parse_args()
 
     args.results_dir = Path("results") / args.results_dir
+    Path("results").mkdir(exist_ok = True)
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args
@@ -103,6 +105,7 @@ def get_unirep_finetune_args():
 
     args.train_ratio = 1 - args.val_ratio
     args.results_dir = Path("results") / args.results_dir
+    Path("results").mkdir(exist_ok = True)
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args
@@ -154,6 +157,7 @@ def get_wavenet_args(pretrain = False):
         args.train_ratio = 1 - args.val_ratio
 
     args.results_dir = Path("results") / args.results_dir
+    Path("results").mkdir(exist_ok = True)
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
 
@@ -183,6 +187,7 @@ def get_transformer_args():
 
     args.train_ratio = 1 - args.val_ratio
     args.results_dir = Path("results") / args.results_dir
+    Path("results").mkdir(exist_ok = True)
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args
@@ -201,6 +206,7 @@ def get_evaluate_ensemble_args():
     args = parser.parse_args()
 
     args.results_dir = Path("results") / args.results_dir
+    Path("results").mkdir(exist_ok = True)
     args.results_dir.mkdir(exist_ok = True)
     print_args(args)
     return args
